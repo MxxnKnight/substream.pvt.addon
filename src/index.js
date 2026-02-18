@@ -29,6 +29,11 @@ if (!require('fs').existsSync(uploadsPath)) {
 }
 app.use('/uploads', express.static(uploadsPath));
 
+// Explicit 404 for missing uploads to prevent falling through to Dashboard
+app.use('/uploads', (req, res) => {
+    res.status(404).send('Subtitle file not found');
+});
+
 // 5. Static Frontend
 // Serve the built frontend assets
 const frontendPath = path.join(__dirname, '../public/admin');

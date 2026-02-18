@@ -251,9 +251,10 @@ export default function App() {
 
       const isSubtitle = /\.(srt|vtt|sub|ass)$/i.test(file.name);
 
-      if ((isZip || files.length > 1) && uploadForm.type === 'movie') {
-        setUploadForm(prev => ({ ...prev, type: 'series' }));
-      }
+      // REMOVED: Auto-switch to series on zip/multi-file logic
+      // if ((isZip || files.length > 1) && uploadForm.type === 'movie') {
+      //   setUploadForm(prev => ({ ...prev, type: 'series' }));
+      // }
 
       if (isZip) {
         handleZipFile(file);
