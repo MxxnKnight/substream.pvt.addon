@@ -28,12 +28,22 @@ const uploadSubtitle = async (req, res) => {
 
     // Helper to process a single subtitle content (from buffer or file)
     const processSubtitle = async (originalName, sourcePath, buffer = null) => {
-      const parsed = parseFilename(originalName);
-      if (!parsed) {
-        console.warn(`Could not parse filename: ${originalName}`);
-        return null;
+      let season = null;
+      let episode = null;
+
+      // Try to parse season/episode for series/anime
+      if (type !== 'movie') {
+        const parsed = parseFilename(originalName);
+        if (parsed) {
+          season = parsed.season;
+          episode = parsed.episode;
+        } else {
+          console.warn(`Could not parse season/episode from: ${originalName} (type: ${type})`);
+          // For series, if we can't parse, we skip.
+          return null;
+        }
       }
-      const { season, episode } = parsed;
+      // For movies, season/episode remain null.
 
       // Ensure directory exists: uploads/{imdb_id}/
       const targetDir = path.join('uploads', imdb_id);
@@ -42,8 +52,17 @@ const uploadSubtitle = async (req, res) => {
       }
 
       // Generate target filename
-      // Format: SxxExx.srt
-      const newFilename = `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}.srt`;
+      let newFilename;
+      if (type === 'movie') {
+        // use timestamp to avoid collisions + original name sanitized
+        // removing problematic chars
+        const sanitized = originalName.replace(/[^a-z0-9.]/gi, '_');
+        newFilename = `${Date.now()}_${sanitized}`;
+      } else {
+        // Format: SxxExx.srt
+        newFilename = `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}.srt`;
+      }
+
       const targetPath = path.join(targetDir, newFilename);
 
       // Write file
