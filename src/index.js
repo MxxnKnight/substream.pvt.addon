@@ -10,31 +10,34 @@ const adminRoutes = require('./routes/admin');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Enable CORS for all routes
+// 1. Middleware
 app.use(cors());
-
-// Parse JSON bodies
 app.use(express.json());
 
-// Serve uploaded files statically
+// 2. Addon Routes (Public for Stremio)
+// Mount at root BEFORE static files to ensure API precedence
+app.use('/', addonRoutes);
+
+// 3. Admin Routes (Upload, Login)
+app.use('/api/admin', adminRoutes);
+
+// 4. Static Uploads
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Serve Frontend Dashboard
-// The frontend build output is in public/admin
+// 5. Static Frontend
+// Serve the built frontend assets
 const frontendPath = path.join(__dirname, '../public/admin');
 app.use(express.static(frontendPath));
 
-// Addon Routes (Public for Stremio)
-app.use('/', addonRoutes);
-
-// Admin Routes (Upload, Login)
-app.use('/api/admin', adminRoutes);
-
-// 404 Handler for undefined routes
-// Since the frontend is not using client-side routing (History API), we don't need a catch-all to serve index.html.
-// This ensures that unknown API calls (e.g. from Stremio) return 404 JSON instead of HTML.
-app.use((req, res) => {
-  res.status(404).json({ error: 'Not Found' });
+// 6. Catch-all for Frontend Routing
+// This must be last. Serves index.html for any unknown routes (SPA support)
+app.get('*', (req, res) => {
+  const indexHtml = path.join(frontendPath, 'index.html');
+  if (require('fs').existsSync(indexHtml)) {
+      res.sendFile(indexHtml);
+  } else {
+      res.status(404).send('Frontend not built or found');
+  }
 });
 
 // Error handling middleware
