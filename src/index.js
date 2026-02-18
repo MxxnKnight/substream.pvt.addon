@@ -30,25 +30,11 @@ app.use('/', addonRoutes);
 // Admin Routes (Upload, Login)
 app.use('/api/admin', adminRoutes);
 
-// Catch-all for frontend routing
-app.get('*', (req, res) => {
-  // If it's an API request, return 404
-  if (req.path.startsWith('/api/') || req.path.startsWith('/subtitles/')) {
-    return res.status(404).json({ error: 'Not Found' });
-  }
-
-  // Otherwise serve index.html
-  const indexHtml = path.join(frontendPath, 'index.html');
-  if (require('fs').existsSync(indexHtml)) {
-      res.sendFile(indexHtml);
-  } else {
-      res.send(`
-        <h1>SubStream Private Addon</h1>
-        <p>Addon is running.</p>
-        <p>Manifest: <a href="/manifest.json">/manifest.json</a></p>
-        <p>Dashboard not built. Run 'npm run build:frontend' in the root directory (via script) or 'cd frontend && npm run build'.</p>
-      `);
-  }
+// 404 Handler for undefined routes
+// Since the frontend is not using client-side routing (History API), we don't need a catch-all to serve index.html.
+// This ensures that unknown API calls (e.g. from Stremio) return 404 JSON instead of HTML.
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not Found' });
 });
 
 // Error handling middleware
