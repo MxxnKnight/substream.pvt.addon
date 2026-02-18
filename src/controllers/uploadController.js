@@ -67,6 +67,7 @@ const uploadSubtitle = async (req, res) => {
       }
 
       const targetPath = path.join(targetDir, newFilename);
+      console.log(`Saving subtitle to: ${targetPath}`);
 
       // Write file
       if (buffer) {
