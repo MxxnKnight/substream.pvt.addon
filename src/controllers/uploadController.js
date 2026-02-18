@@ -8,6 +8,10 @@ require('dotenv').config();
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
+// Define Uploads Directory Absolute Path
+// src/controllers/uploadController.js -> src/controllers/ -> src/ -> root -> uploads
+const UPLOADS_DIR = path.resolve(__dirname, '../../uploads');
+
 const uploadSubtitle = async (req, res) => {
   try {
     const { imdb_id, type, language } = req.body;
@@ -18,7 +22,6 @@ const uploadSubtitle = async (req, res) => {
     }
 
     if (!imdb_id || !type || !language) {
-      // Cleanup file if metadata missing
       if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
       return res.status(400).json({ error: 'Missing metadata (imdb_id, type, language)' });
     }
@@ -39,14 +42,17 @@ const uploadSubtitle = async (req, res) => {
           episode = parsed.episode;
         } else {
           console.warn(`Could not parse season/episode from: ${originalName} (type: ${type})`);
-          // For series, if we can't parse, we skip.
           return null;
         }
       }
-      // For movies, season/episode remain null.
 
-      // Ensure directory exists: uploads/{imdb_id}/
-      const targetDir = path.join('uploads', imdb_id);
+      // Ensure base uploads directory exists
+      if (!fs.existsSync(UPLOADS_DIR)) {
+        fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+      }
+
+      // Ensure target directory exists: uploads/{imdb_id}/
+      const targetDir = path.join(UPLOADS_DIR, imdb_id);
       if (!fs.existsSync(targetDir)) {
         fs.mkdirSync(targetDir, { recursive: true });
       }
@@ -54,12 +60,9 @@ const uploadSubtitle = async (req, res) => {
       // Generate target filename
       let newFilename;
       if (type === 'movie') {
-        // use timestamp to avoid collisions + original name sanitized
-        // removing problematic chars
         const sanitized = originalName.replace(/[^a-z0-9.]/gi, '_');
         newFilename = `${Date.now()}_${sanitized}`;
       } else {
-        // Format: SxxExx.srt
         newFilename = `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}.srt`;
       }
 
@@ -100,8 +103,6 @@ const uploadSubtitle = async (req, res) => {
         if (entry.isDirectory || path.extname(entry.name).toLowerCase() !== '.srt') {
           continue;
         }
-
-        // entry.getData() returns buffer
         const result = await processSubtitle(entry.name, null, entry.getData());
         if (result) results.push(result);
       }
@@ -119,7 +120,6 @@ const uploadSubtitle = async (req, res) => {
 
   } catch (err) {
     console.error(err);
-    // Cleanup if file exists
     if (req.file && fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
     }

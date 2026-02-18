@@ -15,14 +15,19 @@ app.use(cors());
 app.use(express.json());
 
 // 2. Addon Routes (Public for Stremio)
-// Mount at root BEFORE static files to ensure API precedence
 app.use('/', addonRoutes);
 
 // 3. Admin Routes (Upload, Login)
 app.use('/api/admin', adminRoutes);
 
 // 4. Static Uploads
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Mount uploads folder.
+// Ensure uploads folder exists (optional safe check)
+const uploadsPath = path.join(__dirname, '../uploads');
+if (!require('fs').existsSync(uploadsPath)) {
+    require('fs').mkdirSync(uploadsPath);
+}
+app.use('/uploads', express.static(uploadsPath));
 
 // 5. Static Frontend
 // Serve the built frontend assets
@@ -36,6 +41,7 @@ app.get('*', (req, res) => {
   if (require('fs').existsSync(indexHtml)) {
       res.sendFile(indexHtml);
   } else {
+      // If frontend is not built, return 404 to avoid confusion
       res.status(404).send('Frontend not built or found');
   }
 });
