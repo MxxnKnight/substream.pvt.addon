@@ -17,7 +17,9 @@ import {
   Edit2,
   Check,
   Loader,
-  FolderInput
+  FolderInput,
+  Link,
+  RefreshCw
 } from 'lucide-react';
 
 export default function App() {
@@ -51,6 +53,9 @@ export default function App() {
   const isExtracting = extractingCount > 0;
   const [extractionProgress, setExtractionProgress] = useState(0);
 
+  // Refresh state
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   // Refs for file inputs
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
@@ -82,13 +87,11 @@ export default function App() {
   };
 
   const fetchSubtitles = async () => {
+    setIsRefreshing(true);
     try {
       const res = await apiFetch('/api/admin/subtitles');
       if (res.ok) {
         const data = await res.json();
-        // Adapt backend data to frontend format
-        // Backend: { id, imdb_id, type, season, episode, language, file_path, created_at }
-        // Frontend: { id, imdbId, fileName, date, size, type, season, episode }
         const formatted = data.map(sub => ({
           id: sub.id,
           imdbId: sub.imdb_id,
@@ -104,6 +107,8 @@ export default function App() {
       }
     } catch (err) {
       console.error("Failed to fetch subtitles", err);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -115,16 +120,15 @@ export default function App() {
     return match ? match[0] : input;
   };
 
-  const parseSeasonEpisode = (filename) => {
-    const regex = /(?:s|season|[.\-_])\s?(\d{1,2})(?:e|x|episode|[.\-_])\s?(\d{1,2})/i;
-    const match = filename.match(regex);
-    if (match) {
-      return { season: parseInt(match[1], 10).toString(), episode: parseInt(match[2], 10).toString() };
-    }
-    return null;
+  const copyManifestUrl = () => {
+    const url = window.location.origin + '/manifest.json';
+    navigator.clipboard.writeText(url).then(() => {
+      alert('Manifest URL copied to clipboard: ' + url);
+    }).catch(err => {
+      console.error('Failed to copy: ', err);
+    });
   };
 
-  // --- Helper to Load JSZip from CDN ---
   const loadJSZip = () => {
     return new Promise((resolve, reject) => {
       if (window.JSZip) return resolve(window.JSZip);
@@ -300,8 +304,6 @@ export default function App() {
 
   const saveFileName = (index) => {
     const newFiles = [...stagedFiles];
-    // Rename the underlying file object if possible (tricky with File API, usually we just send the new name as metadata)
-    // Or we create a new File object with the new name.
     if (newFiles[index].tempName !== newFiles[index].name) {
        const oldFile = newFiles[index].file;
        const newFile = new File([oldFile], newFiles[index].tempName, { type: oldFile.type });
@@ -351,28 +353,15 @@ export default function App() {
     setUploadError('');
     setUploadSuccess(false);
 
-    // Upload files sequentially or in parallel?
-    // Sequential is safer for rate limits/simplicity
-
     let successCount = 0;
     let failCount = 0;
 
     for (const staged of stagedFiles) {
         const formData = new FormData();
-        // Use the staged.file which might be renamed
         formData.append('file', staged.file);
         formData.append('imdb_id', uploadForm.imdbId);
         formData.append('type', uploadForm.type);
-        formData.append('language', 'eng'); // Default to eng for now, maybe add selector later
-
-        // If series, season/episode logic is handled by backend filename parser usually,
-        // BUT if user manually inputs season/episode in form, we should send it?
-        // The backend `uploadSubtitle` uses filename parser.
-        // It doesn't seemingly take manual season/episode overrides yet in `uploadController.js` based on my memory.
-        // Wait, `uploadController.js` extracts from filename.
-        // Let's rely on filename. If user renamed file in UI, we updated the File object name, so backend should see it.
-        // Wait, File object name property is read-only in some browsers?
-        // Actually `new File([blob], name)` works.
+        formData.append('language', 'eng');
 
         try {
             const res = await apiFetch('/api/admin/upload', {
@@ -479,11 +468,21 @@ export default function App() {
 
       {/* Sidebar */}
       <aside className="w-full md:w-64 bg-slate-800 border-r border-slate-700 flex-shrink-0">
-        <div className="p-6 flex items-center gap-3 border-b border-slate-700">
-          <div className="bg-indigo-500 p-2 rounded-lg">
-            <Film className="w-5 h-5 text-white" />
+        <div className="p-6 flex items-center justify-between gap-3 border-b border-slate-700">
+          <div className="flex items-center gap-3">
+             <div className="bg-indigo-500 p-2 rounded-lg">
+                <Film className="w-5 h-5 text-white" />
+             </div>
+             <h1 className="font-bold text-lg">SubStream</h1>
           </div>
-          <h1 className="font-bold text-lg">SubStream</h1>
+          {/* Copy Manifest Button */}
+          <button
+             onClick={copyManifestUrl}
+             title="Copy Manifest URL"
+             className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+          >
+             <Link className="w-4 h-4" />
+          </button>
         </div>
 
         <nav className="p-4 space-y-2">
@@ -518,9 +517,22 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 p-6 md:p-8 overflow-y-auto">
         <header className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 gap-4">
-          <h2 className="text-2xl font-bold text-white whitespace-nowrap">
-            {currentView === 'upload' ? 'Upload New Subtitle' : 'Subtitle Library'}
-          </h2>
+          <div className="flex items-center gap-4">
+            <h2 className="text-2xl font-bold text-white whitespace-nowrap">
+                {currentView === 'upload' ? 'Upload New Subtitle' : 'Subtitle Library'}
+            </h2>
+            {/* Refresh Button */}
+            {currentView === 'list' && (
+                <button
+                  onClick={fetchSubtitles}
+                  disabled={isRefreshing}
+                  className="p-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-all disabled:opacity-50"
+                  title="Refresh Library"
+                >
+                  <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                </button>
+            )}
+          </div>
 
           {/* Search Bar */}
           {currentView === 'list' && (
@@ -588,38 +600,6 @@ export default function App() {
                     </p>
                   )}
                 </div>
-
-                {/* Conditional Season/Episode Inputs */}
-                {/* Note: In this implementation, manual season/episode overrides are visual only for now unless we update backend to accept them.
-                    However, the backend parses filename. So renaming the file (which works) is the way to go.
-                */}
-                {/*
-                {uploadForm.type !== 'movie' && (
-                  <div className="flex gap-4">
-                    <div className="flex-1">
-                      <label className="block text-sm font-medium text-slate-400 mb-2">Season</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={uploadForm.season}
-                        onChange={(e) => setUploadForm({ ...uploadForm, season: e.target.value })}
-                        placeholder="1"
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <label className="block text-sm font-medium text-slate-400 mb-2">Episode</label>
-                      <input
-                        type="text"
-                        value={uploadForm.episode}
-                        onChange={(e) => setUploadForm({ ...uploadForm, episode: e.target.value })}
-                        placeholder="1"
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      />
-                    </div>
-                  </div>
-                )}
-                */}
 
                 {/* File Upload Area */}
                 <div>
