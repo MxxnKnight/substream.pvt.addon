@@ -1,11 +1,12 @@
 # SubStream Private Addon
 
-A private Stremio addon for providing subtitles from a self-hosted backend.
+A private Stremio addon for providing subtitles from a self-hosted backend, including a React-based admin dashboard.
 
 ## Features
 
 - **Backend**: Node.js + Express
 - **Database**: Supabase (PostgreSQL)
+- **Frontend**: React + Tailwind CSS (bundled with Vite)
 - **Uploads**: Support for `.srt` and `.zip` files with automatic season/episode detection.
 - **Stremio Addon**: Implements Stremio addon protocol to serve subtitles.
 - **Security**: JWT authentication for admin routes.
@@ -30,7 +31,7 @@ create extension if not exists "uuid-ossp";
 create table subtitles (
   id uuid primary key default uuid_generate_v4(),
   imdb_id text not null,
-  type text not null check (type in ('movie', 'series')),
+  type text not null check (type in ('movie', 'series', 'anime')),
   season integer,
   episode integer,
   language text not null,
@@ -56,7 +57,7 @@ cp .env.example .env
 - `ADMIN_USERNAME`: Username for admin login.
 - `ADMIN_PASSWORD`: Password for admin login.
 - `JWT_SECRET`: Secret key for JWT signing.
-- `BASE_URL`: Public URL where the backend is hosted (e.g., `https://your-app.onrender.com`).
+- `BASE_URL`: Public URL where the backend is hosted.
 
 ### 3. Installation
 
@@ -64,7 +65,17 @@ cp .env.example .env
 npm install
 ```
 
-### 4. Running
+### 4. Build Frontend
+
+Before running the server, you need to build the frontend dashboard:
+
+```bash
+npm run build:frontend
+```
+
+This will compile the React app into `public/admin`.
+
+### 5. Running
 
 Development:
 ```bash
@@ -76,6 +87,12 @@ Production:
 npm start
 ```
 
+## Dashboard
+
+Access the admin dashboard at the root URL (e.g., `http://localhost:3000/`).
+- Log in with your `ADMIN_USERNAME` and `ADMIN_PASSWORD`.
+- Upload subtitles or manage existing ones.
+
 ## API Endpoints
 
 ### Public (Stremio)
@@ -84,14 +101,9 @@ npm start
 
 ### Admin (Private)
 - `POST /api/admin/login`: Login to get JWT token.
-  - Body: `{ "username": "admin", "password": "..." }`
 - `POST /api/admin/upload`: Upload subtitles.
-  - Headers: `Authorization: Bearer <token>`
-  - Body (FormData):
-    - `file`: `.srt` or `.zip` file.
-    - `imdb_id`: IMDB ID (e.g., `tt1234567`).
-    - `type`: `movie` or `series`.
-    - `language`: Language code (e.g., `eng`).
+- `GET /api/admin/subtitles`: List uploaded subtitles.
+- `DELETE /api/admin/subtitles/:id`: Delete a subtitle.
 
 ## Deployment
 
@@ -102,4 +114,5 @@ docker run -p 3000:3000 --env-file .env substream-addon
 ```
 
 ### Render / Railway
-Use the provided `render.yaml` or configure manually. Ensure all environment variables are set.
+1. Build command: `npm install && npm run build:frontend`
+2. Start command: `npm start`

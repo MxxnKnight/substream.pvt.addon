@@ -3,7 +3,7 @@ services:
     name: substream-private-addon
     env: node
     plan: free
-    buildCommand: npm install
+    buildCommand: npm install && npm run build:frontend
     startCommand: node src/index.js
     envVars:
       - key: PORT

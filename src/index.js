@@ -17,8 +17,12 @@ app.use(cors());
 app.use(express.json());
 
 // Serve uploaded files statically
-// This allows access to files via http://domain/uploads/...
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// Serve Frontend Dashboard
+// The frontend build output is in public/admin
+const frontendPath = path.join(__dirname, '../public/admin');
+app.use(express.static(frontendPath));
 
 // Addon Routes (Public for Stremio)
 app.use('/', addonRoutes);
@@ -26,13 +30,25 @@ app.use('/', addonRoutes);
 // Admin Routes (Upload, Login)
 app.use('/api/admin', adminRoutes);
 
-// Root endpoint
-app.get('/', (req, res) => {
-  res.send(`
-    <h1>SubStream Private Addon</h1>
-    <p>Addon is running.</p>
-    <p>Manifest: <a href="/manifest.json">/manifest.json</a></p>
-  `);
+// Catch-all for frontend routing
+app.get('*', (req, res) => {
+  // If it's an API request, return 404
+  if (req.path.startsWith('/api/') || req.path.startsWith('/subtitles/')) {
+    return res.status(404).json({ error: 'Not Found' });
+  }
+
+  // Otherwise serve index.html
+  const indexHtml = path.join(frontendPath, 'index.html');
+  if (require('fs').existsSync(indexHtml)) {
+      res.sendFile(indexHtml);
+  } else {
+      res.send(`
+        <h1>SubStream Private Addon</h1>
+        <p>Addon is running.</p>
+        <p>Manifest: <a href="/manifest.json">/manifest.json</a></p>
+        <p>Dashboard not built. Run 'npm run build:frontend' in the root directory (via script) or 'cd frontend && npm run build'.</p>
+      `);
+  }
 });
 
 // Error handling middleware
