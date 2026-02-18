@@ -28,29 +28,19 @@ const getSubtitles = async (req, res) => {
   const cacheKey = `${type}:${idClean}`;
   const cached = cache[cacheKey];
   if (cached && cached.timestamp > Date.now() - CACHE_DURATION) {
-    // console.log(`Serving from cache: ${cacheKey}`);
     return res.json(cached.data);
   }
 
   try {
     // Query database
-    // Note: For series, we expect season and episode to be present.
-    // For movies, season and episode will be null.
-    // Our findSubtitles handles nulls by ignoring the filter, which is what we want for movies?
-    // Wait, for movies we want to query where season IS NULL and episode IS NULL?
-    // Or just filter by imdb_id?
-    // Usually movies don't have season/episode in DB unless we stored them as null.
-    // Let's assume movies are stored with null/undefined season/episode.
-    // findSubtitles implementation: if (season !== null) query.eq('season', season).
-    // If season is null, it doesn't filter by season.
-    // This returns ALL subtitles for that imdb_id.
-    // For movies, this is fine (as long as we don't have series subtitles mixed with movie imdb_id, which shouldn't happen).
+    // Note: We ignore 'type' parameter from request to find subtitles even if type mismatch (e.g. anime vs series)
+    // We rely on IMDB ID being unique enough.
 
     const subtitles = await findSubtitles({
       imdb_id,
       season,
-      episode,
-      type
+      episode
+      // type: type // Removed to allow fuzzy matching
     });
 
     const response = {
@@ -70,7 +60,6 @@ const getSubtitles = async (req, res) => {
     res.json(response);
   } catch (err) {
     console.error(`Error fetching subtitles for ${idClean}:`, err);
-    // Return empty array instead of 500 to not break Stremio UI
     res.json({ subtitles: [] });
   }
 };

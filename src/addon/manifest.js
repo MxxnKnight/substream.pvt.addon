@@ -5,7 +5,7 @@ const manifest = {
   name: "SubStream Private",
   description: "Private subtitle addon",
   resources: ["subtitles"],
-  types: ["movie", "series"],
+  types: ["movie", "series", "anime"],
   idPrefixes: ["tt"],
   catalogs: []
 };

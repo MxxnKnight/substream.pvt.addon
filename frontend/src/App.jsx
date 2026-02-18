@@ -19,7 +19,8 @@ import {
   Loader,
   FolderInput,
   Link,
-  RefreshCw
+  RefreshCw,
+  Globe
 } from 'lucide-react';
 
 export default function App() {
@@ -39,7 +40,8 @@ export default function App() {
     imdbId: '',
     type: 'series',
     season: '',
-    episode: ''
+    episode: '',
+    language: 'eng' // Default to English (ISO 639-2)
   });
 
   // Staging state for files
@@ -64,7 +66,7 @@ export default function App() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      setUser({ username: 'Admin' }); // We could decode token but keeping it simple
+      setUser({ username: 'Admin' });
       fetchSubtitles();
     }
   }, []);
@@ -95,9 +97,9 @@ export default function App() {
         const formatted = data.map(sub => ({
           id: sub.id,
           imdbId: sub.imdb_id,
-          fileName: sub.file_path.split('/').pop(), // Extract filename from URL
+          fileName: sub.file_path.split('/').pop(),
           date: new Date(sub.created_at).toISOString().split('T')[0],
-          size: 'Unknown', // Backend doesn't store size currently
+          size: 'Unknown',
           type: sub.type,
           season: sub.season,
           episode: sub.episode,
@@ -141,7 +143,6 @@ export default function App() {
     });
   };
 
-  // --- Real Zip Extraction Logic ---
   const handleZipFile = async (file) => {
     setExtractingCount(prev => prev + 1);
     setExtractionProgress(10);
@@ -169,12 +170,11 @@ export default function App() {
 
         if (/\.(srt|vtt|sub|ass)$/i.test(relativePath)) {
           const data = await zipEntry.async('blob');
-          // Create a File object from the blob
           const cleanName = relativePath.split('/').pop();
           const fileObj = new File([data], cleanName, { type: 'text/plain' });
 
           extractedFiles.push({
-            file: fileObj, // Keep the actual File object for upload
+            file: fileObj,
             name: cleanName,
             size: data.size,
             isFromZip: true,
@@ -240,13 +240,11 @@ export default function App() {
     setUploadForm({ ...uploadForm, imdbId: extracted });
   };
 
-  // Centralized File Processor
   const processFiles = useCallback((files) => {
     if (files.length === 0) return;
     setUploadSuccess(false);
 
     files.forEach(file => {
-      // Check for zip by extension OR MIME type to be robust
       const isZip = file.name.toLowerCase().endsWith('.zip') ||
                    file.type === 'application/zip' ||
                    file.type === 'application/x-zip-compressed';
@@ -274,10 +272,9 @@ export default function App() {
   const handleFileSelection = (e) => {
     const files = Array.from(e.target.files || []);
     processFiles(files);
-    e.target.value = ''; // Reset input
+    e.target.value = '';
   };
 
-  // Drag and Drop Handlers
   const handleDragOver = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -286,13 +283,12 @@ export default function App() {
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isExtracting) return; // Prevent drops while processing
+    if (isExtracting) return;
 
     const files = Array.from(e.dataTransfer.files || []);
     processFiles(files);
   };
 
-  // Editing Filename Handlers
   const toggleEditFile = (index) => {
     const newFiles = [...stagedFiles];
     newFiles[index].isEditing = !newFiles[index].isEditing;
@@ -361,7 +357,7 @@ export default function App() {
         formData.append('file', staged.file);
         formData.append('imdb_id', uploadForm.imdbId);
         formData.append('type', uploadForm.type);
-        formData.append('language', 'eng');
+        formData.append('language', uploadForm.language); // Use selected language
 
         try {
             const res = await apiFetch('/api/admin/upload', {
@@ -385,8 +381,9 @@ export default function App() {
             imdbId: '',
             season: '',
             episode: ''
+            // Keep previous language setting or reset? Usually keep.
         }));
-        fetchSubtitles(); // Refresh library
+        fetchSubtitles();
     }
 
     if (failCount > 0) {
@@ -394,20 +391,20 @@ export default function App() {
     }
   };
 
-  // --- Search Logic ---
   const filteredSubtitles = subtitles.filter(sub => {
     const query = searchQuery.toLowerCase();
     return (
       (sub.fileName && sub.fileName.toLowerCase().includes(query)) ||
       (sub.imdbId && sub.imdbId.toLowerCase().includes(query)) ||
-      (sub.type && sub.type.toLowerCase().includes(query))
+      (sub.type && sub.type.toLowerCase().includes(query)) ||
+      (sub.language && sub.language.toLowerCase().includes(query))
     );
   });
 
-  // --- Render Components ---
+  // --- Render ---
 
-  // 1. Login Page
   if (!user) {
+    // Login Screen (Unchanged structure)
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-sans text-slate-100">
         <div className="max-w-md w-full bg-slate-800 rounded-2xl shadow-2xl overflow-hidden border border-slate-700">
@@ -462,7 +459,6 @@ export default function App() {
     );
   }
 
-  // 2. Main App Layout
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans flex flex-col md:flex-row">
 
@@ -475,7 +471,6 @@ export default function App() {
              </div>
              <h1 className="font-bold text-lg">SubStream</h1>
           </div>
-          {/* Copy Manifest Button */}
           <button
              onClick={copyManifestUrl}
              title="Copy Manifest URL"
@@ -521,7 +516,6 @@ export default function App() {
             <h2 className="text-2xl font-bold text-white whitespace-nowrap">
                 {currentView === 'upload' ? 'Upload New Subtitle' : 'Subtitle Library'}
             </h2>
-            {/* Refresh Button */}
             {currentView === 'list' && (
                 <button
                   onClick={fetchSubtitles}
@@ -545,7 +539,7 @@ export default function App() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="block w-full pl-10 pr-3 py-2.5 border border-slate-700 rounded-xl leading-5 bg-slate-800 text-slate-300 placeholder-slate-500 focus:outline-none focus:bg-slate-900 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
-                placeholder="Search by name, ID, or type..."
+                placeholder="Search by name, ID, language..."
               />
             </div>
           )}
@@ -578,6 +572,33 @@ export default function App() {
                         {type === 'series' && <Tv className="w-4 h-4" />}
                         {type === 'anime' && <Clapperboard className="w-4 h-4" />}
                         <span className="capitalize font-medium">{type}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Language Selector */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-3">Subtitle Language</label>
+                  <div className="flex gap-4">
+                    {[
+                      { code: 'eng', label: 'English' },
+                      { code: 'mal', label: 'Malayalam' }
+                    ].map((lang) => (
+                      <label key={lang.code} className={`flex-1 cursor-pointer border rounded-xl p-3 flex items-center justify-center gap-2 transition-all ${
+                        uploadForm.language === lang.code
+                          ? 'bg-indigo-600 border-indigo-500 text-white'
+                          : 'bg-slate-900 border-slate-700 text-slate-400 hover:border-indigo-400'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="language"
+                          className="hidden"
+                          checked={uploadForm.language === lang.code}
+                          onChange={() => setUploadForm({ ...uploadForm, language: lang.code })}
+                        />
+                        <Globe className="w-4 h-4" />
+                        <span className="capitalize font-medium">{lang.label}</span>
                       </label>
                     ))}
                   </div>
@@ -816,6 +837,7 @@ export default function App() {
                   <tr className="bg-slate-900/50 border-b border-slate-700">
                     <th className="p-4 text-xs font-semibold text-slate-400 uppercase">IMDB ID</th>
                     <th className="p-4 text-xs font-semibold text-slate-400 uppercase">Type</th>
+                    <th className="p-4 text-xs font-semibold text-slate-400 uppercase">Lang</th>
                     <th className="p-4 text-xs font-semibold text-slate-400 uppercase">Details</th>
                     <th className="p-4 text-xs font-semibold text-slate-400 uppercase">File Name</th>
                     <th className="p-4 text-xs font-semibold text-slate-400 uppercase">Date</th>
@@ -839,6 +861,7 @@ export default function App() {
                             <span className="capitalize">{sub.type}</span>
                           </span>
                         </td>
+                        <td className="p-4 text-slate-300 text-sm uppercase">{sub.language || 'ENG'}</td>
                         <td className="p-4 text-slate-300 text-sm">
                           {sub.type !== 'movie' ? (
                             <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold tracking-wide bg-slate-900 border border-slate-600 text-indigo-300 shadow-sm">
@@ -865,7 +888,7 @@ export default function App() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="7" className="p-12 text-center text-slate-500">
+                      <td colSpan="8" className="p-12 text-center text-slate-500">
                         {searchQuery ? 'No matching subtitles found.' : 'No subtitles found.'}
                       </td>
                     </tr>
