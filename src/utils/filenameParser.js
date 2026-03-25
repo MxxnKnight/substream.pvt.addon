@@ -1,6 +1,6 @@
 
 const parseFilename = (filename) => {
-  const name = filename.replace(/\.(srt|zip)$/i, '');
+  const name = filename.replace(/\.(srt|vtt|zip)$/i, '');
 
   // Pattern 1: S01E01, s01e01
   const sxxexx = /[Ss](\d{1,2})[Ee](\d{1,2})/;

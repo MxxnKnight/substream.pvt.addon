@@ -42,11 +42,12 @@ const uploadSubtitle = async (req, res) => {
 
       // Generate target filename
       let newFilename;
+      const fileExt = path.extname(originalName).toLowerCase();
       if (type === 'movie') {
         const sanitized = originalName.replace(/[^a-z0-9.]/gi, '_');
         newFilename = `${Date.now()}_${sanitized}`;
       } else {
-        newFilename = `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}.srt`;
+        newFilename = `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}${fileExt}`;
       }
 
       const storagePath = `${imdb_id}/${newFilename}`;
@@ -100,13 +101,14 @@ const uploadSubtitle = async (req, res) => {
       const zipEntries = zip.getEntries();
 
       for (const entry of zipEntries) {
-        if (entry.isDirectory || path.extname(entry.name).toLowerCase() !== '.srt') {
+        const entryExt = path.extname(entry.name).toLowerCase();
+        if (entry.isDirectory || (entryExt !== '.srt' && entryExt !== '.vtt')) {
           continue;
         }
         const result = await processSubtitle(entry.name, null, entry.getData());
         if (result) results.push(result);
       }
-    } else if (ext === '.srt') {
+    } else if (ext === '.srt' || ext === '.vtt') {
       const result = await processSubtitle(file.originalname, file.path);
       if (result) results.push(result);
     }

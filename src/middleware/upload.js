@@ -22,10 +22,10 @@ const upload = multer({
   storage: storage,
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
-    if (ext === '.zip' || ext === '.srt') {
+    if (ext === '.zip' || ext === '.srt' || ext === '.vtt') {
       cb(null, true);
     } else {
-      cb(new Error('Only .srt and .zip files are allowed!'), false);
+      cb(new Error('Only .srt, .vtt, and .zip files are allowed!'), false);
     }
   }
 });
