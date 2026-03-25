@@ -44,11 +44,35 @@ const getSubtitles = async (req, res) => {
     });
 
     const response = {
-      subtitles: subtitles.map(sub => ({
-        id: sub.id,
-        lang: sub.language,
-        url: sub.file_path
-      }))
+      subtitles: subtitles.map(sub => {
+        // Map common 2-letter codes or mistyped codes to ISO 639-2
+        const langMap = {
+          'ml': 'mal',
+          'en': 'eng',
+          'english': 'eng',
+          'malayalam': 'mal'
+        };
+        const langCode = langMap[sub.language?.toLowerCase()] || sub.language || 'eng';
+
+        // Extract filename for the title
+        let fileName = 'Subtitle';
+        if (sub.file_path) {
+          const parts = sub.file_path.split('/');
+          fileName = parts[parts.length - 1];
+        }
+
+        // Build a readable title, e.g. "Malayalam - filename.srt"
+        const langName = langCode === 'mal' ? 'Malayalam' : (langCode === 'eng' ? 'English' : langCode);
+        const title = `${langName} - ${fileName}`;
+
+        return {
+          id: sub.id,
+          lang: langCode,
+          title: title,
+          type: 'external',
+          url: sub.file_path
+        };
+      })
     };
 
     // Update cache
