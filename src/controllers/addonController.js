@@ -75,7 +75,6 @@ const getSubtitles = async (req, res) => {
           id: sub.id,
           lang: langCode,
           title: title,
-          type: 'external',
           url: sub.file_path
         };
       })
