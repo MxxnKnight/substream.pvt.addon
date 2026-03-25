@@ -20,22 +20,6 @@ app.use('/', addonRoutes);
 // 3. Admin Routes (Upload, Login)
 app.use('/api/admin', adminRoutes);
 
-// 4. Static Uploads
-// Mount uploads folder.
-// Ensure uploads folder exists (optional safe check)
-const uploadsPath = path.join(__dirname, '../uploads');
-if (!require('fs').existsSync(uploadsPath)) {
-    console.log(`Creating uploads directory at: ${uploadsPath}`);
-    require('fs').mkdirSync(uploadsPath);
-}
-console.log(`Serving uploads from: ${uploadsPath}`);
-app.use('/uploads', express.static(uploadsPath));
-
-// Explicit 404 for missing uploads to prevent falling through to Dashboard
-app.use('/uploads', (req, res) => {
-    res.status(404).send('Subtitle file not found');
-});
-
 // 5. Static Frontend
 // Serve the built frontend assets
 const frontendPath = path.join(__dirname, '../public/admin');

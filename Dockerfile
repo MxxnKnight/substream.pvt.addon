@@ -18,4 +18,4 @@ RUN npm run build:frontend
 
 EXPOSE 3000
 
-CMD ["node", "src/index.js"]
+CMD ["node", "src/server.js"]

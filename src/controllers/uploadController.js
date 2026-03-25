@@ -3,14 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const AdmZip = require('adm-zip');
 const { parseFilename } = require('../utils/filenameParser');
-const { insertSubtitle } = require('../services/db');
+const { insertSubtitle, supabase } = require('../services/db');
 require('dotenv').config();
-
-const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
-
-// Define Uploads Directory Absolute Path
-// src/controllers/uploadController.js -> src/controllers/ -> src/ -> root -> uploads
-const UPLOADS_DIR = path.resolve(__dirname, '../../uploads');
 
 const uploadSubtitle = async (req, res) => {
   try {
@@ -46,17 +40,6 @@ const uploadSubtitle = async (req, res) => {
         }
       }
 
-      // Ensure base uploads directory exists
-      if (!fs.existsSync(UPLOADS_DIR)) {
-        fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-      }
-
-      // Ensure target directory exists: uploads/{imdb_id}/
-      const targetDir = path.join(UPLOADS_DIR, imdb_id);
-      if (!fs.existsSync(targetDir)) {
-        fs.mkdirSync(targetDir, { recursive: true });
-      }
-
       // Generate target filename
       let newFilename;
       if (type === 'movie') {
@@ -66,18 +49,34 @@ const uploadSubtitle = async (req, res) => {
         newFilename = `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}.srt`;
       }
 
-      const targetPath = path.join(targetDir, newFilename);
-      console.log(`Saving subtitle to: ${targetPath}`);
+      const storagePath = `${imdb_id}/${newFilename}`;
+      console.log(`Saving subtitle to Supabase Storage: ${storagePath}`);
 
-      // Write file
-      if (buffer) {
-        fs.writeFileSync(targetPath, buffer);
-      } else {
-        fs.copyFileSync(sourcePath, targetPath);
+      let fileBuffer = buffer;
+      if (!fileBuffer) {
+        fileBuffer = fs.readFileSync(sourcePath);
+      }
+
+      const { data, error } = await supabase
+        .storage
+        .from('subtitles')
+        .upload(storagePath, fileBuffer, {
+          contentType: 'text/plain',
+          upsert: true
+        });
+
+      if (error) {
+        console.error(`Error uploading to Supabase Storage ${storagePath}:`, error);
+        throw error;
       }
 
       // Construct public URL
-      const publicUrl = `${BASE_URL}/uploads/${imdb_id}/${newFilename}`;
+      const { data: publicUrlData } = supabase
+        .storage
+        .from('subtitles')
+        .getPublicUrl(storagePath);
+
+      const publicUrl = publicUrlData.publicUrl;
 
       // Insert into DB
       try {

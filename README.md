@@ -21,6 +21,12 @@ A private Stremio addon for providing subtitles from a self-hosted backend, incl
 
 ### 1. Database Setup (Supabase)
 
+#### Storage Setup
+1. Go to **Storage** in your Supabase dashboard.
+2. Create a new bucket named `subtitles`.
+3. Set the bucket to be **Public**.
+
+#### Database Setup
 Run the following SQL in your Supabase SQL Editor:
 
 ```sql
@@ -112,6 +118,13 @@ Access the admin dashboard at the root URL (e.g., `http://localhost:3000/`).
 docker build -t substream-addon .
 docker run -p 3000:3000 --env-file .env substream-addon
 ```
+
+### Northflank
+1. Connect your repository to Northflank as a new service.
+2. Select **Dockerfile** as the build method (Northflank will automatically detect and build using the provided `Dockerfile`).
+3. Add your environment variables (from `.env.example`) to the service's environment configuration.
+4. Expose port `3000` in the networking tab.
+5. Deploy the service.
 
 ### Render / Railway
 1. Build command: `npm install && npm run build:frontend`

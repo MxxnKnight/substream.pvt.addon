@@ -21,7 +21,7 @@ const deleteSubtitle = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // First get the file path to delete from storage (if we were using storage bucket, but we are using local filesystem)
+    // First get the file path to delete from storage
     const { data: subtitle, error: fetchError } = await supabase
       .from('subtitles')
       .select('*')
@@ -40,8 +40,29 @@ const deleteSubtitle = async (req, res) => {
 
     if (deleteError) throw deleteError;
 
-    // TODO: Delete file from local filesystem
-    // For now, we just delete from DB.
+    // Delete file from Supabase storage
+    if (subtitle.file_path) {
+      try {
+        const urlObj = new URL(subtitle.file_path);
+        const pathSegments = urlObj.pathname.split('/');
+        // URL path: /storage/v1/object/public/subtitles/tt12345/filename.srt
+        // The bucket name is "subtitles"
+        const storageIndex = pathSegments.indexOf('subtitles');
+        if (storageIndex !== -1 && storageIndex + 1 < pathSegments.length) {
+           const storagePath = pathSegments.slice(storageIndex + 1).join('/');
+           const { error: storageError } = await supabase
+             .storage
+             .from('subtitles')
+             .remove([storagePath]);
+
+           if (storageError) {
+             console.error(`Failed to delete file from Supabase Storage: ${storagePath}`, storageError);
+           }
+        }
+      } catch (err) {
+        console.error('Error parsing file URL for deletion:', err);
+      }
+    }
 
     res.json({ message: 'Subtitle deleted' });
 

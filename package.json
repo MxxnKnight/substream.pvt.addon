@@ -2,10 +2,10 @@
   "name": "substream-pvt-addon",
   "version": "1.0.0",
   "description": "a subtitle providing addon for stremio",
-  "main": "src/index.js",
+  "main": "src/server.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "nodemon src/index.js",
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
     "build:frontend": "cd frontend && npm install && npm run build"
   },
   "dependencies": {
