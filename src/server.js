@@ -10,6 +10,10 @@ const adminRoutes = require('./routes/admin');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust the first proxy (required on Render, Railway, Heroku, etc.)
+// Without this, req.protocol returns 'http' even on HTTPS connections.
+app.set('trust proxy', 1);
+
 // ─── VERBOSE REQUEST LOGGER ──────────────────────────────────────────────────
 // Logs EVERY request so we can verify whether Stremio is calling the addon
 app.use((req, res, next) => {
@@ -62,22 +66,25 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
+  const baseUrl = process.env.BASE_URL || `http://localhost:${PORT}`;
   console.log(`\n✅ Server running on port ${PORT} (all interfaces)`);
-  console.log(`\n   ── Stremio Web / Desktop (same PC) ──`);
-  console.log(`   Manifest:  http://127.0.0.1:${PORT}/manifest.json`);
-  console.log(`\n   ── Android / other devices on same WiFi ──`);
-  // Show LAN IP if available
-  try {
-    const os = require('os');
-    const nets = os.networkInterfaces();
-    for (const name of Object.keys(nets)) {
-      for (const net of nets[name]) {
-        if (net.family === 'IPv4' && !net.internal) {
-          console.log(`   Manifest:  http://${net.address}:${PORT}/manifest.json`);
+  console.log(`\n   ── Stremio Manifest URL (install this in Stremio) ──`);
+  console.log(`   ${baseUrl}/manifest.json`);
+  console.log(`\n   ── Admin Dashboard ──`);
+  console.log(`   ${baseUrl}/`);
+  if (!process.env.BASE_URL) {
+    console.log(`\n   ── LAN (same WiFi) ──`);
+    try {
+      const os = require('os');
+      const nets = os.networkInterfaces();
+      for (const name of Object.keys(nets)) {
+        for (const net of nets[name]) {
+          if (net.family === 'IPv4' && !net.internal) {
+            console.log(`   Manifest: http://${net.address}:${PORT}/manifest.json`);
+          }
         }
       }
-    }
-  } catch(_) {}
-  console.log(`\n   ── Dashboard ──`);
-  console.log(`   http://localhost:${PORT}/\n`);
+    } catch(_) {}
+  }
+  console.log('');
 });

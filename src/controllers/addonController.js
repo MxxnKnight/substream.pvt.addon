@@ -45,6 +45,13 @@ const getSubtitles = async (req, res) => {
   const episode = !isNaN(e) ? e : null;
   console.log(`[Stremio Request] Parsed: imdb_id=${imdb_id}, season=${season}, episode=${episode}`);
 
+  // Stremio only sends 'movie' or 'series' — 'anime' is not valid.
+  // Normalize so a DB query for 'series' also matches records stored as 'anime'.
+  const normaliseType = (t) => (t === 'anime' ? 'series' : t);
+  const dbTypes = type === 'series'
+    ? ['series', 'anime']   // series request: match both series + anime rows
+    : [normaliseType(type)];
+
   // Check cache
   const cacheKey = `${type}:${idClean}`;
   const cached = cache[cacheKey];
@@ -54,16 +61,20 @@ const getSubtitles = async (req, res) => {
   }
 
   try {
-    console.log(`[Stremio Request] Querying database...`);
+    console.log(`[Stremio Request] Querying database for types: [${dbTypes.join(', ')}]...`);
 
-    const subtitles = await findSubtitles({
-      imdb_id,
-      season,
-      episode
-    });
+    // Fetch for each matching DB type and merge results
+    const allResults = await Promise.all(
+      dbTypes.map(dbType => findSubtitles({ imdb_id, season, episode, type: dbType }))
+    );
+    const subtitles = allResults.flat();
 
     console.log(`[Stremio Request] DB returned ${subtitles.length} raw records:`);
     subtitles.forEach((s, i) => console.log(`  [${i}]`, JSON.stringify(s)));
+
+    if (subtitles.length === 0) {
+      console.log(`[Stremio Request] No subtitles found for imdb_id=${imdb_id} season=${season} episode=${episode}`);
+    }
 
     const mapped = subtitles
       .filter(sub => !!sub.file_path) // must have a URL

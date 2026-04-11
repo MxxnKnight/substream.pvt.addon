@@ -1,7 +1,7 @@
 
 const express = require('express');
 const router = express.Router();
-const manifest = require('../addon/manifest');
+const { getManifest } = require('../addon/manifest');
 const { getSubtitles } = require('../controllers/addonController');
 
 // CORS middleware for all addon routes
@@ -16,7 +16,12 @@ const addonCors = (req, res, next) => {
 };
 
 router.get('/manifest.json', addonCors, (req, res) => {
-  res.json(manifest);
+  // Derive the base URL: prefer BASE_URL env var (set on Render),
+  // fallback to reconstructing from the incoming request headers.
+  // This ensures transportUrl is always accurate regardless of deployment.
+  const baseUrl = process.env.BASE_URL ||
+    `${req.protocol}://${req.get('host')}`;
+  res.json(getManifest(baseUrl));
 });
 
 // Handle subtitle requests.
