@@ -51,10 +51,13 @@ router.get('/subtitles/download/:encodedUrl.srt', addonCors, async (req, res) =>
 // Stremio sends: /subtitles/{type}/{id}.json
 // For series, id includes colons: tt1234567:1:2
 // Express route `:id` captures everything before `.json` (colons are allowed in params).
-router.get('/subtitles/:type/:id.json', addonCors, (req, res, next) => {
-  // Decode URL-encoded colons (%3A) in case Stremio encodes them
+// Decode URL-encoded colons (%3A) in case Stremio encodes them
+const decodeId = (req, res, next) => {
   req.params.id = decodeURIComponent(req.params.id);
   next();
-}, getSubtitles);
+};
+
+router.get('/subtitles/:type/:id.json', addonCors, decodeId, getSubtitles);
+router.get('/subtitles/:type/:id/:extra.json', addonCors, decodeId, getSubtitles);
 
 module.exports = router;
