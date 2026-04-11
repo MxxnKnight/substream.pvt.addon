@@ -878,58 +878,53 @@ export default function App() {
           </div>
         ) : (
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
             {filteredSubtitles.length > 0 ? (
               filteredSubtitles.map((sub) => (
-                <div key={sub.id} className="bg-slate-900 rounded-[2rem] p-8 border border-slate-800/50 hover:border-indigo-500/30 transition-all hover:shadow-2xl hover:shadow-indigo-500/5 flex flex-col h-full group">
+                <div key={sub.id} className="bg-slate-900 rounded-3xl p-7 border border-slate-800/60 hover:border-indigo-500/40 transition-all flex flex-col h-full shadow-lg">
                   
-                  {/* Top Tags */}
-                  <div className="flex flex-wrap items-center gap-2 mb-6">
-                    <span className="px-4 py-1.5 rounded-full bg-indigo-500/10 text-indigo-400 text-[11px] font-bold border border-indigo-500/10 uppercase tracking-tighter">
-                       {sub.fileName.includes('1080p') ? '1080p' : sub.fileName.includes('720p') ? '720p' : 'HD'}
+                  {/* Header: Badges */}
+                  <div className="flex flex-wrap items-center gap-2 mb-5">
+                    <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
+                      sub.type === 'movie' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                    }`}>
+                      {sub.type}
                     </span>
-                    <span className="px-4 py-1.5 rounded-full bg-slate-800 text-slate-500 text-[11px] font-bold border border-slate-700 uppercase tracking-tighter">
-                       {sub.type === 'movie' ? 'Movie' : `Season ${sub.season}`}
+                    <span className="px-3 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 text-[10px] font-black uppercase tracking-widest border border-emerald-500/20">
+                      {sub.language || 'MAL'}
                     </span>
+                    {sub.type !== 'movie' && (
+                      <span className="px-3 py-1 rounded-lg bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest">
+                        S{sub.season} E{sub.episode}
+                      </span>
+                    )}
                   </div>
 
-                  {/* Size (Simulated if missing) */}
-                  <div className="text-slate-500 text-sm font-bold mb-4">
-                    {sub.size === 'Unknown' ? '1.2 GB' : sub.size}
-                  </div>
-
-                  {/* File Name (Full Wrapper, No Truncation) */}
+                  {/* Body: Filename */}
                   <div className="mb-6 flex-grow">
-                    <h3 className="text-slate-100 font-medium text-lg leading-relaxed break-words">
+                    <p className="text-slate-200 font-medium text-base leading-snug break-all">
                       {sub.fileName}
-                    </h3>
+                    </p>
                   </div>
 
-                  {/* Metadata Row */}
-                  <div className="flex flex-wrap items-center gap-y-2 gap-x-5 text-slate-500 text-xs font-medium mb-8">
-                    <div className="flex items-center gap-2">
-                       <FileText className="w-3.5 h-3.5" />
-                       <span>{sub.fileName.includes('HEVC') ? 'HEVC' : 'H.264'}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                       <Globe className="w-3.5 h-3.5" />
-                       <span className="capitalize">{sub.language === 'mal' ? 'Malayalam' : 'English'}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                       <Shield className="w-3.5 h-3.5" />
-                       <span className="font-mono text-[10px]">{sub.imdbId}</span>
-                    </div>
+                  {/* Info: IMDB ID */}
+                  <div className="flex items-center gap-2 mb-6">
+                     <div className="bg-slate-800 p-1.5 rounded-md">
+                        <Film className="w-3 h-3 text-slate-500" />
+                     </div>
+                     <span className="text-xs font-mono text-indigo-400 font-bold">{sub.imdbId}</span>
                   </div>
 
-                  {/* Action Link Row */}
-                  <div className="pt-6 border-t border-slate-800/50 flex items-center justify-between">
+                  {/* Footer: Delete Action */}
+                  <div className="pt-5 border-t border-slate-800/80 flex items-center justify-between">
                     <button
                       onClick={() => handleDelete(sub.id)}
-                      className="text-red-500/80 hover:text-red-400 font-bold text-sm transition-colors active:scale-95"
+                      className="text-red-500 hover:text-red-400 font-extrabold text-sm transition-colors flex items-center gap-2"
                     >
-                      Delete
+                      <Trash2 className="w-4 h-4" />
+                      <span>Delete Subtitle</span>
                     </button>
-                    <span className="text-[10px] text-slate-600 font-bold">{sub.date}</span>
+                    <span className="text-[10px] text-slate-600 font-medium uppercase">{sub.date}</span>
                   </div>
                 </div>
               ))
