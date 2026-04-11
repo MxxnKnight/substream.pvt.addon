@@ -1,6 +1,6 @@
 const getManifest = () => ({
-  id: "org.stremio.substream.pvt",
-  version: "1.0.4",
+  id: "org.stremio.substream.pvt.v2",
+  version: "1.0.5",
   name: "SubStream Private",
   description: "Private subtitle addon for Movies, Series and Anime",
   logo: "https://vsnzobsidmzzvghmzsqz.supabase.co/storage/v1/object/public/subtitles/logo.png",
