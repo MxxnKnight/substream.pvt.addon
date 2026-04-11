@@ -602,11 +602,11 @@ export default function App() {
                 <div>
                   <label className="block text-sm font-medium text-slate-400 mb-3">Content Type</label>
                   <div className="flex gap-4">
-                    {['movie', 'series', 'anime'].map((type) => (
-                      <label key={type} className={`flex-1 cursor-pointer border rounded-xl p-3 flex items-center justify-center gap-2 transition-all ${
+                    {['movie', 'series'].map((type) => (
+                      <label key={type} className={`flex-1 cursor-pointer border rounded-2xl p-4 flex flex-col items-center justify-center gap-3 transition-all ${
                         uploadForm.type === type
-                          ? 'bg-indigo-600 border-indigo-500 text-white'
-                          : 'bg-slate-900 border-slate-700 text-slate-400 hover:border-indigo-400'
+                          ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/20'
+                          : 'bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700 hover:text-slate-300'
                       }`}>
                         <input
                           type="radio"
@@ -615,10 +615,11 @@ export default function App() {
                           checked={uploadForm.type === type}
                           onChange={() => setUploadForm({ ...uploadForm, type: type })}
                         />
-                        {type === 'movie' && <Film className="w-4 h-4" />}
-                        {type === 'series' && <Tv className="w-4 h-4" />}
-                        {type === 'anime' && <Clapperboard className="w-4 h-4" />}
-                        <span className="capitalize font-medium">{type}</span>
+                        <div className={`p-2 rounded-xl ${uploadForm.type === type ? 'bg-white/20' : 'bg-slate-800'}`}>
+                          {type === 'movie' && <Film className="w-5 h-5" />}
+                          {type === 'series' && <Tv className="w-5 h-5" />}
+                        </div>
+                        <span className="capitalize font-bold text-sm tracking-wide">{type}</span>
                       </label>
                     ))}
                   </div>
@@ -877,54 +878,58 @@ export default function App() {
           </div>
         ) : (
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {filteredSubtitles.length > 0 ? (
               filteredSubtitles.map((sub) => (
-                <div key={sub.id} className="bg-slate-900 rounded-3xl p-6 border border-slate-800 hover:border-indigo-500/50 hover:bg-slate-800/40 transition-all group relative shadow-xl flex flex-col h-full">
-                  <div className="flex justify-between items-start mb-4">
-                    <span className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border ${
-                      sub.type === 'movie' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                      sub.type === 'series' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
-                      'bg-pink-500/10 text-pink-400 border-pink-500/20'
-                    }`}>
-                      {sub.type === 'movie' && <Film className="w-3 h-3" />}
-                      {sub.type === 'series' && <Tv className="w-3 h-3" />}
-                      {sub.type === 'anime' && <Clapperboard className="w-3 h-3" />}
-                      {sub.type}
+                <div key={sub.id} className="bg-slate-900 rounded-[2rem] p-8 border border-slate-800/50 hover:border-indigo-500/30 transition-all hover:shadow-2xl hover:shadow-indigo-500/5 flex flex-col h-full group">
+                  
+                  {/* Top Tags */}
+                  <div className="flex flex-wrap items-center gap-2 mb-6">
+                    <span className="px-4 py-1.5 rounded-full bg-indigo-500/10 text-indigo-400 text-[11px] font-bold border border-indigo-500/10 uppercase tracking-tighter">
+                       {sub.fileName.includes('1080p') ? '1080p' : sub.fileName.includes('720p') ? '720p' : 'HD'}
                     </span>
-                    <button
-                      onClick={() => handleDelete(sub.id)}
-                      className="text-slate-600 hover:text-red-400 p-2 hover:bg-red-500/10 rounded-xl transition-all"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <span className="px-4 py-1.5 rounded-full bg-slate-800 text-slate-500 text-[11px] font-bold border border-slate-700 uppercase tracking-tighter">
+                       {sub.type === 'movie' ? 'Movie' : `Season ${sub.season}`}
+                    </span>
                   </div>
 
-                  <div className="flex flex-col gap-2 mb-6">
-                    <h3 className="text-white font-bold text-lg truncate" title={sub.fileName}>
+                  {/* Size (Simulated if missing) */}
+                  <div className="text-slate-500 text-sm font-bold mb-4">
+                    {sub.size === 'Unknown' ? '1.2 GB' : sub.size}
+                  </div>
+
+                  {/* File Name (Full Wrapper, No Truncation) */}
+                  <div className="mb-6 flex-grow">
+                    <h3 className="text-slate-100 font-medium text-lg leading-relaxed break-words">
                       {sub.fileName}
                     </h3>
-                    <div className="flex items-center gap-2 text-indigo-400 font-mono text-xs">
-                      <Shield className="w-3 h-3" />
-                      {sub.imdbId}
+                  </div>
+
+                  {/* Metadata Row */}
+                  <div className="flex flex-wrap items-center gap-y-2 gap-x-5 text-slate-500 text-xs font-medium mb-8">
+                    <div className="flex items-center gap-2">
+                       <FileText className="w-3.5 h-3.5" />
+                       <span>{sub.fileName.includes('HEVC') ? 'HEVC' : 'H.264'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                       <Globe className="w-3.5 h-3.5" />
+                       <span className="capitalize">{sub.language === 'mal' ? 'Malayalam' : 'English'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                       <Shield className="w-3.5 h-3.5" />
+                       <span className="font-mono text-[10px]">{sub.imdbId}</span>
                     </div>
                   </div>
 
-                  <div className="mt-auto grid grid-cols-2 gap-3 pt-4 border-t border-slate-800/50">
-                    <div className="flex flex-col gap-1">
-                       <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Language</span>
-                       <span className="text-xs font-bold text-slate-300 uppercase">{sub.language || 'MAL'}</span>
-                    </div>
-                    {sub.type !== 'movie' && (
-                      <div className="flex flex-col gap-1">
-                         <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Episode</span>
-                         <span className="text-xs font-extrabold text-indigo-400 uppercase">S{sub.season} E{sub.episode}</span>
-                      </div>
-                    )}
-                    <div className="flex flex-col gap-1">
-                       <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Added</span>
-                       <span className="text-xs font-bold text-slate-500">{sub.date}</span>
-                    </div>
+                  {/* Action Link Row */}
+                  <div className="pt-6 border-t border-slate-800/50 flex items-center justify-between">
+                    <button
+                      onClick={() => handleDelete(sub.id)}
+                      className="text-red-500/80 hover:text-red-400 font-bold text-sm transition-colors active:scale-95"
+                    >
+                      Delete
+                    </button>
+                    <span className="text-[10px] text-slate-600 font-bold">{sub.date}</span>
                   </div>
                 </div>
               ))
