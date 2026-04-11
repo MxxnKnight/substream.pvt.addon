@@ -466,7 +466,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col md:flex-row overflow-hidden h-screen">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col md:flex-row h-full md:h-screen md:overflow-hidden">
 
       {/* Mobile Top Bar */}
       <div className="md:hidden bg-slate-900 border-b border-slate-800 p-4 flex items-center justify-between sticky top-0 z-50">
@@ -484,9 +484,9 @@ export default function App() {
         </button>
       </div>
 
-      {/* Sidebar / Drawer */}
-      <aside className={`fixed inset-0 z-40 md:relative md:z-0 md:flex w-full md:w-72 bg-slate-900 border-r border-slate-800 flex-shrink-0 transition-transform duration-300 ease-in-out ${isNavOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-        <div className="flex flex-col h-full w-full max-w-xs md:max-w-none bg-slate-900 shadow-2xl md:shadow-none">
+      {/* Sidebar / Top Drawer */}
+      <aside className={`fixed inset-0 z-40 md:relative md:z-0 md:flex w-full md:w-80 bg-slate-900/95 md:bg-slate-900 border-b md:border-b-0 md:border-r border-slate-800 transition-all duration-500 ease-in-out ${isNavOpen ? 'translate-y-0 opacity-100' : '-translate-y-full md:translate-y-0 opacity-0 md:opacity-100'}`}>
+        <div className="flex flex-col h-full w-full bg-slate-900 shadow-2xl md:shadow-none overflow-y-auto">
           <div className="p-6 hidden md:flex items-center justify-between gap-3 border-b border-slate-800">
             <div className="flex items-center gap-3">
                <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-2 rounded-xl">
@@ -556,9 +556,9 @@ export default function App() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto bg-slate-950 pb-12">
-        <div className="max-w-7xl mx-auto p-6 md:p-10">
-          <header className={`flex flex-col lg:flex-row lg:justify-between lg:items-center mb-10 gap-6 ${currentView === 'list' ? 'sticky top-0 bg-slate-950/80 backdrop-blur-md z-30 py-4 -mt-4' : ''}`}>
+      <main className="flex-1 overflow-y-auto bg-slate-950 pb-20 md:pb-12">
+        <div className="max-w-7xl mx-auto p-4 md:p-10">
+          <header className={`flex flex-col lg:flex-row lg:justify-between lg:items-center mt-4 md:mt-0 mb-8 md:mb-10 gap-6 ${currentView === 'list' ? 'sticky top-0 bg-slate-950/90 backdrop-blur-xl z-30 py-4 -mx-4 px-4' : ''}`}>
             <div className="flex items-center gap-4">
               <h2 className="text-3xl font-extrabold text-white tracking-tight">
                   {currentView === 'upload' ? 'Upload' : 'Library'}
@@ -701,13 +701,13 @@ export default function App() {
                     <div
                       onDragOver={handleDragOver}
                       onDrop={handleDrop}
-                      className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-600 bg-slate-900/50 rounded-xl hover:bg-slate-900 hover:border-indigo-400 transition-all cursor-pointer"
+                      className="flex flex-col items-center justify-center w-full min-h-[160px] border-2 border-dashed border-slate-700 bg-slate-900/50 rounded-[2rem] hover:bg-slate-900 hover:border-indigo-500/50 transition-all cursor-pointer p-6"
                       onClick={(e) => {
                         // If user clicks the background box, default to file picker
                         if (e.target === e.currentTarget) fileInputRef.current?.click();
                       }}
                     >
-                       <div className="text-center pointer-events-none">
+                       <div className="text-center pointer-events-none w-full">
                           {isExtracting ? (
                             <div className="flex flex-col items-center">
                               <Loader className="w-6 h-6 text-indigo-400 animate-spin mb-2" />
