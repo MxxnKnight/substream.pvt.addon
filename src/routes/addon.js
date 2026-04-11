@@ -16,12 +16,35 @@ const addonCors = (req, res, next) => {
 };
 
 router.get('/manifest.json', addonCors, (req, res) => {
-  // Derive the base URL: prefer BASE_URL env var (set on Render),
-  // fallback to reconstructing from the incoming request headers.
-  // This ensures transportUrl is always accurate regardless of deployment.
-  const baseUrl = process.env.BASE_URL ||
-    `${req.protocol}://${req.get('host')}`;
-  res.json(getManifest(baseUrl));
+  res.setHeader('Cache-Control', 'max-age=0, no-cache, no-store, must-revalidate');
+  res.json(getManifest());
+});
+
+// Proxy route to serve the subtitle file directly to Stremio clients.
+// Bypasses Cloudflare block on unusual User-Agents (like Exoplayer) and ensures .srt extension
+const { Readable } = require('stream');
+router.get('/subtitles/download/:encodedUrl.srt', addonCors, async (req, res) => {
+  try {
+    const fileUrl = Buffer.from(req.params.encodedUrl, 'base64url').toString('utf-8');
+    const response = await fetch(fileUrl);
+    
+    if (!response.ok) {
+      return res.status(response.status).send(`Failed to fetch subtitle from upstream: ${response.statusText}`);
+    }
+
+    res.setHeader('Content-Type', 'application/x-subrip');
+    res.setHeader('Content-Disposition', 'attachment; filename="subtitle.srt"');
+    
+    if (response.body) {
+      const readable = Readable.fromWeb(response.body);
+      readable.pipe(res);
+    } else {
+      res.status(500).send('Empty response from upstream');
+    }
+  } catch (error) {
+    console.error('Subtitle proxy error:', error);
+    res.status(500).send('Internal server error during download proxy');
+  }
 });
 
 // Handle subtitle requests.

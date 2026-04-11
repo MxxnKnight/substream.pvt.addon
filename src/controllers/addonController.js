@@ -97,10 +97,15 @@ const getSubtitles = async (req, res) => {
 
         const title = `${langName} - ${fileName}`;
 
+        // Create a proxy URL to bypass Cloudflare/User-Agent blocking on Stremio Desktop/Android
+        const baseUrl = req.protocol + '://' + req.get('host');
+        const encodedUrl = Buffer.from(sub.file_path).toString('base64url');
+        const proxyUrl = `${baseUrl}/subtitles/download/${encodedUrl}.srt`;
+
         // Stremio requires: id (string), url (string), lang (ISO 639-2 string)
         return {
           id: String(sub.id),       // MUST be a string
-          url: sub.file_path,       // MUST be a publicly accessible direct URL
+          url: proxyUrl,            // Use proxy to avoid strictly client-side fetch issues
           lang: langCode,           // MUST be ISO 639-2 (3-letter) code
           title: title              // optional but helpful for UX
         };
