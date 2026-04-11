@@ -4,10 +4,22 @@ const manifest = {
   version: "1.0.0",
   name: "SubStream Private",
   description: "Private subtitle addon",
-  resources: ["subtitles"],
+  // Explicitly define the resource with types and idPrefixes
+  // so Stremio knows exactly when to call this addon.
+  resources: [
+    {
+      name: "subtitles",
+      types: ["movie", "series", "anime"],
+      idPrefixes: ["tt"]
+    }
+  ],
   types: ["movie", "series", "anime"],
   idPrefixes: ["tt"],
-  catalogs: []
+  catalogs: [],
+  behaviorHints: {
+    adult: false,
+    p2p: false
+  }
 };
 
 module.exports = manifest;

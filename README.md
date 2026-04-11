@@ -1,131 +1,253 @@
 # SubStream Private Addon
 
-A private Stremio addon for providing subtitles from a self-hosted backend, including a React-based admin dashboard.
+A private Stremio addon for providing subtitles from a self-hosted backend, with a React-based admin dashboard for managing subtitle files.
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
+
+---
 
 ## Features
 
 - **Backend**: Node.js + Express
-- **Database**: Supabase (PostgreSQL)
-- **Frontend**: React + Tailwind CSS (bundled with Vite)
-- **Uploads**: Support for `.srt` and `.zip` files with automatic season/episode detection.
-- **Stremio Addon**: Implements Stremio addon protocol to serve subtitles.
-- **Security**: JWT authentication for admin routes.
+- **Database**: Supabase (PostgreSQL + Storage)
+- **Frontend**: React + Tailwind CSS (bundled with Vite, served by Express)
+- **Uploads**: `.srt` and `.zip` files with automatic season/episode detection
+- **Stremio Addon**: Implements the Stremio addon protocol to serve subtitles
+- **Security**: JWT authentication for all admin routes
+
+---
+
+## Tech Stack
+
+| Layer      | Technology                           |
+|------------|--------------------------------------|
+| Runtime    | Node.js v18+                         |
+| Server     | Express                              |
+| Frontend   | React 18 + Tailwind CSS (via Vite)   |
+| Database   | Supabase (Postgres)                  |
+| Storage    | Supabase Storage                     |
+| Auth       | JWT (jsonwebtoken)                   |
+| Hosting    | Render (recommended) / Docker / Railway |
+
+---
 
 ## Prerequisites
 
-- Node.js (v18+)
-- Supabase Account
-- Docker (optional)
+- **Node.js v18+** — [Download](https://nodejs.org/)
+- **Supabase account** — [supabase.com](https://supabase.com) (free tier works)
+- **Git** — for deployment
 
-## Setup
+---
 
-### 1. Database Setup (Supabase)
+## Database Setup (Supabase)
 
-#### Storage Setup
-1. Go to **Storage** in your Supabase dashboard.
-2. Create a new bucket named `subtitles`.
-3. Set the bucket to be **Public**.
+### 1. Storage Bucket
 
-#### Database Setup
-Run the following SQL in your Supabase SQL Editor:
+1. Open your Supabase project → **Storage**
+2. Create a new bucket named `subtitles`
+3. Set it to **Public**
+
+### 2. SQL Schema
+
+Run the following in the Supabase **SQL Editor**:
 
 ```sql
 -- Enable UUID extension
-create extension if not exists "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Create subtitles table
-create table subtitles (
-  id uuid primary key default uuid_generate_v4(),
-  imdb_id text not null,
-  type text not null check (type in ('movie', 'series', 'anime')),
-  season integer,
-  episode integer,
-  language text not null,
-  file_path text not null,
-  created_at timestamp with time zone default now()
+CREATE TABLE subtitles (
+  id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  imdb_id    TEXT NOT NULL,
+  type       TEXT NOT NULL CHECK (type IN ('movie', 'series', 'anime')),
+  season     INTEGER,
+  episode    INTEGER,
+  language   TEXT NOT NULL,
+  file_path  TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- Create indexes
-create index idx_subtitles_imdb_id on subtitles(imdb_id);
-create index idx_subtitles_query on subtitles(imdb_id, season, episode);
+-- Performance indexes
+CREATE INDEX idx_subtitles_imdb_id    ON subtitles(imdb_id);
+CREATE INDEX idx_subtitles_query      ON subtitles(imdb_id, season, episode);
 ```
 
-### 2. Environment Variables
+---
 
-Copy `.env.example` to `.env` and fill in your details:
+## Local Development
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/MxxnKnight/substream.pvt.addon.git
+cd substream.pvt.addon
+```
+
+### 2. Configure environment variables
 
 ```bash
 cp .env.example .env
 ```
 
-- `SUPABASE_URL`: Your Supabase Project URL.
-- `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase Service Role Key (needed for backend inserts).
-- `ADMIN_USERNAME`: Username for admin login.
-- `ADMIN_PASSWORD`: Password for admin login.
-- `JWT_SECRET`: Secret key for JWT signing.
-- `BASE_URL`: Public URL where the backend is hosted.
+Edit `.env` and fill in all values:
 
-### 3. Installation
+| Variable                    | Description                                              |
+|-----------------------------|----------------------------------------------------------|
+| `PORT`                      | Port to run the server on (default: `3000`)              |
+| `BASE_URL`                  | Public URL of your deployment (e.g. `http://localhost:3000`) |
+| `SUPABASE_URL`              | Your Supabase project URL                                |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (found in Project Settings → API) |
+| `ADMIN_USERNAME`            | Username for the admin dashboard                         |
+| `ADMIN_PASSWORD`            | Password for the admin dashboard                         |
+| `JWT_SECRET`                | Random secret string for signing JWTs (min. 32 chars)   |
+
+### 3. Install dependencies & build frontend
 
 ```bash
 npm install
-```
-
-### 4. Build Frontend
-
-Before running the server, you need to build the frontend dashboard:
-
-```bash
 npm run build:frontend
 ```
 
-This will compile the React app into `public/admin`.
+### 4. Start the server
 
-### 5. Running
-
-Development:
 ```bash
+# Development (with auto-reload)
 npm run dev
-```
 
-Production:
-```bash
+# Production
 npm start
 ```
 
-## Dashboard
+Visit `http://localhost:3000` to open the admin dashboard.  
+The Stremio manifest is at `http://localhost:3000/manifest.json`.
 
-Access the admin dashboard at the root URL (e.g., `http://localhost:3000/`).
-- Log in with your `ADMIN_USERNAME` and `ADMIN_PASSWORD`.
-- Upload subtitles or manage existing ones.
+---
 
-## API Endpoints
+## Deployment on Render
 
-### Public (Stremio)
-- `GET /manifest.json`: Addon manifest.
-- `GET /subtitles/:type/:id.json`: Get subtitles for a video.
+> **Render** is the recommended hosting platform. A `render.yaml` blueprint is included for one-click deploy.
 
-### Admin (Private)
-- `POST /api/admin/login`: Login to get JWT token.
-- `POST /api/admin/upload`: Upload subtitles.
-- `GET /api/admin/subtitles`: List uploaded subtitles.
-- `DELETE /api/admin/subtitles/:id`: Delete a subtitle.
+### Option A — Blueprint (Recommended)
 
-## Deployment
+1. Fork or push this repo to your GitHub account.
+2. Go to [Render Dashboard](https://dashboard.render.com/) → **New** → **Blueprint**.
+3. Connect your GitHub repository.
+4. Render will detect `render.yaml` and create the service automatically.
+5. Set the required environment variables in the Render dashboard (see table below).
 
-### Docker
+### Option B — Manual Web Service
+
+1. Go to [Render Dashboard](https://dashboard.render.com/) → **New** → **Web Service**.
+2. Connect your GitHub repository.
+3. Fill in the service settings:
+
+   | Setting          | Value                                      |
+   |------------------|--------------------------------------------|
+   | **Environment**  | `Node`                                     |
+   | **Branch**       | `main` (or `dev`)                          |
+   | **Build Command**| `npm install && npm run build:frontend`    |
+   | **Start Command**| `node src/server.js`                       |
+   | **Plan**         | Free (or paid for better performance)      |
+
+4. Under **Environment Variables**, add:
+
+   | Key                         | Value / Notes                                       |
+   |-----------------------------|-----------------------------------------------------|
+   | `BASE_URL`                  | Your Render service URL, e.g. `https://your-app.onrender.com` |
+   | `SUPABASE_URL`              | Your Supabase project URL                           |
+   | `SUPABASE_SERVICE_ROLE_KEY` | Your Supabase service role key                      |
+   | `ADMIN_USERNAME`            | Admin login username                                |
+   | `ADMIN_PASSWORD`            | Admin login password                                |
+   | `JWT_SECRET`                | A long random string (generate with `openssl rand -hex 32`) |
+
+   > ⚠️ **Do NOT set `PORT`** — Render injects this automatically. The server already reads `process.env.PORT`.
+
+5. Click **Create Web Service** and wait for the build to complete (~2–3 minutes).
+
+### After Deployment
+
+- **Dashboard**: `https://your-app.onrender.com/`  
+- **Stremio Manifest**: `https://your-app.onrender.com/manifest.json`  
+- Install in Stremio: paste the manifest URL in **Settings → Add-ons → Community Add-ons**.
+
+> **Note on Render free tier**: The service sleeps after 15 minutes of inactivity and takes ~30 seconds to cold-start. Upgrade to a paid plan to avoid this.
+
+---
+
+## Docker Deployment
+
 ```bash
+# Build image
 docker build -t substream-addon .
+
+# Run container
 docker run -p 3000:3000 --env-file .env substream-addon
 ```
 
-### Northflank
-1. Connect your repository to Northflank as a new service.
-2. Select **Dockerfile** as the build method (Northflank will automatically detect and build using the provided `Dockerfile`).
-3. Add your environment variables (from `.env.example`) to the service's environment configuration.
-4. Expose port `3000` in the networking tab.
-5. Deploy the service.
+---
 
-### Render / Railway
-1. Build command: `npm install && npm run build:frontend`
-2. Start command: `npm start`
+## Railway Deployment
+
+1. Push the repo to GitHub.
+2. Go to [Railway](https://railway.app/) → **New Project** → **Deploy from GitHub**.
+3. Set the environment variables from the table above.
+4. Railway auto-detects Node.js and uses `npm start`.
+5. Set the `BASE_URL` to the Railway-assigned URL.
+
+---
+
+## API Reference
+
+### Public Endpoints (Stremio)
+
+| Method | Path                         | Description               |
+|--------|------------------------------|---------------------------|
+| `GET`  | `/manifest.json`             | Addon manifest            |
+| `GET`  | `/subtitles/:type/:id.json`  | Fetch subtitles for media |
+
+### Admin Endpoints (JWT protected)
+
+| Method   | Path                        | Description               |
+|----------|-----------------------------|---------------------------|
+| `POST`   | `/api/admin/login`          | Login → returns JWT token |
+| `GET`    | `/api/admin/subtitles`      | List all subtitles        |
+| `POST`   | `/api/admin/upload`         | Upload subtitle file      |
+| `DELETE` | `/api/admin/subtitles/:id`  | Delete a subtitle         |
+
+---
+
+## Upload Guidelines
+
+- **Supported formats**: `.srt`, `.vtt`, `.zip` (zip containing subtitle files)
+- **Naming convention for auto-detection**: `S01E02.srt`, `s01e02.srt`
+- **IMDB ID format**: `tt1234567`
+
+---
+
+## Project Structure
+
+```
+substream.pvt.addon/
+├── frontend/               # React admin dashboard source
+│   ├── src/
+│   └── vite.config.js      # Builds into public/admin/
+├── public/
+│   └── admin/              # Built frontend (served by Express)
+├── src/
+│   ├── addon/              # Stremio addon manifest & handler
+│   ├── controllers/        # Route handlers
+│   ├── middleware/         # JWT auth middleware
+│   ├── routes/             # Express routers
+│   ├── services/           # Supabase service layer
+│   └── server.js           # Entry point
+├── .env.example            # Environment variable template
+├── render.yaml             # Render deployment blueprint
+├── Dockerfile              # Docker build config
+└── package.json
+```
+
+---
+
+## License
+
+MIT

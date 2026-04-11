@@ -6,8 +6,8 @@ services:
     buildCommand: npm install && npm run build:frontend
     startCommand: node src/server.js
     envVars:
-      - key: PORT
-        value: 3000
+      - key: NODE_ENV
+        value: production
       - key: BASE_URL
         sync: false
       - key: SUPABASE_URL

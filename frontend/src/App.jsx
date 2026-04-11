@@ -38,10 +38,10 @@ export default function App() {
   // Upload Form State
   const [uploadForm, setUploadForm] = useState({
     imdbId: '',
-    type: 'series',
+    type: 'movie',       // default: Movie
     season: '',
     episode: '',
-    language: 'eng' // Default to English (ISO 639-2)
+    language: 'mal'      // default: Malayalam
   });
 
   // Staging state for files
@@ -393,12 +393,15 @@ export default function App() {
   };
 
   const filteredSubtitles = subtitles.filter(sub => {
-    const query = searchQuery.toLowerCase();
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return true;
+    const epStr = sub.season != null ? `s${String(sub.season).padStart(2,'0')}e${String(sub.episode).padStart(2,'0')}` : '';
     return (
       (sub.fileName && sub.fileName.toLowerCase().includes(query)) ||
       (sub.imdbId && sub.imdbId.toLowerCase().includes(query)) ||
       (sub.type && sub.type.toLowerCase().includes(query)) ||
-      (sub.language && sub.language.toLowerCase().includes(query))
+      (sub.language && sub.language.toLowerCase().includes(query)) ||
+      (epStr && epStr.includes(query.replace(/\s/g,'')))
     );
   });
 

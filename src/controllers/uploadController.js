@@ -44,8 +44,8 @@ const uploadSubtitle = async (req, res) => {
       let newFilename;
       const fileExt = path.extname(originalName).toLowerCase();
       if (type === 'movie') {
-        const sanitized = originalName.replace(/[^a-z0-9.]/gi, '_');
-        newFilename = `${Date.now()}_${sanitized}`;
+        // Sanitize filename — keep it readable, no timestamp prefix
+        newFilename = originalName.replace(/[^a-z0-9._-]/gi, '_');
       } else {
         newFilename = `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}${fileExt}`;
       }
@@ -58,11 +58,17 @@ const uploadSubtitle = async (req, res) => {
         fileBuffer = fs.readFileSync(sourcePath);
       }
 
+      // Supabase Storage only accepts standard MIME types.
+      // .srt must use text/plain (application/x-subrip is NOT supported by Supabase).
+      // .vtt uses text/vtt which Supabase does accept.
+      // Stremio determines file format from the URL extension, not the content-type.
+      const mimeType = fileExt === '.vtt' ? 'text/vtt' : 'text/plain';
+
       const { data, error } = await supabase
         .storage
         .from('subtitles')
         .upload(storagePath, fileBuffer, {
-          contentType: 'text/plain',
+          contentType: mimeType,
           upsert: true
         });
 
@@ -72,12 +78,20 @@ const uploadSubtitle = async (req, res) => {
       }
 
       // Construct public URL
+      // IMPORTANT: The Supabase bucket named 'subtitles' must have public access enabled.
+      // Go to Supabase → Storage → subtitles bucket → Policies → make it public,
+      // OR go to bucket settings and toggle "Public bucket" to ON.
       const { data: publicUrlData } = supabase
         .storage
         .from('subtitles')
         .getPublicUrl(storagePath);
 
       const publicUrl = publicUrlData.publicUrl;
+      console.log(`Public URL for subtitle: ${publicUrl}`);
+      // Verify the URL is accessible (basic check)
+      if (!publicUrl || !publicUrl.startsWith('http')) {
+        throw new Error(`Invalid public URL generated: ${publicUrl}`);
+      }
 
       // Insert into DB
       try {

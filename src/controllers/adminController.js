@@ -1,6 +1,28 @@
 
 const { supabase } = require('../services/db');
 
+// Retry helper for transient Supabase network errors (ECONNRESET / fetch failed from localhost)
+const retrySupabase = async (fn, maxRetries = 3, delayMs = 600) => {
+  let lastErr;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      const isNetworkErr =
+        err?.message?.includes('fetch failed') ||
+        err?.message?.includes('ECONNRESET');
+      if (isNetworkErr && attempt < maxRetries) {
+        console.warn(`[Supabase] Network error (attempt ${attempt}/${maxRetries}), retrying in ${delayMs}ms...`);
+        await new Promise(r => setTimeout(r, delayMs));
+      } else {
+        throw err;
+      }
+    }
+  }
+  throw lastErr;
+};
+
 const listSubtitles = async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -12,63 +34,83 @@ const listSubtitles = async (req, res) => {
     if (error) throw error;
     res.json(data);
   } catch (err) {
-    console.error(err);
+    console.error('[List] Error:', err);
     res.status(500).json({ error: 'Failed to fetch subtitles' });
   }
 };
 
 const deleteSubtitle = async (req, res) => {
-  try {
-    const { id } = req.params;
+  const { id } = req.params;
+  console.log(`[Delete] Request to delete subtitle id=${id}`);
 
-    // First get the file path to delete from storage
-    const { data: subtitle, error: fetchError } = await supabase
-      .from('subtitles')
-      .select('*')
-      .eq('id', id)
-      .single();
+  try {
+    // 1. Fetch the record first to get file_path for storage deletion (with retry)
+    const { data: subtitle, error: fetchError } = await retrySupabase(() =>
+      supabase
+        .from('subtitles')
+        .select('*')
+        .eq('id', id)
+        .single()
+    );
 
     if (fetchError) {
-      return res.status(404).json({ error: 'Subtitle not found' });
+      // PGRST116 = row not found
+      if (fetchError.code === 'PGRST116') {
+        return res.status(404).json({ error: 'Subtitle not found' });
+      }
+      console.error('[Delete] Error fetching subtitle:', fetchError);
+      return res.status(500).json({ error: 'Database error while fetching subtitle' });
     }
 
-    // Delete from DB
-    const { error: deleteError } = await supabase
-      .from('subtitles')
-      .delete()
-      .eq('id', id);
+    // 2. Delete from DB (with retry)
+    const { error: deleteError } = await retrySupabase(() =>
+      supabase
+        .from('subtitles')
+        .delete()
+        .eq('id', id)
+    );
 
-    if (deleteError) throw deleteError;
+    if (deleteError) {
+      console.error('[Delete] DB delete error:', deleteError);
+      return res.status(500).json({ error: 'Failed to delete from database' });
+    }
 
-    // Delete file from Supabase storage
-    if (subtitle.file_path) {
+    console.log(`[Delete] DB record deleted for id=${id}`);
+
+    // 3. Delete from Supabase storage — best-effort, don't fail if this errors
+    if (subtitle?.file_path) {
       try {
         const urlObj = new URL(subtitle.file_path);
         const pathSegments = urlObj.pathname.split('/');
-        // URL path: /storage/v1/object/public/subtitles/tt12345/filename.srt
-        // The bucket name is "subtitles"
-        const storageIndex = pathSegments.indexOf('subtitles');
-        if (storageIndex !== -1 && storageIndex + 1 < pathSegments.length) {
-           const storagePath = pathSegments.slice(storageIndex + 1).join('/');
-           const { error: storageError } = await supabase
-             .storage
-             .from('subtitles')
-             .remove([storagePath]);
+        // URL: /storage/v1/object/public/{bucket}/{storagePath...}
+        // e.g. /storage/v1/object/public/subtitles/tt1234567/S01E01.srt
+        const publicIndex = pathSegments.indexOf('public');
+        if (publicIndex !== -1 && publicIndex + 2 < pathSegments.length) {
+          const storagePath = decodeURIComponent(pathSegments.slice(publicIndex + 2).join('/'));
+          console.log(`[Delete] Removing from storage: ${storagePath}`);
+          const { error: storageError } = await supabase
+            .storage
+            .from('subtitles')
+            .remove([storagePath]);
 
-           if (storageError) {
-             console.error(`Failed to delete file from Supabase Storage: ${storagePath}`, storageError);
-           }
+          if (storageError) {
+            console.error(`[Delete] Storage removal failed (non-critical): ${storagePath}`, storageError);
+          } else {
+            console.log(`[Delete] Storage file removed: ${storagePath}`);
+          }
+        } else {
+          console.warn('[Delete] Could not extract storage path from URL:', subtitle.file_path);
         }
       } catch (err) {
-        console.error('Error parsing file URL for deletion:', err);
+        console.error('[Delete] Error during storage removal (non-critical):', err.message);
       }
     }
 
-    res.json({ message: 'Subtitle deleted' });
+    res.json({ message: 'Subtitle deleted successfully' });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to delete subtitle' });
+    console.error('[Delete] Unexpected error:', err);
+    res.status(500).json({ error: 'Internal server error during deletion' });
   }
 };
 

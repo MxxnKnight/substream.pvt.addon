@@ -10,30 +10,48 @@ const adminRoutes = require('./routes/admin');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 1. Middleware
+// ─── VERBOSE REQUEST LOGGER ──────────────────────────────────────────────────
+// Logs EVERY request so we can verify whether Stremio is calling the addon
+app.use((req, res, next) => {
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  const ua = req.headers['user-agent'] || 'unknown';
+  const ts = new Date().toISOString();
+  // Only print addon-relevant routes verbosely; skip static assets silently
+  const isAddonRoute = req.path.startsWith('/manifest') || req.path.startsWith('/subtitles');
+  const isAdminRoute = req.path.startsWith('/api/');
+  if (isAddonRoute) {
+    console.log(`\n⭐ [${ts}] ADDON REQUEST`);
+    console.log(`   ${req.method} ${req.originalUrl}`);
+    console.log(`   From IP: ${ip}`);
+    console.log(`   User-Agent: ${ua}`);
+  } else if (isAdminRoute) {
+    console.log(`[${ts}] ADMIN ${req.method} ${req.originalUrl} from ${ip}`);
+  }
+  next();
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-// 2. Addon Routes (Public for Stremio)
+// Addon Routes (Public for Stremio)
 app.use('/', addonRoutes);
 
-// 3. Admin Routes (Upload, Login)
+// Admin Routes (Upload, Login)
 app.use('/api/admin', adminRoutes);
 
-// 5. Static Frontend
-// Serve the built frontend assets
+// Static Frontend
 const frontendPath = path.join(__dirname, '../public/admin');
 app.use(express.static(frontendPath));
 
-// 6. Catch-all for Frontend Routing
-// This must be last. Serves index.html for any unknown routes (SPA support)
+// Catch-all for SPA routing - must be last
 app.get('*', (req, res) => {
   const indexHtml = path.join(frontendPath, 'index.html');
   if (require('fs').existsSync(indexHtml)) {
-      res.sendFile(indexHtml);
+    res.sendFile(indexHtml);
   } else {
-      // If frontend is not built, return 404 to avoid confusion
-      res.status(404).send('Frontend not built or found');
+    res.status(404).send('Frontend not built or found');
   }
 });
 
@@ -43,7 +61,23 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Manifest URL: http://localhost:${PORT}/manifest.json`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`\n✅ Server running on port ${PORT} (all interfaces)`);
+  console.log(`\n   ── Stremio Web / Desktop (same PC) ──`);
+  console.log(`   Manifest:  http://127.0.0.1:${PORT}/manifest.json`);
+  console.log(`\n   ── Android / other devices on same WiFi ──`);
+  // Show LAN IP if available
+  try {
+    const os = require('os');
+    const nets = os.networkInterfaces();
+    for (const name of Object.keys(nets)) {
+      for (const net of nets[name]) {
+        if (net.family === 'IPv4' && !net.internal) {
+          console.log(`   Manifest:  http://${net.address}:${PORT}/manifest.json`);
+        }
+      }
+    }
+  } catch(_) {}
+  console.log(`\n   ── Dashboard ──`);
+  console.log(`   http://localhost:${PORT}/\n`);
 });
