@@ -20,17 +20,8 @@ app.use((req, res, next) => {
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
   const ua = req.headers['user-agent'] || 'unknown';
   const ts = new Date().toISOString();
-  // Only print addon-relevant routes verbosely; skip static assets silently
-  const isAddonRoute = req.path.startsWith('/manifest') || req.path.startsWith('/subtitles');
-  const isAdminRoute = req.path.startsWith('/api/');
-  if (isAddonRoute) {
-    console.log(`\n⭐ [${ts}] ADDON REQUEST`);
-    console.log(`   ${req.method} ${req.originalUrl}`);
-    console.log(`   From IP: ${ip}`);
-    console.log(`   User-Agent: ${ua}`);
-  } else if (isAdminRoute) {
-    console.log(`[${ts}] ADMIN ${req.method} ${req.originalUrl} from ${ip}`);
-  }
+  
+  console.log(`[${ts}] ${req.method} ${req.originalUrl} | UA: ${ua} | IP: ${ip}`);
   next();
 });
 // ─────────────────────────────────────────────────────────────────────────────

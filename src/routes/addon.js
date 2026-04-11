@@ -60,6 +60,7 @@ const decodeId = (req, res, next) => {
 };
 
 router.get('/subtitles/:type/:id.json', addonCors, decodeId, getSubtitles);
-router.get('/subtitles/:type/:id/:extra.json', addonCors, decodeId, getSubtitles);
+// Greedy route to catch ANY extra metadata Stremio Desktop/Android appends
+router.get('/subtitles/:type/:id/:extra*', addonCors, decodeId, getSubtitles);
 
 module.exports = router;
