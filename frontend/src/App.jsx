@@ -29,6 +29,7 @@ export default function App() {
   const [currentView, setCurrentView] = useState('upload');
   const [subtitles, setSubtitles] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isNavOpen, setIsNavOpen] = useState(false); // Mobile nav state
 
   // Login Form State
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
@@ -125,9 +126,10 @@ export default function App() {
   const copyManifestUrl = () => {
     const url = window.location.origin + '/manifest.json';
     navigator.clipboard.writeText(url).then(() => {
-      alert('Manifest URL copied to clipboard: ' + url);
+        // Simple temporary toast or alert
+        alert('Manifest URL copied!\n\n' + url);
     }).catch(err => {
-      console.error('Failed to copy: ', err);
+        console.error('Failed to copy: ', err);
     });
   };
 
@@ -464,90 +466,131 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 font-sans flex flex-col md:flex-row">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col md:flex-row overflow-hidden h-screen">
 
-      {/* Sidebar */}
-      <aside className="w-full md:w-64 bg-slate-800 border-r border-slate-700 flex-shrink-0">
-        <div className="p-6 flex items-center justify-between gap-3 border-b border-slate-700">
-          <div className="flex items-center gap-3">
-             <div className="bg-indigo-500 p-2 rounded-lg">
-                <Film className="w-5 h-5 text-white" />
-             </div>
-             <h1 className="font-bold text-lg">SubStream</h1>
+      {/* Mobile Top Bar */}
+      <div className="md:hidden bg-slate-900 border-b border-slate-800 p-4 flex items-center justify-between sticky top-0 z-50">
+        <div className="flex items-center gap-3">
+          <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-2 rounded-xl shadow-lg shadow-indigo-500/20">
+            <Film className="w-5 h-5 text-white" />
           </div>
-          <button
-             onClick={copyManifestUrl}
-             title="Copy Manifest URL"
-             className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
-          >
-             <Link className="w-4 h-4" />
-          </button>
+          <h1 className="font-bold text-lg bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">SubStream</h1>
         </div>
+        <button
+          onClick={() => setIsNavOpen(!isNavOpen)}
+          className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all"
+        >
+          {isNavOpen ? <X className="w-6 h-6" /> : <div className="space-y-1.5"><div className="w-6 h-0.5 bg-current"></div><div className="w-6 h-0.5 bg-current"></div><div className="w-6 h-0.5 bg-current outline-none"></div></div>}
+        </button>
+      </div>
 
-        <nav className="p-4 space-y-2">
-          <button
-            onClick={() => setCurrentView('upload')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-              currentView === 'upload' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-700'
-            }`}
-          >
-            <Upload className="w-5 h-5" />
-            <span className="font-medium">Upload Subtitle</span>
-          </button>
-          <button
-            onClick={() => { setCurrentView('list'); fetchSubtitles(); }}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-              currentView === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-700'
-            }`}
-          >
-            <FileText className="w-5 h-5" />
-            <span className="font-medium">Current Library</span>
-          </button>
-        </nav>
+      {/* Sidebar / Drawer */}
+      <aside className={`fixed inset-0 z-40 md:relative md:z-0 md:flex w-full md:w-72 bg-slate-900 border-r border-slate-800 flex-shrink-0 transition-transform duration-300 ease-in-out ${isNavOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+        <div className="flex flex-col h-full w-full max-w-xs md:max-w-none bg-slate-900 shadow-2xl md:shadow-none">
+          <div className="p-6 hidden md:flex items-center justify-between gap-3 border-b border-slate-800">
+            <div className="flex items-center gap-3">
+               <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-2 rounded-xl">
+                  <Film className="w-5 h-5 text-white" />
+               </div>
+               <h1 className="font-bold text-xl tracking-tight">SubStream</h1>
+            </div>
+          </div>
 
-        <div className="p-4 mt-auto border-t border-slate-700">
-          <button onClick={handleLogout} className="w-full flex items-center gap-2 text-slate-400 hover:text-red-400 px-4 py-2 text-sm">
-            <LogOut className="w-4 h-4" />
-            <span>Sign Out</span>
-          </button>
+          <div className="p-6">
+            <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700/50 mb-8 mt-4 md:mt-0">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Addon URL</p>
+              <button
+                onClick={copyManifestUrl}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-600/20 group"
+              >
+                <Link className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+                <span>Copy Manifest</span>
+              </button>
+            </div>
+
+            <nav className="space-y-1">
+              <button
+                onClick={() => { setCurrentView('upload'); setIsNavOpen(false); }}
+                className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all group ${
+                  currentView === 'upload' ? 'bg-slate-800 text-white shadow-xl border border-slate-700' : 'text-slate-500 hover:bg-slate-800/50 hover:text-slate-300'
+                }`}
+              >
+                <div className={`p-1.5 rounded-lg ${currentView === 'upload' ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-500 group-hover:text-slate-300'}`}>
+                  <Upload className="w-4 h-4" />
+                </div>
+                <span className="font-semibold text-sm">Upload</span>
+              </button>
+              <button
+                onClick={() => { setCurrentView('list'); fetchSubtitles(); setIsNavOpen(false); }}
+                className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all group ${
+                  currentView === 'list' ? 'bg-slate-800 text-white shadow-xl border border-slate-700' : 'text-slate-500 hover:bg-slate-800/50 hover:text-slate-300'
+                }`}
+              >
+                <div className={`p-1.5 rounded-lg ${currentView === 'list' ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-500 group-hover:text-slate-300'}`}>
+                  <Archive className="w-4 h-4" />
+                </div>
+                <span className="font-semibold text-sm">Library</span>
+              </button>
+            </nav>
+          </div>
+
+          <div className="p-6 mt-auto border-t border-slate-800">
+             <div className="flex items-center gap-3 px-4 py-2 mb-4">
+                <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
+                   <User className="w-4 h-4 text-slate-400" />
+                </div>
+                <div className="flex flex-col">
+                   <span className="text-xs font-bold text-white">Administrator</span>
+                   <span className="text-[10px] text-slate-500">Online</span>
+                </div>
+             </div>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 text-slate-500 hover:text-red-400 font-bold px-4 py-3 rounded-xl border border-transparent hover:border-red-500/20 hover:bg-red-500/5 transition-all text-xs"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Sign Out</span>
+            </button>
+          </div>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-6 md:p-8 overflow-y-auto">
-        <header className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 gap-4">
-          <div className="flex items-center gap-4">
-            <h2 className="text-2xl font-bold text-white whitespace-nowrap">
-                {currentView === 'upload' ? 'Upload New Subtitle' : 'Subtitle Library'}
-            </h2>
-            {currentView === 'list' && (
-                <button
-                  onClick={fetchSubtitles}
-                  disabled={isRefreshing}
-                  className="p-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-all disabled:opacity-50"
-                  title="Refresh Library"
-                >
-                  <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
-                </button>
-            )}
-          </div>
-
-          {/* Search Bar */}
-          {currentView === 'list' && (
-            <div className="relative w-full max-w-md">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-slate-500" />
-              </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2.5 border border-slate-700 rounded-xl leading-5 bg-slate-800 text-slate-300 placeholder-slate-500 focus:outline-none focus:bg-slate-900 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
-                placeholder="Search by name, ID, language..."
-              />
+      <main className="flex-1 overflow-y-auto bg-slate-950 pb-12">
+        <div className="max-w-7xl mx-auto p-6 md:p-10">
+          <header className={`flex flex-col lg:flex-row lg:justify-between lg:items-center mb-10 gap-6 ${currentView === 'list' ? 'sticky top-0 bg-slate-950/80 backdrop-blur-md z-30 py-4 -mt-4' : ''}`}>
+            <div className="flex items-center gap-4">
+              <h2 className="text-3xl font-extrabold text-white tracking-tight">
+                  {currentView === 'upload' ? 'Upload' : 'Library'}
+              </h2>
+              {currentView === 'list' && (
+                  <button
+                    onClick={fetchSubtitles}
+                    disabled={isRefreshing}
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    <span className="text-sm font-bold">{isRefreshing ? 'Syncing...' : 'Reload'}</span>
+                  </button>
+              )}
             </div>
-          )}
-        </header>
+
+            {/* Search Bar */}
+            {currentView === 'list' && (
+              <div className="relative w-full lg:max-w-md">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-slate-500" />
+                </div>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="block w-full pl-12 pr-4 py-3.5 border border-slate-800 rounded-2xl leading-5 bg-slate-900/50 text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all shadow-inner"
+                  placeholder="Seach ID, Filename, Lang..."
+                />
+              </div>
+            )}
+          </header>
 
         {currentView === 'upload' ? (
           /* UPLOAD PAGE */
@@ -833,76 +876,73 @@ export default function App() {
             </div>
           </div>
         ) : (
-          /* CURRENT LIBRARY PAGE */
-          <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-xl">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-900/50 border-b border-slate-700">
-                    <th className="p-4 text-xs font-semibold text-slate-400 uppercase">IMDB ID</th>
-                    <th className="p-4 text-xs font-semibold text-slate-400 uppercase">Type</th>
-                    <th className="p-4 text-xs font-semibold text-slate-400 uppercase">Lang</th>
-                    <th className="p-4 text-xs font-semibold text-slate-400 uppercase">Details</th>
-                    <th className="p-4 text-xs font-semibold text-slate-400 uppercase">File Name</th>
-                    <th className="p-4 text-xs font-semibold text-slate-400 uppercase">Date</th>
-                    <th className="p-4 text-xs font-semibold text-slate-400 uppercase text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-700">
-                  {filteredSubtitles.length > 0 ? (
-                    filteredSubtitles.map((sub) => (
-                      <tr key={sub.id} className="hover:bg-slate-700/30">
-                        <td className="p-4 font-mono text-indigo-300 text-sm">{sub.imdbId}</td>
-                        <td className="p-4">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border ${
-                            sub.type === 'movie' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                            sub.type === 'series' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
-                            'bg-pink-500/10 text-pink-400 border-pink-500/20'
-                          }`}>
-                            {sub.type === 'movie' && <Film className="w-3 h-3" />}
-                            {sub.type === 'series' && <Tv className="w-3 h-3" />}
-                            {sub.type === 'anime' && <Clapperboard className="w-3 h-3" />}
-                            <span className="capitalize">{sub.type}</span>
-                          </span>
-                        </td>
-                        <td className="p-4 text-slate-300 text-sm uppercase">{sub.language || 'ENG'}</td>
-                        <td className="p-4 text-slate-300 text-sm">
-                          {sub.type !== 'movie' ? (
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold tracking-wide bg-slate-900 border border-slate-600 text-indigo-300 shadow-sm">
-                              S{sub.season} <span className="mx-1 text-slate-600">|</span> E{sub.episode}
-                            </span>
-                          ) : (
-                            <span className="text-slate-600 text-xs">—</span>
-                          )}
-                        </td>
-                        <td className="p-4 text-slate-200 text-sm max-w-xs truncate" title={sub.fileName}>
-                          {sub.fileName}
-                        </td>
-                        <td className="p-4 text-slate-400 text-sm">{sub.date}</td>
-                        <td className="p-4 text-right">
-                          <button
-                            onClick={() => handleDelete(sub.id)}
-                            className="text-slate-400 hover:text-red-400 transition-colors p-2 hover:bg-red-500/10 rounded-lg group"
-                            title="Delete Subtitle"
-                          >
-                            <Trash2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="8" className="p-12 text-center text-slate-500">
-                        {searchQuery ? 'No matching subtitles found.' : 'No subtitles found.'}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
+            {filteredSubtitles.length > 0 ? (
+              filteredSubtitles.map((sub) => (
+                <div key={sub.id} className="bg-slate-900 rounded-3xl p-6 border border-slate-800 hover:border-indigo-500/50 hover:bg-slate-800/40 transition-all group relative shadow-xl flex flex-col h-full">
+                  <div className="flex justify-between items-start mb-4">
+                    <span className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border ${
+                      sub.type === 'movie' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                      sub.type === 'series' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
+                      'bg-pink-500/10 text-pink-400 border-pink-500/20'
+                    }`}>
+                      {sub.type === 'movie' && <Film className="w-3 h-3" />}
+                      {sub.type === 'series' && <Tv className="w-3 h-3" />}
+                      {sub.type === 'anime' && <Clapperboard className="w-3 h-3" />}
+                      {sub.type}
+                    </span>
+                    <button
+                      onClick={() => handleDelete(sub.id)}
+                      className="text-slate-600 hover:text-red-400 p-2 hover:bg-red-500/10 rounded-xl transition-all"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="flex flex-col gap-2 mb-6">
+                    <h3 className="text-white font-bold text-lg truncate" title={sub.fileName}>
+                      {sub.fileName}
+                    </h3>
+                    <div className="flex items-center gap-2 text-indigo-400 font-mono text-xs">
+                      <Shield className="w-3 h-3" />
+                      {sub.imdbId}
+                    </div>
+                  </div>
+
+                  <div className="mt-auto grid grid-cols-2 gap-3 pt-4 border-t border-slate-800/50">
+                    <div className="flex flex-col gap-1">
+                       <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Language</span>
+                       <span className="text-xs font-bold text-slate-300 uppercase">{sub.language || 'MAL'}</span>
+                    </div>
+                    {sub.type !== 'movie' && (
+                      <div className="flex flex-col gap-1">
+                         <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Episode</span>
+                         <span className="text-xs font-extrabold text-indigo-400 uppercase">S{sub.season} E{sub.episode}</span>
+                      </div>
+                    )}
+                    <div className="flex flex-col gap-1">
+                       <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Added</span>
+                       <span className="text-xs font-bold text-slate-500">{sub.date}</span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-full py-20 text-center">
+                 <div className="bg-slate-900 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-slate-800">
+                    <Archive className="w-8 h-8 text-slate-700" />
+                 </div>
+                 <h3 className="text-slate-300 font-bold text-xl mb-2">No Subtitles Found</h3>
+                 <p className="text-slate-600 text-sm max-w-xs mx-auto">
+                    {searchQuery ? `No matches found for "${searchQuery}"` : "Your library is currently empty. Start uploading some files!"}
+                 </p>
+              </div>
+            )}
           </div>
         )}
-      </main>
-    </div>
-  );
+      </div>
+    </main>
+  </div>
+);
 }
