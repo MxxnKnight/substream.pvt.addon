@@ -87,4 +87,16 @@ app.listen(PORT, '0.0.0.0', () => {
     } catch(_) {}
   }
   console.log('');
+
+  // Self-ping mechanism to keep Render free tier alive
+  // Pings itself every 14 minutes (Render sleeps after 15 minutes of inactivity)
+  setInterval(() => {
+    try {
+      fetch(`${baseUrl}/manifest.json`)
+        .then(res => {
+          if (res.ok) console.log(`[Self-Ping] Successfully pinged to keep server awake (${new Date().toISOString()})`);
+        })
+        .catch(() => {});
+    } catch (err) {}
+  }, 14 * 60 * 1000); // 14 minutes
 });

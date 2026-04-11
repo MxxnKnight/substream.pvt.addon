@@ -57,6 +57,7 @@ const getSubtitles = async (req, res) => {
   const cached = cache[cacheKey];
   if (cached && cached.timestamp > Date.now() - CACHE_DURATION) {
     console.log(`[Stremio Request] Serving from cache for ${cacheKey}`);
+    res.setHeader('Cache-Control', 'max-age=14400, public');
     return res.json(cached.data);
   }
 
@@ -97,15 +98,10 @@ const getSubtitles = async (req, res) => {
 
         const title = `${langName} - ${fileName}`;
 
-        // Create a proxy URL to bypass Cloudflare/User-Agent blocking on Stremio Desktop/Android
-        const baseUrl = req.protocol + '://' + req.get('host');
-        const encodedUrl = Buffer.from(sub.file_path).toString('base64url');
-        const proxyUrl = `${baseUrl}/subtitles/download/${encodedUrl}.srt`;
-
         // Stremio requires: id (string), url (string), lang (ISO 639-2 string)
         return {
           id: String(sub.id),       // MUST be a string
-          url: proxyUrl,            // Use proxy to avoid strictly client-side fetch issues
+          url: sub.file_path,       // Direct Supabase URL for maximum performance and seeking (Range headers)
           lang: langCode,           // MUST be ISO 639-2 (3-letter) code
           title: title              // optional but helpful for UX
         };
@@ -118,6 +114,9 @@ const getSubtitles = async (req, res) => {
 
     console.log(`[Stremio Request] Sending ${mapped.length} subtitles to Stremio:`);
     console.log(JSON.stringify(response, null, 2));
+    
+    // Stremio strictly recommends setting Cache-Control logic for subtitle responses
+    res.setHeader('Cache-Control', 'max-age=14400, public');
     res.json(response);
 
   } catch (err) {
