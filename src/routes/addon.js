@@ -22,7 +22,7 @@ router.get('/manifest.json', addonCors, (req, res) => {
 
 // Proxy route to serve the subtitle file directly to Stremio clients.
 // Bypasses Cloudflare block on unusual User-Agents (like Exoplayer) and ensures .srt extension
-const { Readable } = require('stream');
+
 router.get('/subtitles/download/:encodedUrl.srt', addonCors, async (req, res) => {
   try {
     const fileUrl = Buffer.from(req.params.encodedUrl, 'base64url').toString('utf-8');
@@ -35,12 +35,14 @@ router.get('/subtitles/download/:encodedUrl.srt', addonCors, async (req, res) =>
     res.setHeader('Content-Type', 'application/x-subrip');
     res.setHeader('Content-Disposition', 'attachment; filename="subtitle.srt"');
     
-    if (response.body) {
-      const readable = Readable.fromWeb(response.body);
-      readable.pipe(res);
-    } else {
-      res.status(500).send('Empty response from upstream');
-    }
+    // We must download the entire file into a buffer first
+    // because streaming (piping) uses Transfer-Encoding: chunked.
+    // Stremio Desktop (VLC setup) strictly requires a Content-Length header to accept subtitles!
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    
+    // Express res.send() will automatically compute and set the Content-Length!
+    res.send(buffer);
   } catch (error) {
     console.error('Subtitle proxy error:', error);
     res.status(500).send('Internal server error during download proxy');
