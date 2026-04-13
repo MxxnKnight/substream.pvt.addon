@@ -971,7 +971,7 @@ export default function App() {
 
                 {uploadError && (
                   <div className="text-red-400 text-center text-sm font-medium bg-red-500/10 p-3 rounded-xl border border-red-500/20">
-                    {uploadError}
+                  {uploadError}
                   </div>
                 )}
 
@@ -1010,78 +1010,108 @@ export default function App() {
              </div>
           </div>
         ) : (
-          /* LIBRARY PAGE (Enhanced) */
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-in fade-in duration-500">
-            {filteredSubtitles.length > 0 ? (
-              filteredSubtitles.map((sub) => (
-                <div key={sub.id} className="group bg-slate-900 rounded-[2rem] border border-slate-800/60 hover:border-indigo-500/40 transition-all duration-300 flex flex-col h-full shadow-lg overflow-hidden relative">
-                  
-                  {/* Poster Hover / Background (Optional) */}
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-[50px] -mr-16 -mt-16 pointer-events-none group-hover:bg-indigo-500/10 transition-all" />
-
-                  <div className="p-7 flex-grow">
-                    {/* Media Info with Poster */}
-                    <div className="flex gap-5 mb-6">
-                       {sub.metadata?.poster_path ? (
-                          <img 
-                            src={sub.metadata.poster_path} 
-                            alt="Poster" 
-                            className="w-16 h-24 object-cover rounded-xl shadow-lg ring-1 ring-white/5"
-                          />
+          /* LIBRARY PAGE (Enhanced & Grouped) */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in duration-500">
+            {Object.keys(
+              filteredSubtitles.reduce((acc, sub) => {
+                if (!acc[sub.imdbId]) acc[sub.imdbId] = [];
+                acc[sub.imdbId].push(sub);
+                return acc;
+              }, {})
+            ).length > 0 ? (
+              Object.entries(
+                filteredSubtitles.reduce((acc, sub) => {
+                  if (!acc[sub.imdbId]) acc[sub.imdbId] = [];
+                  acc[sub.imdbId].push(sub);
+                  return acc;
+                }, {})
+              ).map(([imdbId, groupSubtitles]) => {
+                const firstSub = groupSubtitles[0];
+                const metadata = firstSub.metadata;
+                const mediaTitle = metadata?.title || imdbId;
+                
+                return (
+                  <div key={imdbId} className="group bg-slate-900 rounded-[2.5rem] border border-slate-800/60 hover:border-indigo-500/40 transition-all duration-500 flex flex-col h-full shadow-2xl overflow-hidden relative">
+                    
+                    {/* Media Header (Poster & Background) */}
+                    <div className="relative h-48 overflow-hidden">
+                       {metadata?.poster_path ? (
+                          <>
+                             <img 
+                               src={metadata.poster_path} 
+                               alt="Backdrop" 
+                               className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-20 scale-150"
+                             />
+                             <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
+                          </>
                        ) : (
-                          <div className="w-16 h-24 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700">
-                             <Clapperboard className="w-6 h-6 text-slate-700" />
-                          </div>
+                          <div className="absolute inset-0 bg-slate-800" />
                        )}
-                       <div className="flex-1 min-w-0">
-                          <h3 className="font-black text-white text-lg truncate leading-tight mb-1" title={sub.metadata?.title || sub.imdbId}>
-                             {sub.metadata?.title || sub.imdbId}
-                          </h3>
-                          <div className="flex flex-wrap gap-2 mt-2">
-                             <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
-                               sub.type === 'movie' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' : 'bg-purple-500/10 text-purple-400 border-purple-500/20'
-                             }`}>
-                               {sub.type}
-                             </span>
-                             <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 text-[9px] font-black uppercase tracking-widest border border-emerald-500/20">
-                               {sub.language || 'MAL'}
-                             </span>
-                             {sub.type !== 'movie' && (
-                               <span className="px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest">
-                                 S{String(sub.season).padStart(2,'0')} E{String(sub.episode).padStart(2,'0')}
-                               </span>
-                             )}
+                       
+                       <div className="absolute bottom-0 left-0 p-6 flex gap-4 items-end w-full">
+                          {metadata?.poster_path ? (
+                             <img 
+                               src={metadata.poster_path} 
+                               alt="Poster" 
+                               className="w-20 h-28 object-cover rounded-xl shadow-2xl ring-2 ring-white/10 z-10"
+                             />
+                          ) : (
+                             <div className="w-20 h-28 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700 z-10">
+                                <Clapperboard className="w-8 h-8 text-slate-700" />
+                             </div>
+                          )}
+                          <div className="flex-1 min-w-0 z-10">
+                             <h3 className="font-black text-white text-xl truncate leading-tight mb-1" title={mediaTitle}>
+                                {mediaTitle}
+                             </h3>
+                             <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-mono text-indigo-400 font-bold bg-indigo-500/10 px-2 py-0.5 rounded uppercase">{imdbId}</span>
+                                <span className="text-[10px] text-slate-500 font-bold uppercase">{groupSubtitles.length} files</span>
+                             </div>
                           </div>
                        </div>
                     </div>
 
-                    {/* Filename with Lucide Icon */}
-                    <div className="flex items-start gap-3 p-4 bg-slate-950/40 rounded-2xl border border-slate-800/40 group-hover:bg-slate-950/60 transition-all">
-                       <FileText className="w-4 h-4 text-slate-600 mt-0.5 flex-shrink-0" />
-                       <p className="text-slate-400 text-sm leading-relaxed line-clamp-2">
-                          {sub.fileName}
-                       </p>
+                    {/* Subtitles List (Scrollable Area) */}
+                    <div className="p-4 flex-grow">
+                       <p className="px-3 text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Available Subtitles</p>
+                       <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                          {groupSubtitles.sort((a,b) => {
+                             if (a.type === 'movie') return -1;
+                             return (a.season * 1000 + a.episode) - (b.season * 1000 + b.episode);
+                          }).map((sub) => (
+                             <div key={sub.id} className="flex items-center justify-between p-3 rounded-2xl bg-slate-950/40 border border-slate-800/50 hover:border-slate-700 transition-all group/item">
+                                <div className="flex flex-col min-w-0 flex-1 mr-3">
+                                   <div className="flex items-center gap-2 mb-1">
+                                      {sub.type !== 'movie' && (
+                                         <span className="text-[9px] font-black text-indigo-400">S{String(sub.season).padStart(2,'0')}E{String(sub.episode).padStart(2,'0')}</span>
+                                      )}
+                                      <span className="text-[9px] font-black bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded leading-none uppercase">{sub.language || 'MAL'}</span>
+                                   </div>
+                                   <p className="text-[11px] text-slate-400 truncate" title={sub.fileName}>{sub.fileName}</p>
+                                </div>
+                                <button
+                                   onClick={(e) => { e.stopPropagation(); handleDelete(sub.id); }}
+                                   className="p-2 rounded-xl text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover/item:opacity-100"
+                                   title="Remove"
+                                >
+                                   <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                             </div>
+                          ))}
+                       </div>
                     </div>
-                  </div>
 
-                  {/* Footer: Date & Delete */}
-                  <div className="px-7 py-5 bg-slate-800/30 border-t border-slate-800/80 flex items-center justify-between">
-                    <button
-                      onClick={() => handleDelete(sub.id)}
-                      className="text-slate-500 hover:text-red-400 font-bold text-xs transition-all flex items-center gap-2 group/del"
-                    >
-                      <div className="p-1.5 rounded-lg bg-slate-800 group-hover/del:bg-red-500/10 transition-all">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </div>
-                      <span>Remove</span>
-                    </button>
-                    <div className="flex flex-col items-end">
-                       <span className="text-[10px] text-slate-600 font-bold uppercase">{sub.date}</span>
-                       <span className="text-[9px] font-mono text-indigo-500/60">{sub.imdbId}</span>
+                    {/* Footer / Meta */}
+                    <div className="px-7 py-4 bg-slate-950/50 border-t border-slate-800/80 flex items-center justify-between">
+                       <span className="text-[9px] text-slate-600 font-bold uppercase">Updated {firstSub.date}</span>
+                       <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${firstSub.type === 'movie' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-purple-500/20 text-purple-400'}`}>
+                          {firstSub.type}
+                       </span>
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="col-span-full py-20 text-center">
                  <div className="bg-slate-900 w-24 h-24 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 border border-slate-800/50 shadow-xl">
