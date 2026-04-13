@@ -23,7 +23,8 @@ import {
   Globe,
   Sun,
   Moon,
-  Palette
+  Palette,
+  ExternalLink
 } from 'lucide-react';
 
 export default function App() {
@@ -37,7 +38,7 @@ export default function App() {
   // Theme State
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
   const [accent, setAccent] = useState(localStorage.getItem('accent') || 'indigo');
-  const [mediaFilter, setMediaFilter] = useState('all'); // 'all', 'movie', 'series'
+  const [mediaFilter, setMediaFilter] = useState('movie'); // 'movie', 'series'
 
   useEffect(() => {
     localStorage.setItem('theme', theme);
@@ -210,7 +211,6 @@ export default function App() {
   const copyManifestUrl = () => {
     const url = window.location.origin + '/manifest.json';
     navigator.clipboard.writeText(url).then(() => {
-        // Simple temporary toast or alert
         alert('Manifest URL copied!\n\n' + url);
     }).catch(err => {
         console.error('Failed to copy: ', err);
@@ -232,52 +232,30 @@ export default function App() {
   const handleZipFile = async (file) => {
     setExtractingCount(prev => prev + 1);
     setExtractionProgress(10);
-
     try {
       const JSZip = await loadJSZip();
       const zip = new JSZip();
-
-      setExtractionProgress(30);
       const contents = await zip.loadAsync(file);
-
-      setExtractionProgress(60);
       const extractedFiles = [];
       const totalFiles = Object.keys(contents.files).length;
       let processed = 0;
-
       for (const relativePath of Object.keys(contents.files)) {
         const zipEntry = contents.files[relativePath];
         processed++;
         setExtractionProgress(60 + Math.floor((processed / totalFiles) * 30));
-
-        if (zipEntry.dir || relativePath.includes('__MACOSX') || relativePath.startsWith('.')) {
-          continue;
-        }
-
+        if (zipEntry.dir || relativePath.includes('__MACOSX') || relativePath.startsWith('.')) continue;
         if (/\.(srt|vtt|sub|ass)$/i.test(relativePath)) {
           const data = await zipEntry.async('blob');
           const cleanName = relativePath.split('/').pop();
           const fileObj = new File([data], cleanName, { type: 'text/plain' });
-
-          extractedFiles.push({
-            file: fileObj,
-            name: cleanName,
-            size: data.size,
-            isFromZip: true,
-            isEditing: false,
-            originalZip: file.name
-          });
+          extractedFiles.push({ file: fileObj, name: cleanName, size: data.size, isFromZip: true, isEditing: false, originalZip: file.name });
         }
       }
-
       setStagedFiles(prev => [...prev, ...extractedFiles]);
-      setExtractionProgress(100);
-
     } catch (error) {
       console.error("Zip extraction failed:", error);
-      alert("Failed to extract zip file.");
     } finally {
-      setTimeout(() => setExtractingCount(prev => Math.max(0, prev - 1)), 500);
+      setExtractingCount(prev => Math.max(0, prev - 1));
     }
   };
 
@@ -287,16 +265,13 @@ export default function App() {
     e.preventDefault();
     setLoginError('');
     setLoginLoading(true);
-
     try {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(loginForm)
       });
-
       const data = await res.json();
-
       if (res.ok) {
         localStorage.setItem('token', data.token);
         setUser({ username: loginForm.username });
@@ -305,7 +280,7 @@ export default function App() {
         setLoginError(data.error || 'Login failed');
       }
     } catch (err) {
-      setLoginError('Network error. Is the backend running?');
+      setLoginError('Network error');
     } finally {
       setLoginLoading(false);
     }
@@ -316,77 +291,37 @@ export default function App() {
     setUser(null);
     setLoginForm({ username: '', password: '' });
     setCurrentView('upload');
-    setSearchQuery('');
-    setSubtitles([]);
   };
 
   const handleImdbChange = (e) => {
     const rawValue = e.target.value;
     const extracted = extractImdbId(rawValue);
     setUploadForm({ ...uploadForm, imdbId: extracted });
-    if (extracted && extracted !== uploadForm.imdbId) {
-       fetchCurrentMetadata(extracted);
-    } else if (!extracted) {
-       setCurrentMetadata(null);
-    }
+    if (extracted && extracted !== uploadForm.imdbId) fetchCurrentMetadata(extracted);
+    else if (!extracted) setCurrentMetadata(null);
   };
 
   const processFiles = useCallback((files) => {
     if (files.length === 0) return;
     setUploadSuccess(false);
-
     files.forEach(file => {
-      const isZip = file.name.toLowerCase().endsWith('.zip') ||
-                   file.type === 'application/zip' ||
-                   file.type === 'application/x-zip-compressed';
-
-      const isSubtitle = /\.(srt|vtt|sub|ass)$/i.test(file.name);
-
-      // REMOVED: Auto-switch to series on zip/multi-file logic
-      // if ((isZip || files.length > 1) && uploadForm.type === 'movie') {
-      //   setUploadForm(prev => ({ ...prev, type: 'series' }));
-      // }
-
-      if (isZip) {
-        handleZipFile(file);
-      } else if (isSubtitle) {
-        setStagedFiles(prev => [...prev, {
-          file: file,
-          name: file.name,
-          size: file.size,
-          isFromZip: false,
-          isEditing: false
-        }]);
+      const isZip = file.name.toLowerCase().endsWith('.zip') || file.type === 'application/zip';
+      if (isZip) handleZipFile(file);
+      else if (/\.(srt|vtt|sub|ass)$/i.test(file.name)) {
+        setStagedFiles(prev => [...prev, { file: file, name: file.name, size: file.size, isFromZip: false, isEditing: false }]);
       }
     });
-  }, [uploadForm.type]);
+  }, []);
 
   const handleFileSelection = (e) => {
-    const files = Array.from(e.target.files || []);
-    processFiles(files);
+    processFiles(Array.from(e.target.files || []));
     e.target.value = '';
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (isExtracting) return;
-
-    const files = Array.from(e.dataTransfer.files || []);
-    processFiles(files);
   };
 
   const toggleEditFile = (index) => {
     const newFiles = [...stagedFiles];
     newFiles[index].isEditing = !newFiles[index].isEditing;
-    if (newFiles[index].isEditing) {
-      newFiles[index].tempName = newFiles[index].name;
-    }
+    if (newFiles[index].isEditing) newFiles[index].tempName = newFiles[index].name;
     setStagedFiles(newFiles);
   };
 
@@ -394,13 +329,10 @@ export default function App() {
     const newFiles = [...stagedFiles];
     if (newFiles[index].tempName !== newFiles[index].name) {
        const oldFile = newFiles[index].file;
-       const newFile = new File([oldFile], newFiles[index].tempName, { type: oldFile.type });
-       newFiles[index].file = newFile;
+       newFiles[index].file = new File([oldFile], newFiles[index].tempName, { type: oldFile.type });
        newFiles[index].name = newFiles[index].tempName;
     }
-
     newFiles[index].isEditing = false;
-    delete newFiles[index].tempName;
     setStagedFiles(newFiles);
   };
 
@@ -410,161 +342,74 @@ export default function App() {
     setStagedFiles(newFiles);
   };
 
-  const removeStagedFile = (indexToRemove) => {
-    setStagedFiles(stagedFiles.filter((_, index) => index !== indexToRemove));
-  };
-
-  const clearStagedFiles = () => {
-    setStagedFiles([]);
-  };
+  const removeStagedFile = (idx) => setStagedFiles(stagedFiles.filter((_, i) => i !== idx));
 
   const handleDelete = async (id) => {
-    if(window.confirm("Are you sure you want to delete this subtitle?")) {
+    if(window.confirm("Delete this subtitle?")) {
       try {
         const res = await apiFetch(`/api/admin/subtitles/${id}`, { method: 'DELETE' });
-        if (res.ok) {
-           setSubtitles(subtitles.filter(sub => sub.id !== id));
-        } else {
-           alert("Failed to delete subtitle");
-        }
-      } catch (err) {
-        console.error("Delete failed", err);
-      }
+        if (res.ok) setSubtitles(subtitles.filter(sub => sub.id !== id));
+      } catch (err) { console.error(err); }
     }
+  };
+
   const handleDeleteSeason = async (imdbId, season, subs) => {
-    if(window.confirm(`Delete all ${subs.length} subtitles for Season ${season}?`)) {
+    if(window.confirm(`Delete all ${subs.length} subtitles for S${season}?`)) {
       try {
-        // Parallel deletes for speed
         await Promise.all(subs.map(sub => apiFetch(`/api/admin/subtitles/${sub.id}`, { method: 'DELETE' })));
         setSubtitles(prev => prev.filter(s => !subs.some(sub => sub.id === s.id)));
-      } catch (err) {
-        console.error("Bulk delete failed", err);
-        alert("Some subtitles could not be deleted");
-        fetchSubtitles();
-      }
+      } catch (err) { console.error(err); }
     }
   };
 
   const handleUploadSubmit = async (e) => {
     e.preventDefault();
     if (stagedFiles.length === 0 || !uploadForm.imdbId) return;
-
     setIsUploading(true);
-    setUploadError('');
-    setUploadSuccess(false);
-
     let successCount = 0;
-    let failCount = 0;
-
     for (const staged of stagedFiles) {
         const formData = new FormData();
         formData.append('file', staged.file);
         formData.append('imdb_id', uploadForm.imdbId);
         formData.append('type', uploadForm.type);
-        formData.append('language', uploadForm.language); // Use selected language
-
+        formData.append('language', uploadForm.language);
         try {
-            const res = await apiFetch('/api/admin/upload', {
-                method: 'POST',
-                body: formData
-            });
+            const res = await apiFetch('/api/admin/upload', { method: 'POST', body: formData });
             if (res.ok) successCount++;
-            else failCount++;
-        } catch (err) {
-            failCount++;
-            console.error(err);
-        }
+        } catch (err) { console.error(err); }
     }
-
     setIsUploading(false);
     if (successCount > 0) {
         setUploadSuccess(true);
         setStagedFiles([]);
-        setUploadForm(prev => ({
-            ...prev,
-            imdbId: '',
-            season: '',
-            episode: ''
-            // Keep previous language setting or reset? Usually keep.
-        }));
+        setUploadForm(prev => ({ ...prev, imdbId: '' }));
         fetchSubtitles();
-    }
-
-    if (failCount > 0) {
-        setUploadError(`Failed to upload ${failCount} files.`);
     }
   };
 
   const filteredSubtitles = subtitles.filter(sub => {
-    // Search Query Match
-    const query = searchQuery.toLowerCase().trim();
-    const epStr = sub.season != null ? `s${String(sub.season).padStart(2,'0')}e${String(sub.episode).padStart(2,'0')}` : '';
-    const matchesSearch = !query || (
-      (sub.fileName && sub.fileName.toLowerCase().includes(query)) ||
-      (sub.imdbId && sub.imdbId.toLowerCase().includes(query)) ||
-      (sub.type && sub.type.toLowerCase().includes(query)) ||
-      (sub.language && sub.language.toLowerCase().includes(query)) ||
-      (epStr && epStr.includes(query.replace(/\s/g,''))) ||
-      (sub.metadata?.title && sub.metadata.title.toLowerCase().includes(query))
-    );
-
-    // Filter Match
-    const matchesFilter = mediaFilter === 'all' || sub.type === mediaFilter;
-
-    return matchesSearch && matchesFilter;
+    const q = searchQuery.toLowerCase().trim();
+    if (mediaFilter !== sub.type) return false;
+    if (!q) return true;
+    return (sub.fileName?.toLowerCase().includes(q) || sub.imdbId?.toLowerCase().includes(q) || sub.metadata?.title?.toLowerCase().includes(q));
   });
 
-  // --- Render ---
-
   if (!user) {
-    // Login Screen (Simplified & Theme Aware)
     return (
       <div className={`min-h-screen ${theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'} flex items-center justify-center p-4 font-sans transition-theme`}>
         <div className={`max-w-md w-full ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'} rounded-[2.5rem] shadow-2xl overflow-hidden border p-8 lg:p-12 transition-theme`}>
             <div className="text-center mb-10">
-              <div className={`${a.main} w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl ${a.shadow} animate-in zoom-in duration-500`}>
+              <div className={`${a.main} w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl ${a.shadow}`}>
                 <Film className="w-10 h-10 text-white" />
               </div>
-              <h2 className={`text-4xl font-black tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>SubStream Admin</h2>
-              <p className={`mt-3 text-sm font-bold ${theme === 'dark' ? 'text-slate-500' : 'text-slate-500'}`}>Authenticate to manage your subtitles</p>
+              <h2 className={`text-4xl font-black tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>SubStream</h2>
+              <p className="mt-3 text-sm font-bold opacity-50 uppercase tracking-widest">Administrator Portal</p>
             </div>
             <form onSubmit={handleLogin} className="space-y-6">
-              <div>
-                <label className={`block text-xs font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} mb-3 ml-1`}>Username</label>
-                <div className="relative group">
-                  <User className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${theme === 'dark' ? 'text-slate-600' : 'text-slate-300'}`} />
-                  <input
-                    type="text"
-                    value={loginForm.username}
-                    onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
-                    className={`w-full ${theme === 'dark' ? 'bg-slate-950 border-slate-800 focus:border-indigo-500 text-white' : 'bg-slate-50 border-slate-200 focus:border-indigo-400 text-slate-900'} border rounded-2xl py-4 pl-12 pr-4 placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all font-medium`}
-                    placeholder="admin"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className={`block text-xs font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} mb-3 ml-1`}>Password</label>
-                <div className="relative group">
-                  <Shield className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${theme === 'dark' ? 'text-slate-600' : 'text-slate-300'}`} />
-                  <input
-                    type="password"
-                    value={loginForm.password}
-                    onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                    className={`w-full ${theme === 'dark' ? 'bg-slate-950 border-slate-800 focus:border-indigo-500 text-white' : 'bg-slate-50 border-slate-200 focus:border-indigo-400 text-slate-900'} border rounded-2xl py-4 pl-12 pr-4 placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all font-medium`}
-                    placeholder="••••••••"
-                  />
-                </div>
-              </div>
-              {loginError && (
-                <div className="text-red-500 text-xs font-bold text-center bg-red-500/10 py-3 rounded-xl border border-red-500/20">{loginError}</div>
-              )}
-              <button
-                type="submit"
-                disabled={loginLoading}
-                className={`w-full ${a.main} ${a.hover} text-white font-black py-4 rounded-2xl shadow-xl transition-all active:scale-[0.98] disabled:opacity-50`}
-              >
-                {loginLoading ? 'Signing In...' : 'Sign In'}
-              </button>
+              <div className="relative group"><User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 opacity-20" /><input type="text" value={loginForm.username} onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })} className={`w-full ${theme === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'} border rounded-2xl py-4 pl-12 pr-4 outline-none focus:ring-4 ${a.ring}/10 transition-all`} placeholder="username" /></div>
+              <div className="relative group"><Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 opacity-20" /><input type="password" value={loginForm.password} onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })} className={`w-full ${theme === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'} border rounded-2xl py-4 pl-12 pr-4 outline-none focus:ring-4 ${a.ring}/10 transition-all`} placeholder="password" /></div>
+              {loginError && <div className="text-red-500 text-xs font-bold text-center bg-red-500/10 py-3 rounded-xl">{loginError}</div>}
+              <button type="submit" disabled={loginLoading} className={`w-full ${a.main} ${a.hover} text-white font-black py-4 rounded-2xl transition-all shadow-xl ${a.shadow}`}>Sign In</button>
             </form>
         </div>
       </div>
@@ -572,583 +417,161 @@ export default function App() {
   }
 
   return (
-    <div className={`min-h-screen ${theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-white text-slate-900'} font-sans flex flex-col lg:flex-row h-full lg:h-screen lg:overflow-hidden transition-theme`}>
+    <div className={`min-h-screen ${theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-white text-slate-900'} font-sans flex flex-col lg:flex-row h-screen overflow-hidden transition-theme`}>
 
-      {/* Mobile Top Bar */}
-      <div className={`lg:hidden ${theme === 'dark' ? 'bg-slate-900/80' : 'bg-white/80'} backdrop-blur-xl border-b ${theme === 'dark' ? 'border-slate-800' : 'border-slate-100'} p-4 flex items-center justify-between sticky top-0 z-50`}>
-        <div className="flex items-center gap-3">
-          <div className={`${a.main} p-2.5 rounded-2xl shadow-lg ${a.shadow}`}>
-            <Film className="w-5 h-5 text-white" />
-          </div>
-          <h1 className="font-black text-xl tracking-tight">SubStream</h1>
-        </div>
-        <button
-          onClick={() => setIsNavOpen(!isNavOpen)}
-          className={`p-2 ${theme === 'dark' ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'} rounded-2xl transition-all`}
-        >
-          {isNavOpen ? <X className="w-6 h-6" /> : <div className="space-y-1.5"><div className="w-6 h-0.5 bg-current"></div><div className="w-6 h-0.5 bg-current"></div><div className="w-6 h-0.5 bg-current"></div></div>}
-        </button>
-      </div>
-
-      {/* Sidebar / Top Drawer */}
-      <aside className={`fixed inset-0 z-40 lg:relative lg:z-0 lg:flex w-full lg:w-80 ${theme === 'dark' ? 'bg-slate-900' : 'bg-slate-50'} border-b lg:border-b-0 lg:border-r ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'} transition-all duration-500 ease-in-out ${isNavOpen ? 'translate-y-0 opacity-100 pointer-events-auto' : '-translate-y-full lg:translate-y-0 opacity-0 lg:opacity-100 pointer-events-none lg:pointer-events-auto'}`}>
-        <div className="flex flex-col h-full w-full pt-20 lg:pt-0 overflow-y-auto custom-scrollbar">
-          <div className="p-8 mt-4 lg:mt-0 flex items-center justify-between gap-3 border-b border-transparent">
-            <div className="flex items-center gap-4">
-               <div className={`${a.main} p-3 rounded-[1.5rem] shadow-xl ${a.shadow}`}>
-                  <Film className="w-6 h-6 text-white" />
-               </div>
-               <h1 className="font-black text-2xl tracking-tighter">SubStream</h1>
-            </div>
-          </div>
-
-          <div className="p-8">
-            <div className={`${theme === 'dark' ? 'bg-slate-800/80 border-slate-700/50 text-white' : 'bg-white border-slate-200 text-slate-900'} rounded-[2.5rem] p-6 border mb-10 shadow-xl shadow-black/5`}>
-              <p className={`text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} mb-4`}>Addon URL</p>
-              <button
-                onClick={copyManifestUrl}
-                className={`w-full flex items-center justify-center gap-3 px-5 py-4 ${a.main} ${a.hover} text-white rounded-2xl text-xs font-black transition-all shadow-xl ${a.shadow} group`}
-              >
-                <Link className="w-4 h-4 group-hover:rotate-12 transition-transform" />
-                <span>Copy Manifest</span>
-              </button>
-            </div>
-
-            <nav className="space-y-2">
-              {[
-                { id: 'upload', label: 'Upload', icon: Upload },
-                { id: 'list', label: 'Library', icon: Archive },
-                { id: 'logs', label: 'Traffic Logs', icon: Shield },
-              ].map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => { setCurrentView(item.id); if(item.id === 'list') fetchSubtitles(); setIsNavOpen(false); }}
-                  className={`w-full flex items-center gap-4 px-6 py-4 rounded-3xl transition-all group ${
-                    currentView === item.id 
-                      ? `${theme === 'dark' ? 'bg-slate-800 text-white border-slate-700 shadow-2xl' : 'bg-white text-slate-900 border-slate-200 shadow-xl shadow-black/5'} border` 
-                      : `${theme === 'dark' ? 'text-slate-500 hover:bg-slate-800/40 hover:text-slate-300' : 'text-slate-400 hover:bg-white hover:text-slate-600'}`
-                  }`}
-                >
-                  <div className={`p-2 rounded-xl transition-all duration-300 ${currentView === item.id ? `${a.main} text-white shadow-lg` : `${theme === 'dark' ? 'bg-slate-800' : 'bg-slate-100'} group-hover:scale-110`}`}>
-                    <item.icon className="w-4 h-4" />
-                  </div>
-                  <span className="font-black text-sm tracking-tight">{item.label}</span>
+      {/* Sidebar */}
+      <aside className={`fixed inset-0 z-40 lg:relative lg:z-0 lg:flex w-full lg:w-72 ${theme === 'dark' ? 'bg-slate-900' : 'bg-slate-50'} border-b lg:border-b-0 lg:border-r ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'} transition-all duration-500 ${isNavOpen ? 'translate-y-0' : '-translate-y-full lg:translate-y-0'}`}>
+        <div className="flex flex-col h-full w-full pt-20 lg:pt-0">
+          <div className="p-8 flex items-center gap-4"><div className={`${a.main} p-2.5 rounded-2xl`}><Film className="w-5 h-5 text-white" /></div><h1 className="font-black text-xl tracking-tighter">SubStream</h1></div>
+          <div className="p-6">
+            <button onClick={copyManifestUrl} className={`w-full flex items-center justify-center gap-2 px-4 py-3 ${a.main} text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl ${a.shadow}`}>Copy Addon Link</button>
+            <nav className="mt-8 space-y-1">
+              {[ { id: 'upload', label: 'Upload Feed', icon: Upload }, { id: 'list', label: 'Manage Library', icon: Archive }, { id: 'logs', label: 'Live Traffic', icon: Shield } ].map((item) => (
+                <button key={item.id} onClick={() => { setCurrentView(item.id); if(item.id === 'list') fetchSubtitles(); setIsNavOpen(false); }} className={`w-full flex items-center gap-4 px-6 py-3.5 rounded-2xl transition-all ${currentView === item.id ? `${theme === 'dark' ? 'bg-slate-800 text-white' : 'bg-white shadow-sm text-slate-900'} border ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}` : 'opacity-40 hover:opacity-100'}`}>
+                  <item.icon className={`w-4 h-4 ${currentView === item.id ? a.text : ''}`} /><span className="font-bold text-xs">{item.label}</span>
                 </button>
               ))}
             </nav>
-
-            {/* Customization Section */}
-            <div className="mt-12 pt-12 border-t border-slate-800/10">
-               <p className={`text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-600' : 'text-slate-400'} mb-6 px-4`}>Personalization</p>
-               
-               <div className="flex flex-col gap-8 px-4">
-                  {/* Theme Switcher */}
-                  <div className="flex items-center justify-between">
-                     <span className="text-xs font-bold opacity-60">Theme</span>
-                     <button 
-                        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                        className={`p-3 rounded-2xl ${theme === 'dark' ? 'bg-slate-800 text-amber-400' : 'bg-slate-100 text-slate-900'} transition-all hover:scale-110`}
-                     >
-                        {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                     </button>
-                  </div>
-
-                  {/* Accent Picker */}
-                  <div className="flex flex-col gap-4">
-                     <div className="flex items-center gap-2">
-                        <Palette className="w-3 h-3 opacity-40" />
-                        <span className="text-xs font-bold opacity-60">Accent Color</span>
-                     </div>
-                     <div className="flex flex-wrap gap-2.5">
-                        {Object.keys(ACCENTS).map((color) => (
-                           <button
-                             key={color}
-                             onClick={() => setAccent(color)}
-                             className={`w-8 h-8 rounded-full ${ACCENTS[color].main} transition-all hover:scale-125 hover:rotate-12 ${accent === color ? 'ring-offset-2 ring-2 ring-indigo-500 scale-110' : 'opacity-40 grayscale-[50%]'}`}
-                           />
-                        ))}
-                     </div>
-                  </div>
-               </div>
+            <div className="mt-10 pt-10 border-t border-slate-500/10 space-y-6">
+               <div className="flex items-center justify-between px-2"><span className="text-[10px] font-black uppercase opacity-40">Appearance</span><button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className={`p-2 rounded-xl ${theme === 'dark' ? 'bg-slate-800' : 'bg-slate-100'}`}>{theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}</button></div>
+               <div className="px-2 pb-10"><div className="flex flex-wrap gap-2">{Object.keys(ACCENTS).map(c => <button key={c} onClick={() => setAccent(c)} className={`w-6 h-6 rounded-full ${ACCENTS[c].main} transition-all ${accent === c ? 'ring-2 ring-offset-2 ring-indigo-500 scale-110' : 'opacity-30'}`} />)}</div></div>
             </div>
           </div>
-
-          <div className="p-8 mt-auto border-t border-slate-800/10">
-             <div className={`flex items-center gap-4 px-4 py-3 mb-6 rounded-2xl ${theme === 'dark' ? 'bg-white/5' : 'bg-slate-100 shadow-inner'}`}>
-                <div className={`w-10 h-10 rounded-2xl ${theme === 'dark' ? 'bg-slate-800' : 'bg-white shadow-lg'} flex items-center justify-center border ${theme === 'dark' ? 'border-slate-700' : 'border-slate-100'}`}>
-                   <User className={`w-5 h-5 ${a.text}`} />
-                </div>
-                <div className="flex flex-col min-w-0">
-                   <span className={`text-xs font-black truncate ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>Administrator</span>
-                   <div className="flex items-center gap-1.5">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/50" />
-                      <span className={`text-[9px] ${theme === 'dark' ? 'text-slate-500' : 'text-slate-600'} font-black uppercase tracking-tighter`}>System Synchronized</span>
-                   </div>
-                </div>
-             </div>
-            <button
-              onClick={handleLogout}
-              className={`w-full flex items-center justify-center gap-3 ${theme === 'dark' ? 'text-slate-600 hover:text-red-400' : 'text-slate-400 hover:text-red-600'} font-black px-6 py-4 rounded-2xl border border-transparent transition-all text-[10px] uppercase tracking-[0.2em]`}
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Sign Out</span>
-            </button>
-          </div>
+          <div className="mt-auto p-6 flex flex-col gap-3"><button onClick={handleLogout} className="flex items-center justify-center gap-2 opacity-30 hover:opacity-100 transition-all text-[10px] uppercase font-black tracking-widest py-4"><LogOut className="w-4 h-4" /> Sign Out</button></div>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className={`flex-1 overflow-y-auto ${theme === 'dark' ? 'bg-slate-950' : 'bg-slate-100'} pb-24 lg:pb-12 custom-scrollbar transition-theme`}>
-        <div className="max-w-screen-2xl mx-auto p-4 lg:p-12">
+      <main className="flex-1 overflow-y-auto custom-scrollbar flex flex-col relative">
+        <div className="max-w-screen-2xl mx-auto w-full p-4 lg:p-8 flex flex-col gap-8">
           
-          {/* Persistent Header - Clean & Space Efficient */}
-          <header className={`flex flex-col lg:flex-row lg:justify-between lg:items-center sticky top-0 z-30 px-6 py-4 lg:px-12 lg:py-6 transition-all border-b ${theme === 'dark' ? 'bg-slate-950/80 border-white/5' : 'bg-white/90 border-slate-200'} backdrop-blur-xl`}>
-            <div className="flex flex-col lg:flex-row lg:items-center gap-6 lg:gap-10">
-              <div className="flex items-center gap-4">
-                <div className={`${a.main} p-2.5 rounded-xl hidden lg:block shadow-lg ${a.shadow}`}>
-                    {currentView === 'upload' ? <Upload className="w-5 h-5 text-white" /> : currentView === 'list' ? <Archive className="w-5 h-5 text-white" /> : <Shield className="w-5 h-5 text-white" />}
-                </div>
-                <h2 className={`text-2xl lg:text-3xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-                    {currentView === 'upload' ? 'Upload' : currentView === 'list' ? 'Library' : 'Logs'}
-                </h2>
-              </div>
-
-              {/* Media Filter Toggle - Cleaner & Responsive */}
-              {currentView === 'list' && (
-                <div className={`flex p-1 rounded-xl ${theme === 'dark' ? 'bg-slate-900' : 'bg-slate-200/50'} border ${theme === 'dark' ? 'border-white/5' : 'border-slate-300/30'}`}>
-                   {[
-                     { id: 'all', label: 'All' },
-                     { id: 'movie', label: 'Movies' },
-                     { id: 'series', label: 'Series' }
-                   ].map((btn) => (
-                     <button
-                        key={btn.id}
-                        onClick={() => setMediaFilter(btn.id)}
-                        className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                           mediaFilter === btn.id 
-                            ? `${a.main} text-white shadow-lg` 
-                            : `${theme === 'dark' ? 'text-slate-500 hover:text-slate-200' : 'text-slate-500 hover:text-slate-800'}`
-                        }`}
-                     >
-                        {btn.label}
-                     </button>
-                   ))}
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center gap-4 mt-4 lg:mt-0">
-               {currentView === 'list' && (
-                 <div className="relative w-full lg:w-64">
-                    <Search className={`absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 ${theme === 'dark' ? 'text-slate-600' : 'text-slate-400'}`} />
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className={`block w-full pl-10 pr-4 py-2 text-xs border rounded-xl ${theme === 'dark' ? 'bg-slate-900 border-white/5 text-white placeholder-slate-700' : 'bg-slate-100 border-slate-200 text-slate-900 placeholder-slate-400'} focus:outline-none focus:ring-2 ${a.ring}/20 transition-all`}
-                      placeholder="Search subtitles..."
-                    />
-                 </div>
-               )}
-               {currentView === 'list' && (
-                 <button
-                   onClick={fetchSubtitles}
-                   disabled={isRefreshing}
-                   className={`p-2.5 ${theme === 'dark' ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-100 hover:bg-slate-200 border border-slate-200'} rounded-xl transition-all disabled:opacity-50`}
-                   title="Sync Library"
-                 >
-                   <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin ' + a.text : (theme === 'dark' ? 'text-slate-400' : 'text-slate-600')}`} />
-                 </button>
-               )}
-            </div>
+          {/* Mobile Header (Floating rounded square) */}
+          <header className={`lg:hidden flex items-center justify-between p-4 rounded-[1.5rem] sticky top-4 z-50 border shadow-2xl transition-all ${theme === 'dark' ? 'bg-slate-900/90 border-slate-800' : 'bg-white/95 border-slate-200'} backdrop-blur-xl`}>
+             <div className="flex items-center gap-3"><div className={`${a.main} p-2 rounded-xl`}><Film className="w-4 h-4 text-white" /></div><span className="font-black tracking-tighter">SubStream</span></div>
+             <button onClick={() => setIsNavOpen(!isNavOpen)} className="p-2 opacity-50 hover:opacity-100 transition-all">{isNavOpen ? <X className="w-5 h-5" /> : <Palette className="w-5 h-5" />}</button>
           </header>
 
-        {currentView === 'upload' ? (
-          /* UPLOAD PAGE - WIDER */
-          <div className="max-w-6xl w-full animate-in fade-in slide-in-from-bottom-5 duration-700">
-            <div className={`${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100 shadow-2xl shadow-black/5'} rounded-[3rem] border p-10 md:p-16 shadow-2xl`}>
-              <form onSubmit={handleUploadSubmit} className="space-y-10">
-
-                {/* Content Type Selector */}
-                <div>
-                  <label className={`block text-xs font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} mb-5 ml-2`}>Content Type</label>
-                  <div className="grid grid-cols-2 gap-6">
-                    {['movie', 'series'].map((type) => (
-                      <label key={type} className={`cursor-pointer border-2 rounded-[2rem] p-6 flex flex-col items-center justify-center gap-4 transition-all duration-300 ${
-                        uploadForm.type === type
-                          ? `${a.main} ${a.border} text-white shadow-2xl ${a.shadow}`
-                          : `${theme === 'dark' ? 'bg-slate-950 border-slate-800 text-slate-600 hover:border-slate-700' : 'bg-slate-50 border-slate-200 text-slate-400 hover:border-slate-300'}`
-                      }`}>
-                        <input
-                          type="radio"
-                          name="contentType"
-                          className="hidden"
-                          checked={uploadForm.type === type}
-                          onChange={() => setUploadForm({ ...uploadForm, type: type })}
-                        />
-                        <div className={`p-3 rounded-2xl transition-transform ${uploadForm.type === type ? 'bg-white/20 scale-110' : `${theme === 'dark' ? 'bg-slate-900' : 'bg-white shadow-sm'}`}`}>
-                          {type === 'movie' && <Film className="w-6 h-6" />}
-                          {type === 'series' && <Tv className="w-6 h-6" />}
-                        </div>
-                        <span className="capitalize font-black text-sm tracking-wide">{type}</span>
-                      </label>
+          {/* Persistent Desktop Header */}
+          <header className={`hidden lg:flex items-center justify-between sticky top-0 z-30 py-4 px-6 border rounded-2xl transition-all ${theme === 'dark' ? 'bg-slate-925/80 border-slate-800' : 'bg-white/80 border-slate-200'} backdrop-blur-xl shadow-sm`}>
+             <div className="flex items-center gap-8">
+                <h2 className="text-lg font-black tracking-tight">{currentView === 'upload' ? 'Upload Feed' : currentView === 'list' ? 'SubView Library' : 'Live Traffic'}</h2>
+                {currentView === 'list' && (
+                  <div className={`flex p-1 rounded-full ${theme === 'dark' ? 'bg-slate-900' : 'bg-slate-100'} border ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
+                    {['movie', 'series'].map(m => (
+                      <button key={m} onClick={() => setMediaFilter(m)} className={`px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${mediaFilter === m ? `${a.main} text-white shadow-lg` : 'opacity-40 hover:opacity-100'}`}>{m}</button>
                     ))}
                   </div>
-                </div>
-
-                {/* Language Selector */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div>
-                    <label className={`block text-xs font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} mb-5 ml-2`}>Subtitle Language</label>
-                    <div className="flex gap-4">
-                      {[
-                        { code: 'eng', label: 'English' },
-                        { code: 'mal', label: 'Malayalam' }
-                      ].map((lang) => (
-                        <label key={lang.code} className={`flex-1 cursor-pointer border-2 rounded-2xl p-4 flex items-center justify-center gap-3 transition-all ${
-                          uploadForm.language === lang.code
-                            ? `${a.main} ${a.border} text-white shadow-lg`
-                            : `${theme === 'dark' ? 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-600' : 'bg-slate-50 border-slate-200 text-slate-400 hover:border-slate-300'}`
-                        }`}>
-                          <input
-                            type="radio"
-                            name="language"
-                            className="hidden"
-                            checked={uploadForm.language === lang.code}
-                            onChange={() => setUploadForm({ ...uploadForm, language: lang.code })}
-                          />
-                          <Globe className="w-4 h-4" />
-                          <span className="capitalize font-black text-xs">{lang.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* IMDB ID Input */}
-                  <div>
-                    <label className={`block text-xs font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} mb-5 ml-2`}>IMDB ID (or URL)</label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={uploadForm.imdbId}
-                        onChange={handleImdbChange}
-                        placeholder="tt1234567 or URL"
-                        className={`w-full ${theme === 'dark' ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'} border-2 rounded-2xl py-4 px-6 placeholder-slate-600 focus:outline-none focus:ring-4 ${a.ring}/10 font-mono text-sm`}
-                      />
-                      {isMetadataLoading && (
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                            <RefreshCw className={`w-5 h-5 ${a.text} animate-spin`} />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Metadata Preview */}
-                {currentMetadata && (
-                  <div className={`flex gap-8 p-6 ${theme === 'dark' ? 'bg-slate-950/50 border-slate-800' : 'bg-slate-50/50 border-slate-100'} border-2 rounded-[2rem] animate-in fade-in zoom-in-95 duration-500`}>
-                    {currentMetadata.poster_path ? (
-                      <img 
-                        src={currentMetadata.poster_path} 
-                        alt="Poster" 
-                        className="w-32 h-48 object-cover rounded-2xl shadow-2xl ring-4 ring-white/5 flex-shrink-0"
-                      />
-                    ) : (
-                      <div className={`w-32 h-48 ${theme === 'dark' ? 'bg-slate-900' : 'bg-white shadow-inner'} rounded-2xl flex items-center justify-center border-2 border-dashed border-slate-800 flex-shrink-0`}>
-                          <Clapperboard className="w-10 h-10 text-slate-800" />
-                      </div>
-                    )}
-                    <div className="flex-1 py-2 flex flex-col justify-center">
-                      <h4 className="font-black text-white text-3xl leading-none mb-3 tracking-tighter">{currentMetadata.title}</h4>
-                      <p className={`text-sm ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} line-clamp-3 leading-relaxed mb-4`}>{currentMetadata.overview}</p>
-                      {currentMetadata.release_date && (
-                          <div className="flex">
-                            <span className={`px-3 py-1 ${a.main} text-white rounded-lg text-[10px] font-black uppercase tracking-widest`}>
-                              {currentMetadata.release_date.split('-')[0]}
-                            </span>
-                          </div>
-                      )}
-                    </div>
-                  </div>
                 )}
-
-                {/* File Upload Area */}
-                <div>
-                  <label className={`block text-xs font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} mb-5 ml-2`}>
-                    Subtitle Files & Packages
-                  </label>
-
-                  <div className={`relative group mb-8 ${isExtracting ? 'opacity-50 pointer-events-none' : ''}`}>
-                    <input ref={fileInputRef} type="file" multiple accept=".srt,.vtt,.sub,.zip,.ass" onChange={handleFileSelection} className="hidden" />
-                    <input ref={folderInputRef} type="file" webkitdirectory="" directory="" multiple onChange={handleFileSelection} className="hidden" />
-
-                    <div
-                      onDragOver={handleDragOver}
-                      onDrop={handleDrop}
-                      className={`flex flex-col items-center justify-center w-full min-h-[200px] border-4 border-dashed ${theme === 'dark' ? 'border-slate-800 bg-slate-950/30' : 'border-slate-100 bg-slate-50/30'} rounded-[3rem] hover:border-indigo-500/50 hover:bg-slate-900/10 transition-all cursor-pointer p-8`}
-                      onClick={(e) => { if (e.target === e.currentTarget) fileInputRef.current?.click(); }}
-                    >
-                        {isExtracting ? (
-                          <div className="flex flex-col items-center gap-4">
-                            <RefreshCw className={`w-10 h-10 ${a.text} animate-spin`} />
-                            <p className="font-black text-indigo-400 uppercase tracking-widest text-xs">Extracting content...</p>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center gap-6 text-center">
-                            <div className="flex items-center gap-4 pointer-events-auto">
-                              <button type="button" onClick={() => fileInputRef.current?.click()} className={`${a.main} ${a.hover} text-white px-6 py-3 rounded-2xl text-xs font-black shadow-xl ${a.shadow} transition-all active:scale-95`}>Select Files</button>
-                              <span className="text-slate-600 font-black text-[10px] uppercase">or</span>
-                              <button type="button" onClick={() => folderInputRef.current?.click()} className={`${theme === 'dark' ? 'bg-slate-800' : 'bg-white shadow-lg'} hover:bg-slate-700 px-6 py-3 rounded-2xl text-xs font-black text-slate-400 transition-all active:scale-95 border ${theme === 'dark' ? 'border-slate-700' : 'border-slate-100'}`}>Select Folder</button>
-                            </div>
-                            <p className="text-[10px] text-slate-600 font-black uppercase tracking-widest">
-                              {stagedFiles.length > 0 ? `${stagedFiles.length} files staged` : 'Drag and drop zips, folders, or srt files'}
-                            </p>
-                          </div>
-                        )}
-                    </div>
-                  </div>
-
-                  {/* Staged Files List */}
-                  {stagedFiles.length > 0 && (
-                    <div className={`${theme === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-100'} rounded-3xl border overflow-hidden animate-in slide-in-from-top-4 duration-500`}>
-                      <div className={`px-6 py-4 ${theme === 'dark' ? 'bg-slate-900/50' : 'bg-white'} border-b ${theme === 'dark' ? 'border-slate-800' : 'border-slate-100'} flex justify-between items-center`}>
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Staged Files ({stagedFiles.length})</span>
-                        <button type="button" onClick={clearStagedFiles} className="text-[10px] font-black text-red-500 uppercase tracking-widest hover:text-red-400">Clear All</button>
-                      </div>
-                      <ul className="max-h-64 overflow-y-auto divide-y divide-slate-800/20 custom-scrollbar">
-                        {stagedFiles.map((file, idx) => (
-                          <li key={idx} className="flex items-center justify-between p-4 hover:bg-indigo-500/5 transition-colors group">
-                            <div className="flex items-center gap-4 min-w-0 mr-4">
-                              <div className={`p-2 rounded-xl ${theme === 'dark' ? 'bg-slate-900' : 'bg-white shadow-sm'}`}>
-                                 {file.isFromZip ? <Archive className="w-4 h-4 text-indigo-400" /> : <FileText className="w-4 h-4 text-slate-500" />}
-                              </div>
-                              <div className="flex flex-col min-w-0">
-                                 {file.isEditing ? (
-                                   <input type="text" autoFocus value={file.tempName} onChange={(e) => updateTempName(idx, e.target.value)} onBlur={() => saveFileName(idx)} onKeyDown={(e) => e.key === 'Enter' && saveFileName(idx)} className="bg-slate-900 text-white text-xs px-2 py-1 rounded border border-indigo-500 outline-none" />
-                                 ) : (
-                                   <span className="text-sm font-bold truncate text-slate-300 group-hover:text-white transition-colors">{file.name}</span>
-                                 )}
-                                 <span className="text-[9px] font-black text-slate-600 uppercase">{(file.size / 1024).toFixed(0)} KB</span>
-                              </div>
-                            </div>
-                            <div className="flex gap-2">
-                               <button type="button" onClick={() => file.isEditing ? saveFileName(idx) : toggleEditFile(idx)} className="p-2 text-slate-600 hover:text-indigo-400 transition-all"><Edit2 className="w-3.5 h-3.5" /></button>
-                               <button type="button" onClick={() => removeStagedFile(idx)} className="p-2 text-slate-600 hover:text-red-400 transition-all"><X className="w-3.5 h-3.5" /></button>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-
-                {/* Upload Button */}
-                <button
-                  type="button"
-                  onClick={handleUploadSubmit}
-                  disabled={stagedFiles.length === 0 || !uploadForm.imdbId || isUploading || isExtracting}
-                  className={`w-full py-6 rounded-3xl font-black text-lg text-white shadow-2xl transition-all flex items-center justify-center gap-4 ${
-                    stagedFiles.length === 0 || !uploadForm.imdbId || isUploading || isExtracting
-                      ? 'bg-slate-800 cursor-not-allowed text-slate-600 border border-slate-700'
-                      : `${a.main} ${a.hover} ${a.shadow} active:scale-95`
-                  }`}
-                >
-                  {isUploading ? (
-                    <><RefreshCw className="w-6 h-6 animate-spin" /><span>Syncing to Database...</span></>
-                  ) : (
-                    <><Upload className="w-6 h-6" /><span>Upload {stagedFiles.length} Subtitles</span></>
-                  )}
-                </button>
-
-                {uploadSuccess && (
-                  <div className="text-emerald-400 text-center text-xs font-black uppercase tracking-widest bg-emerald-500/10 p-5 rounded-3xl border border-emerald-500/20 animate-in zoom-in duration-500">
-                    Done! Everything added to your stream library.
-                  </div>
-                )}
-                {uploadError && (
-                  <div className="text-red-400 text-center text-xs font-black uppercase tracking-widest bg-red-500/10 p-5 rounded-3xl border border-red-500/20">
-                    {uploadError}
-                  </div>
-                )}
-              </form>
-            </div>
-          </div>
-        ) : currentView === 'logs' ? (
-          /* LOGS PAGE */
-          <div className="max-w-5xl animate-in fade-in slide-in-from-bottom-5 duration-700 px-2 lg:px-0">
-             <div className={`${theme === 'dark' ? 'bg-slate-900 border-slate-800 shadow-2xl shadow-black/50' : 'bg-white border-slate-100 shadow-2xl shadow-black/5'} rounded-[3rem] border overflow-hidden`}>
-               <div className={`px-8 py-6 ${theme === 'dark' ? 'bg-slate-800/40' : 'bg-slate-50/50'} border-b ${theme === 'dark' ? 'border-slate-700/50' : 'border-slate-100'} flex items-center justify-between`}>
-                  <div className="flex items-center gap-4">
-                     <div className={`${a.main} p-3 rounded-2xl shadow-lg ${a.shadow}`}>
-                        <Shield className="w-5 h-5 text-white" />
-                     </div>
-                     <h3 className="text-xl font-black tracking-tight">System Traffic</h3>
-                  </div>
-                  <div className="flex items-center gap-3">
-                     <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                     <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Active</span>
-                  </div>
-               </div>
-               <div className={`p-8 h-[650px] overflow-y-auto font-mono text-[13px] space-y-3 custom-scrollbar ${theme === 'dark' ? 'bg-slate-950/20' : 'bg-white'}`}>
-                  {logs.length > 0 ? logs.map((log, i) => (
-                    <div key={i} className={`flex gap-6 p-4 rounded-2xl border ${theme === 'dark' ? 'border-slate-800/40 bg-slate-900/10' : 'border-slate-100 bg-slate-50/10'} hover:scale-[1.01] transition-all duration-300`}>
-                       <span className="text-slate-600 font-bold shrink-0">{log.ts}</span>
-                       <span className={`${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'} break-all font-medium leading-relaxed`}>{log.message}</span>
-                    </div>
-                  )) : (
-                    <div className="h-full flex flex-col items-center justify-center py-20 opacity-30 grayscale saturate-0 text-center">
-                       <RefreshCw className={`w-16 h-16 mb-8 ${a.text} animate-spin-slow`} />
-                       <h4 className="font-black text-3xl uppercase tracking-tighter mb-2">Awaiting Signals</h4>
-                       <p className="text-xs font-bold uppercase tracking-widest">Connect your stremio addon to see live data</p>
-                    </div>
-                  )}
-               </div>
              </div>
-          </div>
-        ) : (
-          /* LIBRARY PAGE (Enhanced, Grouped, Responsive) */
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10 animate-in fade-in slide-in-from-bottom-5 duration-700">
-            {Object.keys(
-              filteredSubtitles.reduce((acc, sub) => {
-                if (!acc[sub.imdbId]) acc[sub.imdbId] = [];
-                acc[sub.imdbId].push(sub);
-                return acc;
-              }, {})
-            ).length > 0 ? (
-              Object.entries(
-                filteredSubtitles.reduce((acc, sub) => {
-                  if (!acc[sub.imdbId]) acc[sub.imdbId] = [];
-                  acc[sub.imdbId].push(sub);
-                  return acc;
-                }, {})
-              ).map(([imdbId, groupSubtitles]) => {
-                const firstSub = groupSubtitles[0];
-                const metadata = firstSub.metadata;
-                const mediaTitle = metadata?.title || imdbId;
-                
-                return (
-                  <div key={imdbId} className={`group ${theme === 'dark' ? 'bg-slate-900 border-slate-800 shadow-2xl shadow-black/40' : 'bg-white border-slate-200 shadow-xl shadow-black/5'} rounded-[2.5rem] border hover:border-indigo-500/30 transition-all duration-500 flex flex-col h-full overflow-hidden relative`}>
-                    
-                    {/* Media Header (Poster & Background) */}
-                    <div className="relative h-64 overflow-hidden">
-                       {metadata?.poster_path ? (
-                          <>
-                             <img src={metadata.poster_path} alt="Backdrop" className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-20 scale-150 group-hover:scale-110 transition-transform duration-1000" />
-                             <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-60" />
-                          </>
-                       ) : (
-                          <div className={`absolute inset-0 ${theme === 'dark' ? 'bg-slate-800' : 'bg-slate-100'}`} />
-                       )}
-                       
-                       <div className="absolute bottom-0 left-0 p-8 flex gap-6 items-end w-full">
-                          {metadata?.poster_path ? (
-                             <img src={metadata.poster_path} alt="Poster" className="w-28 h-40 object-cover rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] ring-2 ring-white/10 z-10 group-hover:scale-105 transition-transform duration-500" />
-                          ) : (
-                             <div className={`w-24 h-36 ${theme === 'dark' ? 'bg-slate-800' : 'bg-white shadow-lg'} rounded-2xl flex items-center justify-center border-2 border-dashed ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'} z-10`}>
-                                <Clapperboard className="w-10 h-10 text-slate-700 opacity-20" />
-                             </div>
-                          )}
-                          <div className="flex-1 min-w-0 z-10 mb-2">
-                             <div className="flex flex-wrap gap-2 mb-3">
-                                <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-lg ${firstSub.type === 'movie' ? 'bg-indigo-600 text-white' : 'bg-purple-600 text-white'}`}>{firstSub.type}</span>
-                                <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-lg bg-emerald-600 text-white border border-emerald-600/20">Synced</span>
-                             </div>
-                             <h3 className={`font-black tracking-tighter leading-[1.1] ${theme === 'dark' ? 'text-white' : 'text-slate-900'} ${mediaTitle.length > 30 ? 'text-lg line-clamp-2' : mediaTitle.length > 20 ? 'text-xl line-clamp-2' : 'text-3xl line-clamp-1'} break-words drop-shadow-sm`} title={mediaTitle}>
-                                {mediaTitle}
-                             </h3>
-                             <div className="flex items-center gap-3 mt-4">
-                                <span className={`text-[10px] font-mono ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'} font-black`}>{imdbId}</span>
-                             </div>
-                          </div>
-                       </div>
-                    </div>
+             <div className="flex items-center gap-3">
+                {currentView === 'list' && <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 opacity-30" /><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className={`pl-8 pr-4 py-1.5 rounded-lg text-[10px] outline-none border transition-all ${theme === 'dark' ? 'bg-slate-900 border-slate-800 focus:border-indigo-500' : 'bg-slate-50 border-slate-200 focus:border-indigo-400'}`} placeholder="Search IMDB or Files..." /></div>}
+                {currentView === 'list' && <button onClick={fetchSubtitles} disabled={isRefreshing} className={`p-2 rounded-lg opacity-40 hover:opacity-100 transition-all ${isRefreshing ? 'animate-spin' : ''}`}><RefreshCw className="w-3.5 h-3.5" /></button>}
+             </div>
+          </header>
 
-                                  {/* Subtitles List (Grouped by Season) */}
-                    <div className="p-6 flex-grow">
-                       <div className="max-h-[450px] overflow-y-auto space-y-8 pr-2 custom-scrollbar">
-                          {Object.entries(
-                            groupSubtitles.reduce((acc, sub) => {
-                              const s = sub.season != null ? sub.season : 'Movie';
-                              if (!acc[s]) acc[s] = [];
-                              acc[s].push(sub);
-                              return acc;
-                            }, {})
-                          ).sort((a,b) => {
-                             if (a[0] === 'Movie') return -1;
-                             return Number(a[0]) - Number(b[0]);
-                          }).map(([season, subs]) => (
-                             <div key={season}>
-                                <div className="flex items-center justify-between px-4 mb-4">
-                                   <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${theme === 'dark' ? 'text-slate-500' : 'text-slate-600'}`}>
-                                      {season === 'Movie' ? 'Core Subtitles' : `Season ${String(season).padStart(2,'0')}`} • {subs.length}
-                                   </p>
-                                   {season !== 'Movie' && (
-                                      <button 
-                                         onClick={() => handleDeleteSeason(imdbId, season, subs)}
-                                         className={`text-[9px] font-black uppercase tracking-widest py-1 px-3 rounded-lg border transition-all ${theme === 'dark' ? 'border-red-500/20 text-red-400/60 hover:text-red-400 hover:bg-red-500/10' : 'border-red-200 text-red-500 hover:bg-red-500 hover:text-white'}`}
-                                      >
-                                         Delete Season
-                                      </button>
-                                   )}
-                                </div>
-                                <div className="space-y-3">
-                                   {subs.sort((a,b) => (a.episode || 0) - (b.episode || 0)).map((sub) => (
-                                      <div key={sub.id} className={`flex items-center justify-between p-4 rounded-[1.5rem] ${theme === 'dark' ? 'bg-slate-950/40 border-slate-800' : 'bg-slate-200 border-slate-300 shadow-sm'} border hover:border-indigo-500/30 transition-all duration-300 group/item`}>
-                                         <div className="flex flex-col min-w-0 flex-1 mr-4">
-                                            <div className="flex items-center gap-2 mb-2">
-                                               {sub.type !== 'movie' && (
-                                                  <span className={`text-[10px] font-black ${a.text} ${theme === 'dark' ? 'bg-indigo-500/10' : 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'} px-2 py-0.5 rounded-lg`}>EP {String(sub.episode).padStart(2,'0')}</span>
-                                               )}
-                                               <span className={`text-[10px] font-black ${theme === 'dark' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'} px-2 py-0.5 rounded-lg uppercase`}>{sub.language || 'MAL'}</span>
-                                            </div>
-                                            <p className={`text-[11px] font-medium leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'} truncate-2-lines`} title={sub.fileName}>{sub.fileName}</p>
-                                         </div>
-                                         <button
-                                            onClick={(e) => { e.stopPropagation(); handleDelete(sub.id); }}
-                                            className="p-3 rounded-2xl text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all sm:opacity-0 group-hover/item:opacity-100 ring-4 ring-transparent hover:ring-red-500/5 shadow-inner"
-                                            title="Remove"
-                                         >
-                                            <Trash2 className="w-4 h-4" />
-                                         </button>
-                                      </div>
-                                   ))}
-                                </div>
-                             </div>
-                          ))}
-                       </div>
-                    </div>
+          {currentView === 'upload' ? (
+            <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-5 duration-700">
+              <div className={`rounded-[2.5rem] border p-8 lg:p-12 ${theme === 'dark' ? 'bg-slate-900 border-slate-800 shadow-2xl' : 'bg-white border-slate-100 shadow-xl'}`}>
+                <form onSubmit={handleUploadSubmit} className="space-y-8">
+                  <div className="grid grid-cols-2 gap-4">
+                    {['movie', 'series'].map(t => (
+                      <button key={t} type="button" onClick={() => setUploadForm({...uploadForm, type: t})} className={`p-6 rounded-[2rem] border-2 transition-all flex flex-col items-center gap-3 ${uploadForm.type === t ? `${a.main} border-transparent text-white shadow-xl ${a.shadow}` : `${theme === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-100'}`}`}>
+                         {t === 'movie' ? <Film className="w-5 h-5" /> : <Tv className="w-5 h-5" />}
+                         <span className="text-[10px] font-black uppercase tracking-widest">{t}</span>
+                      </button>
+                    ))}
                   </div>
-                    </div>
-
-                    {/* Footer / Meta */}
-                    <div className={`px-10 py-6 ${theme === 'dark' ? 'bg-slate-950/50' : 'bg-slate-50/50'} border-t ${theme === 'dark' ? 'border-slate-800/80' : 'border-slate-100'} flex items-center justify-between ring-white/5`}>
-                       <div className="flex items-center gap-2">
-                          <RefreshCw className="w-3 h-3 text-slate-700" />
-                          <span className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">Added {firstSub.date}</span>
-                       </div>
-                       <div className="flex -space-x-2">
-                          {[1,2,3].map(i => <div key={i} className="w-5 h-5 rounded-full bg-slate-800 border-2 border-slate-900 group-hover:scale-110 transition-transform" />)}
-                       </div>
-                    </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-3"><label className="text-[10px] font-black uppercase opacity-40 px-2">Subtitle Language</label><div className="flex gap-2">{[ {code: 'eng', label: 'English'}, {code: 'mal', label: 'Malayalam'} ].map(l => <button key={l.code} type="button" onClick={() => setUploadForm({...uploadForm, language: l.code})} className={`flex-1 py-3 rounded-xl border-2 text-[10px] font-black uppercase transition-all ${uploadForm.language === l.code ? `${a.main} border-transparent text-white` : `${theme === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-transparent'}`}`}>{l.label}</button>)}</div></div>
+                    <div className="space-y-3"><label className="text-[10px] font-black uppercase opacity-40 px-2">IMDB Identity</label><div className="relative"><input type="text" value={uploadForm.imdbId} onChange={handleImdbChange} placeholder="tt1234567" className={`w-full py-3.5 px-4 rounded-xl border-2 outline-none font-mono text-xs ${theme === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-transparent focus:bg-white'}`} />{isMetadataLoading && <RefreshCw className={`absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 ${a.text} animate-spin`} />}</div></div>
                   </div>
-                );
-              })
-            ) : (
-              <div className="col-span-full py-40 text-center animate-in fade-in duration-1000">
-                 <div className={`w-32 h-32 rounded-[3.5rem] ${theme === 'dark' ? 'bg-slate-900' : 'bg-slate-50'} flex items-center justify-center mx-auto mb-10 border-2 ${theme === 'dark' ? 'border-slate-800' : 'border-slate-100'} shadow-2xl relative overflow-hidden`}>
-                    <Archive className={`w-12 h-12 ${theme === 'dark' ? 'text-slate-800' : 'text-slate-200'}`} />
-                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent" />
-                 </div>
-                 <h3 className="text-4xl font-black mb-5 tracking-tighter">Library is Empty</h3>
-                 <p className={`text-sm ${theme === 'dark' ? 'text-slate-600' : 'text-slate-400'} max-w-sm mx-auto font-bold uppercase tracking-widest leading-loose`}>
-                    {searchQuery ? `Zero matches for "${searchQuery}"` : "Your cinema collection is waiting for its first subtitle pack."}
-                 </p>
+                  {currentMetadata && <div className={`flex gap-6 p-4 rounded-[1.8rem] border-2 animate-in slide-in-from-left-4 ${theme === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-100'}`}>{currentMetadata.poster_path ? <img src={currentMetadata.poster_path} alt="Poster" className="w-16 h-24 object-cover rounded-xl shadow-lg" /> : <div className="w-16 h-24 bg-slate-900 rounded-xl" />}<div className="flex flex-col justify-center min-w-0"><h4 className="font-black text-lg truncate">{currentMetadata.title}</h4><p className="text-[10px] opacity-40 line-clamp-2">{currentMetadata.overview}</p></div></div>}
+                  <div onDragOver={(e)=>e.preventDefault()} onDrop={handleDrop} className={`min-h-[160px] border-4 border-dashed rounded-[2.5rem] flex flex-col items-center justify-center p-8 transition-all cursor-pointer ${theme === 'dark' ? 'border-slate-800 bg-slate-950/20 hover:border-indigo-500/50' : 'border-slate-100 bg-slate-50 hover:border-indigo-400'}`} onClick={()=>fileInputRef.current.click()}><input ref={fileInputRef} type="file" multiple hidden onChange={handleFileSelection} /><Archive className="w-8 h-8 opacity-20 mb-4" /><p className="text-[10px] font-black uppercase tracking-widest opacity-40">Drop packs or click to select</p></div>
+                  {stagedFiles.length > 0 && <div className={`rounded-2xl border divide-y overflow-hidden ${theme === 'dark' ? 'bg-slate-950 border-slate-800 divide-slate-800' : 'bg-slate-50 border-slate-100 divide-slate-100'}`}>{stagedFiles.map((f, i) => <div key={i} className="flex items-center justify-between p-3.5 hover:bg-white/5 transition-colors"><div className="flex items-center gap-3 min-w-0"><div className="p-2 rounded-lg bg-slate-900"><FileText className="w-3 h-3 opacity-40" /></div><span className="text-xs font-bold truncate opacity-80">{f.name}</span></div><button type="button" onClick={()=>removeStagedFile(i)} className="p-2 hover:text-red-500 transition-colors"><X className="w-4 h-4" /></button></div>)}</div>}
+                  <button type="button" onClick={handleUploadSubmit} disabled={!uploadForm.imdbId || stagedFiles.length === 0 || isUploading} className={`w-full py-5 rounded-2xl font-black text-white transition-all shadow-2xl ${!uploadForm.imdbId || stagedFiles.length === 0 || isUploading ? 'opacity-20 cursor-not-allowed' : `${a.main} ${a.hover} ${a.shadow} active:scale-95`}`}>{isUploading ? 'Synchronizing Cluster...' : `Commit ${stagedFiles.length} Subtitles`}</button>
+                  {uploadSuccess && <div className="p-4 rounded-xl bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase text-center border border-emerald-500/20">Protocol Complete. Cluster Updated.</div>}
+                </form>
               </div>
-            )}
-          </div>
-        )}
-      </div>
-    </main>
-  </div>
-);
+            </div>
+          ) : currentView === 'logs' ? (
+            <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-5 duration-700">
+               <div className={`rounded-[2.5rem] border overflow-hidden ${theme === 'dark' ? 'bg-slate-900 border-slate-800 shadow-2xl' : 'bg-white border-slate-100 shadow-xl'}`}>
+                  <div className="h-[600px] overflow-y-auto p-4 lg:p-8 font-mono text-[11px] space-y-2.5 custom-scrollbar">
+                     {logs.length > 0 ? logs.map((log, i) => <div key={i} className={`p-4 rounded-xl border flex gap-6 ${theme === 'dark' ? 'bg-slate-950/40 border-slate-800' : 'bg-slate-50 border-slate-100'}`}><span className="opacity-30 shrink-0">{log.ts}</span><span className="opacity-80 break-all">{log.message}</span></div>) : <div className="h-full flex flex-col items-center justify-center opacity-20"><RefreshCw className="w-10 h-10 animate-spin-slow mb-6" /><p className="font-black uppercase tracking-widest text-[10px]">Awaiting Signal Stream...</p></div>}
+                  </div>
+               </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 pb-20 animate-in fade-in duration-700">
+               {Object.entries(subtitles.filter(sub => {
+                 const q = searchQuery.toLowerCase().trim();
+                 if (mediaFilter !== sub.type) return false;
+                 if (!q) return true;
+                 return (sub.fileName?.toLowerCase().includes(q) || sub.imdbId?.toLowerCase().includes(q) || sub.metadata?.title?.toLowerCase().includes(q));
+               }).reduce((acc, sub) => {
+                 const key = sub.type === 'movie' ? `${sub.imdbId}_${sub.language}` : `${sub.imdbId}_s${sub.season || 0}_${sub.language}`;
+                 if (!acc[key]) acc[key] = []; acc[key].push(sub); return acc;
+               }, {})).length > 0 ? Object.entries(subtitles.filter(sub => {
+                 const q = searchQuery.toLowerCase().trim();
+                 if (mediaFilter !== sub.type) return false;
+                 if (!q) return true;
+                 return (sub.fileName?.toLowerCase().includes(q) || sub.imdbId?.toLowerCase().includes(q) || sub.metadata?.title?.toLowerCase().includes(q));
+               }).reduce((acc, sub) => {
+                 const key = sub.type === 'movie' ? `${sub.imdbId}_${sub.language}` : `${sub.imdbId}_s${sub.season || 0}_${sub.language}`;
+                 if (!acc[key]) acc[key] = []; acc[key].push(sub); return acc;
+               }, {})).map(([groupKey, groupSubs]) => {
+                  const first = groupSubs[0];
+                  const m = first.metadata;
+                  const isSeries = first.type === 'series';
+                  const title = m?.title || first.imdbId;
+                  
+                  return (
+                     <div key={groupKey} className={`flex flex-col h-full border rounded-[1.8rem] overflow-hidden transition-all duration-300 ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                        <div className="relative h-32 shrink-0 overflow-hidden">
+                           {m?.poster_path ? <img src={m.poster_path} className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-10" /> : <div className="absolute inset-0 bg-slate-950" />}
+                           <div className="absolute inset-0 p-4 flex gap-3 items-end">
+                              {m?.poster_path && <img src={m.poster_path} className="w-12 h-18 object-cover rounded-lg shadow-xl" />}
+                              <div className="flex-1 min-w-0">
+                                 <div className="flex flex-wrap gap-1 mb-1 items-center">
+                                    <span className={`text-[6px] font-black uppercase px-2 py-0.5 rounded-full ${isSeries ? 'bg-purple-600' : 'bg-indigo-600'} text-white shadow-sm`}>{first.type}</span>
+                                    {isSeries && <span className="text-[6px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-700 text-white shadow-sm">S{String(first.season || 0).padStart(2,'0')}</span>}
+                                    <span className={`text-[6px] font-black uppercase px-2 py-0.5 rounded-full ${theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-600'}`}>{first.language?.toUpperCase()}</span>
+                                 </div>
+                                 <h4 className={`font-bold leading-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'} ${title.length > 20 ? 'text-[10px]' : 'text-xs'} line-clamp-2`} title={title}>{title}</h4>
+                                 <p className="text-[8px] opacity-30 font-mono">{first.imdbId}</p>
+                              </div>
+                           </div>
+                        </div>
+                        <div className="p-3 flex-grow overflow-hidden flex flex-col">
+                           <div className="flex items-center justify-between mb-2 px-1">
+                              <span className="text-[8px] font-black uppercase opacity-20 tracking-widest">{isSeries ? 'Episodes' : 'File Pack'} • {groupSubs.length}</span>
+                              {isSeries && <button onClick={()=>handleDeleteSeason(first.imdbId, first.season, groupSubs)} className="text-[7px] font-black uppercase px-2 py-0.5 rounded-md bg-red-500/10 text-red-500 border border-red-500/10 hover:bg-red-500 hover:text-white transition-all">Flush</button>}
+                           </div>
+                           <div className="space-y-1 overflow-y-auto max-h-[160px] custom-scrollbar pr-1">
+                              {groupSubs.sort((a,b)=>(a.episode||0)-(b.episode||0)).map(s => (
+                                 <div key={s.id} className={`flex items-center justify-between p-2 rounded-xl border ${theme === 'dark' ? 'bg-slate-950/40 border-slate-800' : 'bg-slate-50 border-slate-100'} group/item`}>
+                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                       {isSeries && <span className={`text-[8px] font-black ${a.text}`}>E{String(s.episode).padStart(2,'0')}</span>}
+                                       <span className="text-[10px] font-medium truncate opacity-60" title={s.fileName}>{s.fileName}</span>
+                                    </div>
+                                    <button onClick={()=>handleDelete(s.id)} className="p-1 opacity-0 group-hover/item:opacity-100 hover:text-red-500 transition-all"><Trash2 className="w-3 h-3" /></button>
+                                 </div>
+                              ))}
+                           </div>
+                        </div>
+                        <div className={`p-3 border-t flex items-center justify-between ${theme === 'dark' ? 'border-slate-800' : 'border-slate-100'}`}>
+                           <div className="flex items-center gap-1 opacity-20"><div className="w-1 h-1 rounded-full bg-emerald-500" /> <span className="text-[7px] font-black uppercase">Synced</span></div>
+                           <button onClick={()=>window.open(`https://www.imdb.com/title/${first.imdbId}`, '_blank')} className="opacity-20 hover:opacity-100 transition-all"><ExternalLink className="w-3 h-3" /></button>
+                        </div>
+                     </div>
+                  );
+               }) : (
+                  <div className="col-span-full py-20 text-center opacity-30"><Archive className="w-12 h-12 mx-auto mb-4" /><p className="text-[10px] font-black uppercase tracking-widest">Library Segment Empty</p></div>
+               )}
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  );
 }
