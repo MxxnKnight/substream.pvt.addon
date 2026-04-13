@@ -20,7 +20,10 @@ import {
   FolderInput,
   Link,
   RefreshCw,
-  Globe
+  Globe,
+  Sun,
+  Moon,
+  Palette
 } from 'lucide-react';
 
 export default function App() {
@@ -30,6 +33,34 @@ export default function App() {
   const [subtitles, setSubtitles] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isNavOpen, setIsNavOpen] = useState(false); // Mobile nav state
+
+  // Theme State
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+  const [accent, setAccent] = useState(localStorage.getItem('accent') || 'indigo');
+
+  useEffect(() => {
+    localStorage.setItem('theme', theme);
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem('accent', accent);
+  }, [accent]);
+
+  const ACCENTS = {
+    indigo: { main: 'bg-indigo-600', hover: 'hover:bg-indigo-500', text: 'text-indigo-600', border: 'border-indigo-600', shadow: 'shadow-indigo-600/20', ring: 'ring-indigo-500' },
+    rose: { main: 'bg-rose-600', hover: 'hover:bg-rose-500', text: 'text-rose-600', border: 'border-rose-600', shadow: 'shadow-rose-600/20', ring: 'ring-rose-500' },
+    emerald: { main: 'bg-emerald-600', hover: 'hover:bg-emerald-500', text: 'text-emerald-600', border: 'border-emerald-600', shadow: 'shadow-emerald-600/20', ring: 'ring-emerald-500' },
+    amber: { main: 'bg-amber-600', hover: 'hover:bg-amber-500', text: 'text-amber-600', border: 'border-amber-600', shadow: 'shadow-amber-600/20', ring: 'ring-amber-500' },
+    sky: { main: 'bg-sky-600', hover: 'hover:bg-sky-500', text: 'text-sky-600', border: 'border-sky-600', shadow: 'shadow-sky-600/20', ring: 'ring-sky-500' },
+  };
+
+  const a = ACCENTS[accent];
+
 
   // Login Form State
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
@@ -467,154 +498,178 @@ export default function App() {
   // --- Render ---
 
   if (!user) {
-    // Login Screen (Unchanged structure)
+    // Login Screen (Simplified & Theme Aware)
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-sans text-slate-100">
-        <div className="max-w-md w-full bg-slate-800 rounded-2xl shadow-2xl overflow-hidden border border-slate-700">
-          <div className="p-8">
-            <div className="text-center mb-8">
-              <div className="bg-indigo-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-500/20">
-                <Film className="w-8 h-8 text-white" />
+      <div className={`min-h-screen ${theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'} flex items-center justify-center p-4 font-sans transition-theme`}>
+        <div className={`max-w-md w-full ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'} rounded-[2.5rem] shadow-2xl overflow-hidden border p-8 lg:p-12`}>
+            <div className="text-center mb-10">
+              <div className={`${a.main} w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl ${a.shadow}`}>
+                <Film className="w-10 h-10 text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-white">SubStream Admin</h2>
+              <h2 className={`text-3xl font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>SubStream Admin</h2>
+              <p className={`mt-2 text-sm font-medium ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>Authenticate to manage your subtitles</p>
             </div>
             <form onSubmit={handleLogin} className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">Username</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                <label className={`block text-xs font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} mb-3 ml-1`}>Username</label>
+                <div className="relative group">
+                  <User className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${theme === 'dark' ? 'text-slate-600' : 'text-slate-300'}`} />
                   <input
                     type="text"
                     value={loginForm.username}
                     onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg py-3 pl-10 pr-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className={`w-full ${theme === 'dark' ? 'bg-slate-950 border-slate-800 focus:border-indigo-500 text-white' : 'bg-slate-50 border-slate-200 focus:border-indigo-400 text-slate-900'} border rounded-2xl py-4 pl-12 pr-4 placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all font-medium`}
                     placeholder="admin"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">Password</label>
-                <div className="relative">
-                  <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                <label className={`block text-xs font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} mb-3 ml-1`}>Password</label>
+                <div className="relative group">
+                  <Shield className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${theme === 'dark' ? 'text-slate-600' : 'text-slate-300'}`} />
                   <input
                     type="password"
                     value={loginForm.password}
                     onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg py-3 pl-10 pr-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className={`w-full ${theme === 'dark' ? 'bg-slate-950 border-slate-800 focus:border-indigo-500 text-white' : 'bg-slate-50 border-slate-200 focus:border-indigo-400 text-slate-900'} border rounded-2xl py-4 pl-12 pr-4 placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all font-medium`}
                     placeholder="••••••••"
                   />
                 </div>
               </div>
               {loginError && (
-                <div className="text-red-400 text-sm text-center">{loginError}</div>
+                <div className="text-red-500 text-xs font-bold text-center bg-red-500/10 py-3 rounded-xl border border-red-500/20">{loginError}</div>
               )}
               <button
                 type="submit"
                 disabled={loginLoading}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-lg shadow-lg disabled:opacity-50"
+                className={`w-full ${a.main} ${a.hover} text-white font-black py-4 rounded-2xl shadow-xl transition-all active:scale-[0.98] disabled:opacity-50`}
               >
                 {loginLoading ? 'Signing In...' : 'Sign In'}
               </button>
             </form>
-          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col md:flex-row h-full md:h-screen md:overflow-hidden">
+    <div className={`min-h-screen ${theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-white text-slate-900'} font-sans flex flex-col lg:flex-row h-full lg:h-screen lg:overflow-hidden transition-theme`}>
 
       {/* Mobile Top Bar */}
-      <div className="md:hidden bg-slate-900 border-b border-slate-800 p-4 flex items-center justify-between sticky top-0 z-50">
+      <div className={`lg:hidden ${theme === 'dark' ? 'bg-slate-900/80' : 'bg-white/80'} backdrop-blur-xl border-b ${theme === 'dark' ? 'border-slate-800' : 'border-slate-100'} p-4 flex items-center justify-between sticky top-0 z-50`}>
         <div className="flex items-center gap-3">
-          <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-2 rounded-xl shadow-lg shadow-indigo-500/20">
+          <div className={`${a.main} p-2.5 rounded-2xl shadow-lg ${a.shadow}`}>
             <Film className="w-5 h-5 text-white" />
           </div>
-          <h1 className="font-bold text-lg bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">SubStream</h1>
+          <h1 className="font-black text-xl tracking-tight">SubStream</h1>
         </div>
         <button
           onClick={() => setIsNavOpen(!isNavOpen)}
-          className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all"
+          className={`p-2 ${theme === 'dark' ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'} rounded-2xl transition-all`}
         >
-          {isNavOpen ? <X className="w-6 h-6" /> : <div className="space-y-1.5"><div className="w-6 h-0.5 bg-current"></div><div className="w-6 h-0.5 bg-current"></div><div className="w-6 h-0.5 bg-current outline-none"></div></div>}
+          {isNavOpen ? <X className="w-6 h-6" /> : <div className="space-y-1.5"><div className="w-6 h-0.5 bg-current"></div><div className="w-6 h-0.5 bg-current"></div><div className="w-6 h-0.5 bg-current"></div></div>}
         </button>
       </div>
 
       {/* Sidebar / Top Drawer */}
-      <aside className={`fixed inset-0 z-40 md:relative md:z-0 md:flex w-full md:w-80 bg-slate-900 border-b md:border-b-0 md:border-r border-slate-800 transition-all duration-500 ease-in-out ${isNavOpen ? 'translate-y-0 opacity-100 pointer-events-auto' : '-translate-y-full md:translate-y-0 opacity-0 md:opacity-100 pointer-events-none md:pointer-events-auto'}`}>
-        <div className="flex flex-col h-full w-full bg-slate-900 shadow-2xl md:shadow-none pt-20 md:pt-0 overflow-y-auto">
-          <div className="p-6 mt-4 md:mt-0 flex items-center justify-between gap-3 border-b border-slate-800">
-            <div className="flex items-center gap-3">
-               <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-2 rounded-xl">
-                  <Film className="w-5 h-5 text-white" />
+      <aside className={`fixed inset-0 z-40 lg:relative lg:z-0 lg:flex w-full lg:w-80 ${theme === 'dark' ? 'bg-slate-900' : 'bg-slate-50'} border-b lg:border-b-0 lg:border-r ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'} transition-all duration-500 ease-in-out ${isNavOpen ? 'translate-y-0 opacity-100 pointer-events-auto' : '-translate-y-full lg:translate-y-0 opacity-0 lg:opacity-100 pointer-events-none lg:pointer-events-auto'}`}>
+        <div className="flex flex-col h-full w-full pt-20 lg:pt-0 overflow-y-auto custom-scrollbar">
+          <div className="p-8 mt-4 lg:mt-0 flex items-center justify-between gap-3 border-b border-transparent">
+            <div className="flex items-center gap-4">
+               <div className={`${a.main} p-3 rounded-[1.5rem] shadow-xl ${a.shadow}`}>
+                  <Film className="w-6 h-6 text-white" />
                </div>
-               <h1 className="font-bold text-xl tracking-tight text-white">SubStream</h1>
+               <h1 className="font-black text-2xl tracking-tighter">SubStream</h1>
             </div>
           </div>
 
-          <div className="p-6">
-            <div className="bg-slate-800/80 rounded-2xl p-5 border border-slate-700/50 mb-8">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Addon URL</p>
+          <div className="p-8">
+            <div className={`${theme === 'dark' ? 'bg-slate-800/80 border-slate-700/50 text-white' : 'bg-white border-slate-200 text-slate-900'} rounded-[2.5rem] p-6 border mb-10 shadow-xl shadow-black/5`}>
+              <p className={`text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} mb-4`}>Addon URL</p>
               <button
                 onClick={copyManifestUrl}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-black transition-all shadow-lg shadow-indigo-600/20 group"
+                className={`w-full flex items-center justify-center gap-3 px-5 py-4 ${a.main} ${a.hover} text-white rounded-2xl text-xs font-black transition-all shadow-xl ${a.shadow} group`}
               >
                 <Link className="w-4 h-4 group-hover:rotate-12 transition-transform" />
                 <span>Copy Manifest</span>
               </button>
             </div>
 
-            <nav className="space-y-1">
-              <button
-                onClick={() => { setCurrentView('upload'); setIsNavOpen(false); }}
-                className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all group ${
-                  currentView === 'upload' ? 'bg-slate-800 text-white shadow-xl border border-slate-700' : 'text-slate-500 hover:bg-slate-800/50 hover:text-slate-300'
-                }`}
-              >
-                <div className={`p-1.5 rounded-lg ${currentView === 'upload' ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-500 group-hover:text-slate-300'}`}>
-                  <Upload className="w-4 h-4" />
-                </div>
-                <span className="font-semibold text-sm">Upload</span>
-              </button>
-              <button
-                onClick={() => { setCurrentView('list'); fetchSubtitles(); setIsNavOpen(false); }}
-                className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all group ${
-                  currentView === 'list' ? 'bg-slate-800 text-white shadow-xl border border-slate-700' : 'text-slate-500 hover:bg-slate-800/50 hover:text-slate-300'
-                }`}
-              >
-                <div className={`p-1.5 rounded-lg ${currentView === 'list' ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-500 group-hover:text-slate-300'}`}>
-                  <Archive className="w-4 h-4" />
-                </div>
-                <span className="font-semibold text-sm">Library</span>
-              </button>
-              <button
-                onClick={() => { setCurrentView('logs'); setIsNavOpen(false); }}
-                className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all group ${
-                  currentView === 'logs' ? 'bg-slate-800 text-white shadow-xl border border-slate-700' : 'text-slate-500 hover:bg-slate-800/50 hover:text-slate-300'
-                }`}
-              >
-                <div className={`p-1.5 rounded-lg ${currentView === 'logs' ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-500 group-hover:text-slate-300'}`}>
-                  <Shield className="w-4 h-4" />
-                </div>
-                <span className="font-semibold text-sm">Traffic Logs</span>
-              </button>
+            <nav className="space-y-2">
+              {[
+                { id: 'upload', label: 'Upload', icon: Upload },
+                { id: 'list', label: 'Library', icon: Archive },
+                { id: 'logs', label: 'Traffic Logs', icon: Shield },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => { setCurrentView(item.id); if(item.id === 'list') fetchSubtitles(); setIsNavOpen(false); }}
+                  className={`w-full flex items-center gap-4 px-6 py-4 rounded-3xl transition-all group ${
+                    currentView === item.id 
+                      ? `${theme === 'dark' ? 'bg-slate-800 text-white border-slate-700 shadow-2xl' : 'bg-white text-slate-900 border-slate-200 shadow-xl shadow-black/5'} border` 
+                      : `${theme === 'dark' ? 'text-slate-500 hover:bg-slate-800/40 hover:text-slate-300' : 'text-slate-400 hover:bg-white hover:text-slate-600'}`
+                  }`}
+                >
+                  <div className={`p-2 rounded-xl transition-all duration-300 ${currentView === item.id ? `${a.main} text-white shadow-lg` : `${theme === 'dark' ? 'bg-slate-800' : 'bg-slate-100'} group-hover:scale-110`}`}>
+                    <item.icon className="w-4 h-4" />
+                  </div>
+                  <span className="font-black text-sm tracking-tight">{item.label}</span>
+                </button>
+              ))}
             </nav>
+
+            {/* Customization Section */}
+            <div className="mt-12 pt-12 border-t border-slate-800/10">
+               <p className={`text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-600' : 'text-slate-400'} mb-6 px-4`}>Personalization</p>
+               
+               <div className="flex flex-col gap-8 px-4">
+                  {/* Theme Switcher */}
+                  <div className="flex items-center justify-between">
+                     <span className="text-xs font-bold opacity-60">Theme</span>
+                     <button 
+                        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                        className={`p-3 rounded-2xl ${theme === 'dark' ? 'bg-slate-800 text-amber-400' : 'bg-slate-100 text-slate-900'} transition-all hover:scale-110`}
+                     >
+                        {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                     </button>
+                  </div>
+
+                  {/* Accent Picker */}
+                  <div className="flex flex-col gap-4">
+                     <div className="flex items-center gap-2">
+                        <Palette className="w-3 h-3 opacity-40" />
+                        <span className="text-xs font-bold opacity-60">Accent Color</span>
+                     </div>
+                     <div className="flex flex-wrap gap-2.5">
+                        {Object.keys(ACCENTS).map((color) => (
+                           <button
+                             key={color}
+                             onClick={() => setAccent(color)}
+                             className={`w-8 h-8 rounded-full ${ACCENTS[color].main} transition-all hover:scale-125 hover:rotate-12 ${accent === color ? 'ring-offset-2 ring-2 ring-indigo-500 scale-110' : 'opacity-40 grayscale-[50%]'}`}
+                           />
+                        ))}
+                     </div>
+                  </div>
+               </div>
+            </div>
           </div>
 
-          <div className="p-6 mt-auto border-t border-slate-800">
-             <div className="flex items-center gap-3 px-4 py-2 mb-4">
-                <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
-                   <User className="w-4 h-4 text-slate-400" />
+          <div className="p-8 mt-auto border-t border-slate-800/10">
+             <div className="flex items-center gap-4 px-4 py-2 mb-6">
+                <div className={`w-10 h-10 rounded-2xl ${theme === 'dark' ? 'bg-slate-800' : 'bg-white shadow-lg'} flex items-center justify-center border ${theme === 'dark' ? 'border-slate-700' : 'border-slate-100'}`}>
+                   <User className={`w-5 h-5 ${a.text}`} />
                 </div>
-                <div className="flex flex-col">
-                   <span className="text-xs font-bold text-white">Administrator</span>
-                   <span className="text-[10px] text-slate-500">Online</span>
+                <div className="flex flex-col min-w-0">
+                   <span className="text-xs font-black truncate">Administrator</span>
+                   <div className="flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">System Ready</span>
+                   </div>
                 </div>
              </div>
             <button
               onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-2 text-slate-500 hover:text-red-400 font-bold px-4 py-3 rounded-xl border border-transparent hover:border-red-500/20 hover:bg-red-500/5 transition-all text-xs"
+              className={`w-full flex items-center justify-center gap-3 ${theme === 'dark' ? 'text-slate-600 hover:text-red-400 font-black px-6 py-4 rounded-2xl border border-transparent hover:border-red-500/10' : 'text-slate-400 hover:text-red-500 font-black px-6 py-4 rounded-2xl border border-transparent'} transition-all text-xs uppercase tracking-widest`}
             >
               <LogOut className="w-4 h-4" />
               <span>Sign Out</span>
@@ -624,21 +679,26 @@ export default function App() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto bg-slate-950 pb-20 md:pb-12">
-        <div className="max-w-7xl mx-auto p-4 md:p-10">
-          <header className={`flex flex-col lg:flex-row lg:justify-between lg:items-center mt-4 md:mt-0 mb-8 md:mb-10 gap-6 ${currentView === 'list' ? 'sticky top-0 bg-slate-950/90 backdrop-blur-xl z-30 py-4 -mx-4 px-4' : ''}`}>
-            <div className="flex items-center gap-4">
-              <h2 className="text-3xl font-extrabold text-white tracking-tight">
-                  {currentView === 'upload' ? 'Upload' : 'Library'}
+      <main className={`flex-1 overflow-y-auto ${theme === 'dark' ? 'bg-slate-950' : 'bg-white'} pb-24 lg:pb-12 custom-scrollbar`}>
+        <div className="max-w-7xl mx-auto p-4 lg:p-12">
+          
+          {/* Floating Header */}
+          <header className={`flex flex-col lg:flex-row lg:justify-between lg:items-center mt-4 lg:mt-0 mb-12 gap-8 sticky top-6 z-30 p-5 rounded-[2.5rem] ${theme === 'dark' ? 'bg-slate-900/40' : 'bg-slate-50/40'} glass shadow-2xl transition-all`}>
+            <div className="flex items-center gap-5">
+              <div className={`${a.main} p-3 rounded-2xl hidden lg:block`}>
+                  {currentView === 'upload' ? <Upload className="w-5 h-5 text-white" /> : currentView === 'list' ? <Archive className="w-5 h-5 text-white" /> : <Shield className="w-5 h-5 text-white" />}
+              </div>
+              <h2 className="text-3xl font-black tracking-tighter">
+                  {currentView === 'upload' ? 'Upload Center' : currentView === 'list' ? 'SubView Library' : 'Traffic Monitor'}
               </h2>
               {currentView === 'list' && (
                   <button
                     onClick={fetchSubtitles}
                     disabled={isRefreshing}
-                    className="flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all disabled:opacity-50"
+                    className={`flex items-center gap-2 px-5 py-2.5 ${theme === 'dark' ? 'bg-slate-900 hover:bg-slate-800' : 'bg-white hover:bg-slate-100'} rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 shadow-lg`}
                   >
-                    <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                    <span className="text-sm font-bold">{isRefreshing ? 'Syncing...' : 'Reload'}</span>
+                    <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-indigo-500' : ''}`} />
+                    <span>{isRefreshing ? 'Syncing...' : 'Sync Now'}</span>
                   </button>
               )}
             </div>
@@ -646,15 +706,15 @@ export default function App() {
             {/* Search Bar */}
             {currentView === 'list' && (
               <div className="relative w-full lg:max-w-md">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Search className="h-4 w-4 text-slate-500" />
+                <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                  <Search className={`h-4 w-4 ${theme === 'dark' ? 'text-slate-600' : 'text-slate-400'}`} />
                 </div>
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="block w-full pl-12 pr-4 py-3.5 border border-slate-800 rounded-2xl leading-5 bg-slate-900/50 text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all shadow-inner"
-                  placeholder="Seach ID, Filename, Lang..."
+                  className={`block w-full pl-14 pr-6 py-4 border-none rounded-[1.5rem] leading-5 ${theme === 'dark' ? 'bg-slate-950/80 text-white placeholder-slate-700' : 'bg-white text-slate-900 placeholder-slate-400'} focus:outline-none focus:ring-4 ${a.ring}/10 transition-all shadow-inner font-medium`}
+                  placeholder="Seach by Movie, ID, or Filename..."
                 />
               </div>
             )}
@@ -976,42 +1036,252 @@ export default function App() {
                 )}
 
               </form>
+   
+        {currentView === 'upload' ? (
+          /* UPLOAD PAGE */
+          <div className="max-w-3xl animate-in fade-in slide-in-from-bottom-5 duration-700">
+            <div className={`${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100 shadow-2xl shadow-black/5'} rounded-[3rem] border p-8 md:p-12 shadow-2xl`}>
+              <form onSubmit={handleUploadSubmit} className="space-y-10">
+
+                {/* Content Type Selector */}
+                <div>
+                  <label className={`block text-xs font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} mb-5 ml-2`}>Content Type</label>
+                  <div className="grid grid-cols-2 gap-6">
+                    {['movie', 'series'].map((type) => (
+                      <label key={type} className={`cursor-pointer border-2 rounded-[2rem] p-6 flex flex-col items-center justify-center gap-4 transition-all duration-300 ${
+                        uploadForm.type === type
+                          ? `${a.main} ${a.border} text-white shadow-2xl ${a.shadow}`
+                          : `${theme === 'dark' ? 'bg-slate-950 border-slate-800 text-slate-600 hover:border-slate-700' : 'bg-slate-50 border-slate-200 text-slate-400 hover:border-slate-300'}`
+                      }`}>
+                        <input
+                          type="radio"
+                          name="contentType"
+                          className="hidden"
+                          checked={uploadForm.type === type}
+                          onChange={() => setUploadForm({ ...uploadForm, type: type })}
+                        />
+                        <div className={`p-3 rounded-2xl transition-transform ${uploadForm.type === type ? 'bg-white/20 scale-110' : `${theme === 'dark' ? 'bg-slate-900' : 'bg-white shadow-sm'}`}`}>
+                          {type === 'movie' && <Film className="w-6 h-6" />}
+                          {type === 'series' && <Tv className="w-6 h-6" />}
+                        </div>
+                        <span className="capitalize font-black text-sm tracking-wide">{type}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Language Selector */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div>
+                    <label className={`block text-xs font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} mb-5 ml-2`}>Subtitle Language</label>
+                    <div className="flex gap-4">
+                      {[
+                        { code: 'eng', label: 'English' },
+                        { code: 'mal', label: 'Malayalam' }
+                      ].map((lang) => (
+                        <label key={lang.code} className={`flex-1 cursor-pointer border-2 rounded-2xl p-4 flex items-center justify-center gap-3 transition-all ${
+                          uploadForm.language === lang.code
+                            ? `${a.main} ${a.border} text-white shadow-lg`
+                            : `${theme === 'dark' ? 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-600' : 'bg-slate-50 border-slate-200 text-slate-400 hover:border-slate-300'}`
+                        }`}>
+                          <input
+                            type="radio"
+                            name="language"
+                            className="hidden"
+                            checked={uploadForm.language === lang.code}
+                            onChange={() => setUploadForm({ ...uploadForm, language: lang.code })}
+                          />
+                          <Globe className="w-4 h-4" />
+                          <span className="capitalize font-black text-xs">{lang.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* IMDB ID Input */}
+                  <div>
+                    <label className={`block text-xs font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} mb-5 ml-2`}>IMDB ID (or URL)</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={uploadForm.imdbId}
+                        onChange={handleImdbChange}
+                        placeholder="tt1234567 or URL"
+                        className={`w-full ${theme === 'dark' ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'} border-2 rounded-2xl py-4 px-6 placeholder-slate-600 focus:outline-none focus:ring-4 ${a.ring}/10 font-mono text-sm`}
+                      />
+                      {isMetadataLoading && (
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                            <RefreshCw className={`w-5 h-5 ${a.text} animate-spin`} />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Metadata Preview */}
+                {currentMetadata && (
+                  <div className={`flex gap-8 p-6 ${theme === 'dark' ? 'bg-slate-950/50 border-slate-800' : 'bg-slate-50/50 border-slate-100'} border-2 rounded-[2rem] animate-in fade-in zoom-in-95 duration-500`}>
+                    {currentMetadata.poster_path ? (
+                      <img 
+                        src={currentMetadata.poster_path} 
+                        alt="Poster" 
+                        className="w-32 h-48 object-cover rounded-2xl shadow-2xl ring-4 ring-white/5 flex-shrink-0"
+                      />
+                    ) : (
+                      <div className={`w-32 h-48 ${theme === 'dark' ? 'bg-slate-900' : 'bg-white shadow-inner'} rounded-2xl flex items-center justify-center border-2 border-dashed border-slate-800 flex-shrink-0`}>
+                          <Clapperboard className="w-10 h-10 text-slate-800" />
+                      </div>
+                    )}
+                    <div className="flex-1 py-2 flex flex-col justify-center">
+                      <h4 className="font-black text-white text-3xl leading-none mb-3 tracking-tighter">{currentMetadata.title}</h4>
+                      <p className={`text-sm ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} line-clamp-3 leading-relaxed mb-4`}>{currentMetadata.overview}</p>
+                      {currentMetadata.release_date && (
+                          <div className="flex">
+                            <span className={`px-3 py-1 ${a.main} text-white rounded-lg text-[10px] font-black uppercase tracking-widest`}>
+                              {currentMetadata.release_date.split('-')[0]}
+                            </span>
+                          </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* File Upload Area */}
+                <div>
+                  <label className={`block text-xs font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} mb-5 ml-2`}>
+                    Subtitle Files & Packages
+                  </label>
+
+                  <div className={`relative group mb-8 ${isExtracting ? 'opacity-50 pointer-events-none' : ''}`}>
+                    <input ref={fileInputRef} type="file" multiple accept=".srt,.vtt,.sub,.zip,.ass" onChange={handleFileSelection} className="hidden" />
+                    <input ref={folderInputRef} type="file" webkitdirectory="" directory="" multiple onChange={handleFileSelection} className="hidden" />
+
+                    <div
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                      className={`flex flex-col items-center justify-center w-full min-h-[200px] border-4 border-dashed ${theme === 'dark' ? 'border-slate-800 bg-slate-950/30' : 'border-slate-100 bg-slate-50/30'} rounded-[3rem] hover:border-indigo-500/50 hover:bg-slate-900/10 transition-all cursor-pointer p-8`}
+                      onClick={(e) => { if (e.target === e.currentTarget) fileInputRef.current?.click(); }}
+                    >
+                        {isExtracting ? (
+                          <div className="flex flex-col items-center gap-4">
+                            <RefreshCw className={`w-10 h-10 ${a.text} animate-spin`} />
+                            <p className="font-black text-indigo-400 uppercase tracking-widest text-xs">Extracting content...</p>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center gap-6 text-center">
+                            <div className="flex items-center gap-4 pointer-events-auto">
+                              <button type="button" onClick={() => fileInputRef.current?.click()} className={`${a.main} ${a.hover} text-white px-6 py-3 rounded-2xl text-xs font-black shadow-xl ${a.shadow} transition-all active:scale-95`}>Select Files</button>
+                              <span className="text-slate-600 font-black text-[10px] uppercase">or</span>
+                              <button type="button" onClick={() => folderInputRef.current?.click()} className={`${theme === 'dark' ? 'bg-slate-800' : 'bg-white shadow-lg'} hover:bg-slate-700 px-6 py-3 rounded-2xl text-xs font-black text-slate-400 transition-all active:scale-95 border ${theme === 'dark' ? 'border-slate-700' : 'border-slate-100'}`}>Select Folder</button>
+                            </div>
+                            <p className="text-[10px] text-slate-600 font-black uppercase tracking-widest">
+                              {stagedFiles.length > 0 ? `${stagedFiles.length} files staged` : 'Drag and drop zips, folders, or srt files'}
+                            </p>
+                          </div>
+                        )}
+                    </div>
+                  </div>
+
+                  {/* Staged Files List */}
+                  {stagedFiles.length > 0 && (
+                    <div className={`${theme === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-100'} rounded-3xl border overflow-hidden animate-in slide-in-from-top-4 duration-500`}>
+                      <div className={`px-6 py-4 ${theme === 'dark' ? 'bg-slate-900/50' : 'bg-white'} border-b ${theme === 'dark' ? 'border-slate-800' : 'border-slate-100'} flex justify-between items-center`}>
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Staged Files ({stagedFiles.length})</span>
+                        <button type="button" onClick={clearStagedFiles} className="text-[10px] font-black text-red-500 uppercase tracking-widest hover:text-red-400">Clear All</button>
+                      </div>
+                      <ul className="max-h-64 overflow-y-auto divide-y divide-slate-800/20 custom-scrollbar">
+                        {stagedFiles.map((file, idx) => (
+                          <li key={idx} className="flex items-center justify-between p-4 hover:bg-indigo-500/5 transition-colors group">
+                            <div className="flex items-center gap-4 min-w-0 mr-4">
+                              <div className={`p-2 rounded-xl ${theme === 'dark' ? 'bg-slate-900' : 'bg-white shadow-sm'}`}>
+                                 {file.isFromZip ? <Archive className="w-4 h-4 text-indigo-400" /> : <FileText className="w-4 h-4 text-slate-500" />}
+                              </div>
+                              <div className="flex flex-col min-w-0">
+                                 {file.isEditing ? (
+                                   <input type="text" autoFocus value={file.tempName} onChange={(e) => updateTempName(idx, e.target.value)} onBlur={() => saveFileName(idx)} onKeyDown={(e) => e.key === 'Enter' && saveFileName(idx)} className="bg-slate-900 text-white text-xs px-2 py-1 rounded border border-indigo-500 outline-none" />
+                                 ) : (
+                                   <span className="text-sm font-bold truncate text-slate-300 group-hover:text-white transition-colors">{file.name}</span>
+                                 )}
+                                 <span className="text-[9px] font-black text-slate-600 uppercase">{(file.size / 1024).toFixed(0)} KB</span>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                               <button type="button" onClick={() => file.isEditing ? saveFileName(idx) : toggleEditFile(idx)} className="p-2 text-slate-600 hover:text-indigo-400 transition-all"><Edit2 className="w-3.5 h-3.5" /></button>
+                               <button type="button" onClick={() => removeStagedFile(idx)} className="p-2 text-slate-600 hover:text-red-400 transition-all"><X className="w-3.5 h-3.5" /></button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                {/* Upload Button */}
+                <button
+                  type="button"
+                  onClick={handleUploadSubmit}
+                  disabled={stagedFiles.length === 0 || !uploadForm.imdbId || isUploading || isExtracting}
+                  className={`w-full py-6 rounded-3xl font-black text-lg text-white shadow-2xl transition-all flex items-center justify-center gap-4 ${
+                    stagedFiles.length === 0 || !uploadForm.imdbId || isUploading || isExtracting
+                      ? 'bg-slate-800 cursor-not-allowed text-slate-600 border border-slate-700'
+                      : `${a.main} ${a.hover} ${a.shadow} active:scale-95`
+                  }`}
+                >
+                  {isUploading ? (
+                    <><RefreshCw className="w-6 h-6 animate-spin" /><span>Syncing to Database...</span></>
+                  ) : (
+                    <><Upload className="w-6 h-6" /><span>Upload {stagedFiles.length} Subtitles</span></>
+                  )}
+                </button>
+
+                {uploadSuccess && (
+                  <div className="text-emerald-400 text-center text-xs font-black uppercase tracking-widest bg-emerald-500/10 p-5 rounded-3xl border border-emerald-500/20 animate-in zoom-in duration-500">
+                    Done! Everything added to your stream library.
+                  </div>
+                )}
+                {uploadError && (
+                  <div className="text-red-400 text-center text-xs font-black uppercase tracking-widest bg-red-500/10 p-5 rounded-3xl border border-red-500/20">
+                    {uploadError}
+                  </div>
+                )}
+              </form>
             </div>
           </div>
         ) : currentView === 'logs' ? (
           /* LOGS PAGE */
-          <div className="max-w-4xl animate-in fade-in duration-500">
-             <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
-               <div className="px-6 py-4 bg-slate-800/50 border-b border-slate-700/50 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                     <div className="p-2 bg-indigo-500 rounded-xl">
-                        <Shield className="w-4 h-4 text-white" />
+          <div className="max-w-5xl animate-in fade-in slide-in-from-bottom-5 duration-700 px-2 lg:px-0">
+             <div className={`${theme === 'dark' ? 'bg-slate-900 border-slate-800 shadow-2xl shadow-black/50' : 'bg-white border-slate-100 shadow-2xl shadow-black/5'} rounded-[3rem] border overflow-hidden`}>
+               <div className={`px-8 py-6 ${theme === 'dark' ? 'bg-slate-800/40' : 'bg-slate-50/50'} border-b ${theme === 'dark' ? 'border-slate-700/50' : 'border-slate-100'} flex items-center justify-between`}>
+                  <div className="flex items-center gap-4">
+                     <div className={`${a.main} p-3 rounded-2xl shadow-lg ${a.shadow}`}>
+                        <Shield className="w-5 h-5 text-white" />
                      </div>
-                     <span className="font-bold text-white">Live Traffic Logs</span>
+                     <h3 className="text-xl font-black tracking-tight">System Traffic</h3>
                   </div>
-                  <div className="flex items-center gap-2">
-                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                     <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Live</span>
+                  <div className="flex items-center gap-3">
+                     <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                     <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Active</span>
                   </div>
                </div>
-               <div className="p-6 h-[600px] overflow-y-auto font-mono text-sm space-y-2 scrollbar-hide">
+               <div className={`p-8 h-[650px] overflow-y-auto font-mono text-[13px] space-y-3 custom-scrollbar ${theme === 'dark' ? 'bg-slate-950/20' : 'bg-white'}`}>
                   {logs.length > 0 ? logs.map((log, i) => (
-                    <div key={i} className="flex gap-4 p-3 rounded-xl border border-slate-800/30 bg-slate-950/20 group hover:bg-slate-800/20 transition-all">
-                       <span className="text-slate-600 flex-shrink-0">{log.ts}</span>
-                       <span className="text-slate-300 break-all">{log.message}</span>
+                    <div key={i} className={`flex gap-6 p-4 rounded-2xl border ${theme === 'dark' ? 'border-slate-800/40 bg-slate-900/10' : 'border-slate-100 bg-slate-50/10'} hover:scale-[1.01] transition-all duration-300`}>
+                       <span className="text-slate-600 font-bold shrink-0">{log.ts}</span>
+                       <span className={`${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'} break-all font-medium leading-relaxed`}>{log.message}</span>
                     </div>
                   )) : (
-                    <div className="h-full flex flex-col items-center justify-center text-slate-700 opacity-50">
-                       <RefreshCw className="w-10 h-10 mb-4 animate-spin-slow" />
-                       <p className="font-bold">Waiting for incoming traffic...</p>
+                    <div className="h-full flex flex-col items-center justify-center py-20 opacity-30 grayscale saturate-0 text-center">
+                       <RefreshCw className={`w-16 h-16 mb-8 ${a.text} animate-spin-slow`} />
+                       <h4 className="font-black text-3xl uppercase tracking-tighter mb-2">Awaiting Signals</h4>
+                       <p className="text-xs font-bold uppercase tracking-widest">Connect your stremio addon to see live data</p>
                     </div>
                   )}
                </div>
              </div>
           </div>
         ) : (
-          /* LIBRARY PAGE (Enhanced & Grouped) */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in duration-500">
+          /* LIBRARY PAGE (Enhanced, Grouped, Responsive) */
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10 animate-in fade-in slide-in-from-bottom-5 duration-700">
             {Object.keys(
               filteredSubtitles.reduce((acc, sub) => {
                 if (!acc[sub.imdbId]) acc[sub.imdbId] = [];
@@ -1031,71 +1301,66 @@ export default function App() {
                 const mediaTitle = metadata?.title || imdbId;
                 
                 return (
-                  <div key={imdbId} className="group bg-slate-900 rounded-[2.5rem] border border-slate-800/60 hover:border-indigo-500/40 transition-all duration-500 flex flex-col h-full shadow-2xl overflow-hidden relative">
+                  <div key={imdbId} className={`group ${theme === 'dark' ? 'bg-slate-900 border-slate-800 shadow-2xl shadow-black/40' : 'bg-white border-slate-100 shadow-2xl shadow-black/5'} rounded-[3rem] border hover:border-indigo-500/30 transition-all duration-500 flex flex-col h-full overflow-hidden relative group`}>
                     
                     {/* Media Header (Poster & Background) */}
-                    <div className="relative h-48 overflow-hidden">
+                    <div className="relative h-64 overflow-hidden">
                        {metadata?.poster_path ? (
                           <>
-                             <img 
-                               src={metadata.poster_path} 
-                               alt="Backdrop" 
-                               className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-20 scale-150"
-                             />
-                             <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
+                             <img src={metadata.poster_path} alt="Backdrop" className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-20 scale-150 group-hover:scale-110 transition-transform duration-1000" />
+                             <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-60" />
                           </>
                        ) : (
-                          <div className="absolute inset-0 bg-slate-800" />
+                          <div className={`absolute inset-0 ${theme === 'dark' ? 'bg-slate-800' : 'bg-slate-100'}`} />
                        )}
                        
-                       <div className="absolute bottom-0 left-0 p-6 flex gap-4 items-end w-full">
+                       <div className="absolute bottom-0 left-0 p-8 flex gap-6 items-end w-full">
                           {metadata?.poster_path ? (
-                             <img 
-                               src={metadata.poster_path} 
-                               alt="Poster" 
-                               className="w-20 h-28 object-cover rounded-xl shadow-2xl ring-2 ring-white/10 z-10"
-                             />
+                             <img src={metadata.poster_path} alt="Poster" className="w-28 h-40 object-cover rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] ring-2 ring-white/10 z-10 group-hover:scale-105 transition-transform duration-500" />
                           ) : (
-                             <div className="w-20 h-28 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700 z-10">
-                                <Clapperboard className="w-8 h-8 text-slate-700" />
+                             <div className={`w-24 h-36 ${theme === 'dark' ? 'bg-slate-800' : 'bg-white shadow-lg'} rounded-2xl flex items-center justify-center border-2 border-dashed ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'} z-10`}>
+                                <Clapperboard className="w-10 h-10 text-slate-700 opacity-20" />
                              </div>
                           )}
-                          <div className="flex-1 min-w-0 z-10">
-                             <h3 className="font-black text-white text-xl truncate leading-tight mb-1" title={mediaTitle}>
+                          <div className="flex-1 min-w-0 z-10 mb-2">
+                             <div className="flex flex-wrap gap-2 mb-3">
+                                <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-lg ${firstSub.type === 'movie' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-purple-500/20 text-purple-400'}`}>{firstSub.type}</span>
+                                <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">Synced</span>
+                             </div>
+                             <h3 className={`font-black tracking-tighter leading-[0.9] text-white ${mediaTitle.length > 20 ? 'text-xl' : 'text-3xl'} truncate`} title={mediaTitle}>
                                 {mediaTitle}
                              </h3>
-                             <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-mono text-indigo-400 font-bold bg-indigo-500/10 px-2 py-0.5 rounded uppercase">{imdbId}</span>
-                                <span className="text-[10px] text-slate-500 font-bold uppercase">{groupSubtitles.length} files</span>
+                             <div className="flex items-center gap-3 mt-4">
+                                <span className={`text-[10px] font-mono ${theme === 'dark' ? 'text-slate-400' : 'text-slate-400'} font-black`}>{imdbId}</span>
                              </div>
                           </div>
                        </div>
                     </div>
 
                     {/* Subtitles List (Scrollable Area) */}
-                    <div className="p-4 flex-grow">
-                       <p className="px-3 text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Available Subtitles</p>
-                       <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                    <div className="p-6 flex-grow">
+                       <p className={`px-4 text-[9px] font-black uppercase tracking-[0.2em] ${theme === 'dark' ? 'text-slate-600' : 'text-slate-400'} mb-5`}>Linked Files • {groupSubtitles.length}</p>
+                       <div className="max-h-[350px] overflow-y-auto space-y-3 pr-2 custom-scrollbar">
                           {groupSubtitles.sort((a,b) => {
                              if (a.type === 'movie') return -1;
                              return (a.season * 1000 + a.episode) - (b.season * 1000 + b.episode);
                           }).map((sub) => (
-                             <div key={sub.id} className="flex items-center justify-between p-3 rounded-2xl bg-slate-950/40 border border-slate-800/50 hover:border-slate-700 transition-all group/item">
-                                <div className="flex flex-col min-w-0 flex-1 mr-3">
-                                   <div className="flex items-center gap-2 mb-1">
+                             <div key={sub.id} className={`flex items-center justify-between p-4 rounded-[1.5rem] ${theme === 'dark' ? 'bg-slate-950/40 border-slate-800' : 'bg-slate-50/50 border-slate-100'} border hover:border-indigo-500/30 transition-all duration-300 group/item`}>
+                                <div className="flex flex-col min-w-0 flex-1 mr-4">
+                                   <div className="flex items-center gap-2 mb-2">
                                       {sub.type !== 'movie' && (
-                                         <span className="text-[9px] font-black text-indigo-400">S{String(sub.season).padStart(2,'0')}E{String(sub.episode).padStart(2,'0')}</span>
+                                         <span className={`text-[10px] font-black ${a.text} bg-indigo-500/10 px-2 py-0.5 rounded-lg`}>S{String(sub.season).padStart(2,'0')}E{String(sub.episode).padStart(2,'0')}</span>
                                       )}
-                                      <span className="text-[9px] font-black bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded leading-none uppercase">{sub.language || 'MAL'}</span>
+                                      <span className="text-[10px] font-black bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded-lg uppercase">{sub.language || 'MAL'}</span>
                                    </div>
-                                   <p className="text-[11px] text-slate-400 truncate" title={sub.fileName}>{sub.fileName}</p>
+                                   <p className={`text-[11px] font-medium leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'} truncate-2-lines`} title={sub.fileName}>{sub.fileName}</p>
                                 </div>
                                 <button
                                    onClick={(e) => { e.stopPropagation(); handleDelete(sub.id); }}
-                                   className="p-2 rounded-xl text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover/item:opacity-100"
+                                   className="p-3 rounded-2xl text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-all sm:opacity-0 group-hover/item:opacity-100 ring-4 ring-transparent hover:ring-red-500/5 shadow-inner"
                                    title="Remove"
                                 >
-                                   <Trash2 className="w-3.5 h-3.5" />
+                                   <Trash2 className="w-4 h-4" />
                                 </button>
                              </div>
                           ))}
@@ -1103,23 +1368,27 @@ export default function App() {
                     </div>
 
                     {/* Footer / Meta */}
-                    <div className="px-7 py-4 bg-slate-950/50 border-t border-slate-800/80 flex items-center justify-between">
-                       <span className="text-[9px] text-slate-600 font-bold uppercase">Updated {firstSub.date}</span>
-                       <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${firstSub.type === 'movie' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-purple-500/20 text-purple-400'}`}>
-                          {firstSub.type}
-                       </span>
+                    <div className={`px-10 py-6 ${theme === 'dark' ? 'bg-slate-950/50' : 'bg-slate-50/50'} border-t ${theme === 'dark' ? 'border-slate-800/80' : 'border-slate-100'} flex items-center justify-between ring-white/5`}>
+                       <div className="flex items-center gap-2">
+                          <RefreshCw className="w-3 h-3 text-slate-700" />
+                          <span className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">Added {firstSub.date}</span>
+                       </div>
+                       <div className="flex -space-x-2">
+                          {[1,2,3].map(i => <div key={i} className="w-5 h-5 rounded-full bg-slate-800 border-2 border-slate-900 group-hover:scale-110 transition-transform" />)}
+                       </div>
                     </div>
                   </div>
                 );
               })
             ) : (
-              <div className="col-span-full py-20 text-center">
-                 <div className="bg-slate-900 w-24 h-24 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 border border-slate-800/50 shadow-xl">
-                    <Archive className="w-10 h-10 text-slate-800" />
+              <div className="col-span-full py-40 text-center animate-in fade-in duration-1000">
+                 <div className={`w-32 h-32 rounded-[3.5rem] ${theme === 'dark' ? 'bg-slate-900' : 'bg-slate-50'} flex items-center justify-center mx-auto mb-10 border-2 ${theme === 'dark' ? 'border-slate-800' : 'border-slate-100'} shadow-2xl relative overflow-hidden`}>
+                    <Archive className={`w-12 h-12 ${theme === 'dark' ? 'text-slate-800' : 'text-slate-200'}`} />
+                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent" />
                  </div>
-                 <h3 className="text-white font-black text-2xl mb-3 tracking-tight">No Subtitles Found</h3>
-                 <p className="text-slate-500 text-sm max-w-xs mx-auto font-medium">
-                    {searchQuery ? `We couldn't find any results for "${searchQuery}"` : "Your library is sounding a bit empty. Time to upload some cinema!"}
+                 <h3 className="text-4xl font-black mb-5 tracking-tighter">Library is Empty</h3>
+                 <p className={`text-sm ${theme === 'dark' ? 'text-slate-600' : 'text-slate-400'} max-w-sm mx-auto font-bold uppercase tracking-widest leading-loose`}>
+                    {searchQuery ? `Zero matches for "${searchQuery}"` : "Your cinema collection is waiting for its first subtitle pack."}
                  </p>
               </div>
             )}
