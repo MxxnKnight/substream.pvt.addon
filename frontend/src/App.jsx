@@ -679,11 +679,11 @@ export default function App() {
       </aside>
 
       {/* Main Content */}
-      <main className={`flex-1 overflow-y-auto ${theme === 'dark' ? 'bg-slate-950' : 'bg-white'} pb-24 lg:pb-12 custom-scrollbar`}>
-        <div className="max-w-7xl mx-auto p-4 lg:p-12">
+      <main className={`flex-1 overflow-y-auto ${theme === 'dark' ? 'bg-slate-950' : 'bg-white'} pb-24 lg:pb-12 custom-scrollbar transition-theme`}>
+        <div className="max-w-screen-2xl mx-auto p-4 lg:p-12">
           
-          {/* Floating Header */}
-          <header className={`flex flex-col lg:flex-row lg:justify-between lg:items-center mt-4 lg:mt-0 mb-12 gap-8 sticky top-6 z-30 p-5 rounded-[2.5rem] ${theme === 'dark' ? 'bg-slate-900/40' : 'bg-slate-50/40'} glass shadow-2xl transition-all`}>
+          {/* Floating Header - Rounded Square Style */}
+          <header className={`flex flex-col lg:flex-row lg:justify-between lg:items-center mt-10 mb-16 gap-8 sticky top-10 z-30 p-8 rounded-[2rem] ${theme === 'dark' ? 'bg-slate-900/60' : 'bg-slate-50/60'} glass shadow-2xl transition-all border border-white/5`}>
             <div className="flex items-center gap-5">
               <div className={`${a.main} p-3 rounded-2xl hidden lg:block`}>
                   {currentView === 'upload' ? <Upload className="w-5 h-5 text-white" /> : currentView === 'list' ? <Archive className="w-5 h-5 text-white" /> : <Shield className="w-5 h-5 text-white" />}
@@ -721,9 +721,9 @@ export default function App() {
           </header>
 
         {currentView === 'upload' ? (
-          /* UPLOAD PAGE */
-          <div className="max-w-3xl animate-in fade-in slide-in-from-bottom-5 duration-700">
-            <div className={`${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100 shadow-2xl shadow-black/5'} rounded-[3rem] border p-8 md:p-12 shadow-2xl`}>
+          /* UPLOAD PAGE - WIDER */
+          <div className="max-w-6xl w-full animate-in fade-in slide-in-from-bottom-5 duration-700">
+            <div className={`${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100 shadow-2xl shadow-black/5'} rounded-[3rem] border p-10 md:p-16 shadow-2xl`}>
               <form onSubmit={handleUploadSubmit} className="space-y-10">
 
                 {/* Content Type Selector */}
