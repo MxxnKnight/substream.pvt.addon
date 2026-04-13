@@ -61,7 +61,7 @@ export default function App() {
     sky: { main: 'bg-sky-600', hover: 'hover:bg-sky-500', text: 'text-sky-600', border: 'border-sky-600', shadow: 'shadow-sky-600/20', ring: 'ring-sky-500' },
   };
 
-  const a = ACCENTS[accent];
+  const a = ACCENTS[accent] || ACCENTS.indigo;
 
 
   // Login Form State
@@ -316,6 +316,18 @@ export default function App() {
   const handleFileSelection = (e) => {
     processFiles(Array.from(e.target.files || []));
     e.target.value = '';
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isExtracting) return;
+    processFiles(Array.from(e.dataTransfer.files || []));
   };
 
   const toggleEditFile = (index) => {
