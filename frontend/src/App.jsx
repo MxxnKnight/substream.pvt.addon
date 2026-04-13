@@ -431,6 +431,18 @@ export default function App() {
         console.error("Delete failed", err);
       }
     }
+  const handleDeleteSeason = async (imdbId, season, subs) => {
+    if(window.confirm(`Delete all ${subs.length} subtitles for Season ${season}?`)) {
+      try {
+        // Parallel deletes for speed
+        await Promise.all(subs.map(sub => apiFetch(`/api/admin/subtitles/${sub.id}`, { method: 'DELETE' })));
+        setSubtitles(prev => prev.filter(s => !subs.some(sub => sub.id === s.id)));
+      } catch (err) {
+        console.error("Bulk delete failed", err);
+        alert("Some subtitles could not be deleted");
+        fetchSubtitles();
+      }
+    }
   };
 
   const handleUploadSubmit = async (e) => {
@@ -690,32 +702,32 @@ export default function App() {
         <div className="max-w-screen-2xl mx-auto p-4 lg:p-12">
           
           {/* Floating Header - Rounded Square Style */}
-          <header className={`flex flex-col lg:flex-row lg:justify-between lg:items-center mt-10 mb-16 gap-8 sticky top-10 z-30 p-8 rounded-[2rem] ${theme === 'dark' ? 'bg-slate-900/60' : 'bg-white/80 shadow-2xl shadow-black/5'} glass transition-all border border-white/5`}>
-            <div className="flex flex-col lg:flex-row lg:items-center gap-8">
+          <header className={`flex flex-col lg:flex-row lg:justify-between lg:items-center mt-10 mb-16 gap-8 sticky top-10 z-30 p-8 rounded-[2rem] ${theme === 'dark' ? 'bg-slate-900/60' : 'bg-white/90 shadow-2xl shadow-black/10'} glass transition-all border ${theme === 'dark' ? 'border-white/5' : 'border-slate-300'}`}>
+            <div className="flex flex-col lg:flex-row lg:items-center gap-10">
               <div className="flex items-center gap-5">
-                <div className={`${a.main} p-3 rounded-2xl hidden lg:block shadow-xl ${a.shadow}`}>
-                    {currentView === 'upload' ? <Upload className="w-5 h-5 text-white" /> : currentView === 'list' ? <Archive className="w-5 h-5 text-white" /> : <Shield className="w-5 h-5 text-white" />}
+                <div className={`${a.main} p-4 rounded-2xl hidden lg:block shadow-2xl ${a.shadow}`}>
+                    {currentView === 'upload' ? <Upload className="w-6 h-6 text-white" /> : currentView === 'list' ? <Archive className="w-6 h-6 text-white" /> : <Shield className="w-6 h-6 text-white" />}
                 </div>
-                <h2 className={`text-4xl font-black tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-                    {currentView === 'upload' ? 'Upload Center' : currentView === 'list' ? 'SubView Library' : 'Traffic Monitor'}
+                <h2 className={`text-4xl lg:text-5xl font-black tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                    {currentView === 'upload' ? 'Upload' : currentView === 'list' ? 'Library' : 'Logs'}
                 </h2>
               </div>
 
-              {/* Media Filter Toggle (Library Only) */}
+              {/* Media Filter Toggle - Highly Visible */}
               {currentView === 'list' && (
-                <div className={`flex p-1.5 rounded-[1.2rem] ${theme === 'dark' ? 'bg-slate-950' : 'bg-slate-200/50'} shadow-inner`}>
+                <div className={`flex p-2 rounded-[1.5rem] ${theme === 'dark' ? 'bg-slate-950/80' : 'bg-slate-200'} shadow-inner border ${theme === 'dark' ? 'border-white/5' : 'border-slate-300/50'}`}>
                    {[
-                     { id: 'all', label: 'All Content' },
+                     { id: 'all', label: 'All' },
                      { id: 'movie', label: 'Movies' },
                      { id: 'series', label: 'Series' }
                    ].map((btn) => (
                      <button
                         key={btn.id}
                         onClick={() => setMediaFilter(btn.id)}
-                        className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                        className={`px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-300 ${
                            mediaFilter === btn.id 
-                            ? `${a.main} text-white shadow-xl` 
-                            : `${theme === 'dark' ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-700'}`
+                            ? `${a.main} text-white shadow-2xl ${a.shadow} scale-105` 
+                            : `${theme === 'dark' ? 'text-slate-500 hover:text-slate-200' : 'text-slate-500 hover:text-slate-900'}`
                         }`}
                      >
                         {btn.label}
@@ -1019,7 +1031,7 @@ export default function App() {
                 const mediaTitle = metadata?.title || imdbId;
                 
                 return (
-                  <div key={imdbId} className={`group ${theme === 'dark' ? 'bg-slate-900 border-slate-800 shadow-2xl shadow-black/40' : 'bg-white border-slate-100 shadow-2xl shadow-black/5'} rounded-[3rem] border hover:border-indigo-500/30 transition-all duration-500 flex flex-col h-full overflow-hidden relative group`}>
+                  <div key={imdbId} className={`group ${theme === 'dark' ? 'bg-slate-900 border-slate-800 shadow-2xl shadow-black/40' : 'bg-white border-slate-300 shadow-2xl shadow-black/10'} rounded-[3rem] border hover:border-indigo-500/30 transition-all duration-500 flex flex-col h-full overflow-hidden relative group`}>
                     
                     {/* Media Header (Poster & Background) */}
                     <div className="relative h-64 overflow-hidden">
@@ -1055,34 +1067,61 @@ export default function App() {
                        </div>
                     </div>
 
-                    {/* Subtitles List (Scrollable Area) */}
+                                  {/* Subtitles List (Grouped by Season) */}
                     <div className="p-6 flex-grow">
-                       <p className={`px-4 text-[9px] font-black uppercase tracking-[0.2em] ${theme === 'dark' ? 'text-slate-600' : 'text-slate-400'} mb-5`}>Linked Files • {groupSubtitles.length}</p>
-                       <div className="max-h-[350px] overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-                          {groupSubtitles.sort((a,b) => {
-                             if (a.type === 'movie') return -1;
-                             return (a.season * 1000 + a.episode) - (b.season * 1000 + b.episode);
-                          }).map((sub) => (
-                             <div key={sub.id} className={`flex items-center justify-between p-4 rounded-[1.5rem] ${theme === 'dark' ? 'bg-slate-950/40 border-slate-800' : 'bg-slate-50/50 border-slate-100'} border hover:border-indigo-500/30 transition-all duration-300 group/item`}>
-                                <div className="flex flex-col min-w-0 flex-1 mr-4">
-                                   <div className="flex items-center gap-2 mb-2">
-                                      {sub.type !== 'movie' && (
-                                         <span className={`text-[10px] font-black ${a.text} bg-indigo-500/10 px-2 py-0.5 rounded-lg`}>S{String(sub.season).padStart(2,'0')}E{String(sub.episode).padStart(2,'0')}</span>
-                                      )}
-                                      <span className="text-[10px] font-black bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded-lg uppercase">{sub.language || 'MAL'}</span>
-                                   </div>
-                                   <p className={`text-[11px] font-medium leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'} truncate-2-lines`} title={sub.fileName}>{sub.fileName}</p>
+                       <div className="max-h-[450px] overflow-y-auto space-y-8 pr-2 custom-scrollbar">
+                          {Object.entries(
+                            groupSubtitles.reduce((acc, sub) => {
+                              const s = sub.season != null ? sub.season : 'Movie';
+                              if (!acc[s]) acc[s] = [];
+                              acc[s].push(sub);
+                              return acc;
+                            }, {})
+                          ).sort((a,b) => {
+                             if (a[0] === 'Movie') return -1;
+                             return Number(a[0]) - Number(b[0]);
+                          }).map(([season, subs]) => (
+                             <div key={season}>
+                                <div className="flex items-center justify-between px-4 mb-4">
+                                   <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${theme === 'dark' ? 'text-slate-500' : 'text-slate-500'}`}>
+                                      {season === 'Movie' ? 'Core Subtitles' : `Season ${String(season).padStart(2,'0')}`} • {subs.length}
+                                   </p>
+                                   {season !== 'Movie' && (
+                                      <button 
+                                         onClick={() => handleDeleteSeason(imdbId, season, subs)}
+                                         className={`text-[9px] font-black uppercase tracking-widest py-1 px-3 rounded-lg border transition-all ${theme === 'dark' ? 'border-red-500/20 text-red-400/60 hover:text-red-400 hover:bg-red-500/10' : 'border-red-200 text-red-500 hover:bg-red-500 hover:text-white'}`}
+                                      >
+                                         Delete Season
+                                      </button>
+                                   )}
                                 </div>
-                                <button
-                                   onClick={(e) => { e.stopPropagation(); handleDelete(sub.id); }}
-                                   className="p-3 rounded-2xl text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-all sm:opacity-0 group-hover/item:opacity-100 ring-4 ring-transparent hover:ring-red-500/5 shadow-inner"
-                                   title="Remove"
-                                >
-                                   <Trash2 className="w-4 h-4" />
-                                </button>
+                                <div className="space-y-3">
+                                   {subs.sort((a,b) => (a.episode || 0) - (b.episode || 0)).map((sub) => (
+                                      <div key={sub.id} className={`flex items-center justify-between p-4 rounded-[1.5rem] ${theme === 'dark' ? 'bg-slate-950/40 border-slate-800' : 'bg-slate-200 border-slate-300 shadow-sm'} border hover:border-indigo-500/30 transition-all duration-300 group/item`}>
+                                         <div className="flex flex-col min-w-0 flex-1 mr-4">
+                                            <div className="flex items-center gap-2 mb-2">
+                                               {sub.type !== 'movie' && (
+                                                  <span className={`text-[10px] font-black ${a.text} ${theme === 'dark' ? 'bg-indigo-500/10' : 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'} px-2 py-0.5 rounded-lg`}>EP {String(sub.episode).padStart(2,'0')}</span>
+                                               )}
+                                               <span className={`text-[10px] font-black ${theme === 'dark' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'} px-2 py-0.5 rounded-lg uppercase`}>{sub.language || 'MAL'}</span>
+                                            </div>
+                                            <p className={`text-[11px] font-medium leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'} truncate-2-lines`} title={sub.fileName}>{sub.fileName}</p>
+                                         </div>
+                                         <button
+                                            onClick={(e) => { e.stopPropagation(); handleDelete(sub.id); }}
+                                            className="p-3 rounded-2xl text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all sm:opacity-0 group-hover/item:opacity-100 ring-4 ring-transparent hover:ring-red-500/5 shadow-inner"
+                                            title="Remove"
+                                         >
+                                            <Trash2 className="w-4 h-4" />
+                                         </button>
+                                      </div>
+                                   ))}
+                                </div>
                              </div>
                           ))}
                        </div>
+                    </div>
+                  </div>
                     </div>
 
                     {/* Footer / Meta */}
