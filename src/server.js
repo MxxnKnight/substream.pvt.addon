@@ -10,6 +10,19 @@ const adminRoutes = require('./routes/admin');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Log buffer for the dashboard
+const logBuffer = [];
+const MAX_LOGS = 200;
+
+const addToLogs = (message) => {
+  const ts = new Date().toLocaleTimeString();
+  logBuffer.unshift({ ts, message });
+  if (logBuffer.length > MAX_LOGS) logBuffer.pop();
+};
+
+// Make logs available to routes
+app.set('logBuffer', logBuffer);
+
 // Trust the first proxy (required on Render, Railway, Heroku, etc.)
 // Without this, req.protocol returns 'http' even on HTTPS connections.
 app.set('trust proxy', 1);
@@ -21,7 +34,15 @@ app.use((req, res, next) => {
   const ua = req.headers['user-agent'] || 'unknown';
   const ts = new Date().toISOString();
   
-  console.log(`[${ts}] ${req.method} ${req.originalUrl} | UA: ${ua} | IP: ${ip}`);
+  // Skip self-pings in the buffer to keep it clean (but keep in console)
+  const isSelfPing = req.originalUrl.includes('manifest.json') && ua.includes('node-fetch');
+  
+  const logMsg = `${req.method} ${req.originalUrl} | UA: ${ua} | IP: ${ip}`;
+  console.log(`[${ts}] ${logMsg}`);
+  
+  if (!isSelfPing) {
+    addToLogs(`${req.method} ${req.originalUrl}`);
+  }
   next();
 });
 // ─────────────────────────────────────────────────────────────────────────────
@@ -53,6 +74,7 @@ app.get('*', (req, res) => {
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
+  addToLogs(`ERROR: ${err.message}`);
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
@@ -63,6 +85,9 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`   ${baseUrl}/manifest.json`);
   console.log(`\n   ── Admin Dashboard ──`);
   console.log(`   ${baseUrl}/`);
+  
+  addToLogs(`Server started on port ${PORT}`);
+
   if (!process.env.BASE_URL) {
     console.log(`\n   ── LAN (same WiFi) ──`);
     try {
@@ -80,7 +105,6 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('');
 
   // Self-ping mechanism to keep Render free tier alive
-  // Pings itself every 14 minutes (Render sleeps after 15 minutes of inactivity)
   setInterval(() => {
     try {
       fetch(`${baseUrl}/manifest.json`)

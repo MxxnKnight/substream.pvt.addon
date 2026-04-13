@@ -59,9 +59,17 @@ export default function App() {
   // Refresh state
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Logs state
+  const [logs, setLogs] = useState([]);
+  const [isLogsLoading, setIsLogsLoading] = useState(false);
+
   // Refs for file inputs
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
+
+  // Metadata for current upload
+  const [currentMetadata, setCurrentMetadata] = useState(null);
+  const [isMetadataLoading, setIsMetadataLoading] = useState(false);
 
   // --- Check Auth on Load ---
   useEffect(() => {
@@ -71,6 +79,28 @@ export default function App() {
       fetchSubtitles();
     }
   }, []);
+
+  // --- Periodic Log Fetching ---
+  useEffect(() => {
+    let interval;
+    if (user && currentView === 'logs') {
+      fetchLogs();
+      interval = setInterval(fetchLogs, 3000); // Poll logs every 3 seconds
+    }
+    return () => clearInterval(interval);
+  }, [user, currentView]);
+
+  const fetchLogs = async () => {
+    try {
+      const res = await apiFetch('/api/admin/logs');
+      if (res.ok) {
+        const data = await res.json();
+        setLogs(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch logs", err);
+    }
+  };
 
   // --- API Helpers ---
 
@@ -104,7 +134,8 @@ export default function App() {
           type: sub.type,
           season: sub.season,
           episode: sub.episode,
-          language: sub.language
+          language: sub.language,
+          metadata: sub.metadata // Store metadata from backend
         }));
         setSubtitles(formatted);
       }
@@ -112,6 +143,27 @@ export default function App() {
       console.error("Failed to fetch subtitles", err);
     } finally {
       setIsRefreshing(false);
+    }
+  };
+
+  const fetchCurrentMetadata = async (imdbId) => {
+    if (!imdbId || !imdbId.startsWith('tt')) {
+      setCurrentMetadata(null);
+      return;
+    }
+    setIsMetadataLoading(true);
+    try {
+      const res = await apiFetch(`/api/admin/metadata?imdbId=${imdbId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setCurrentMetadata(data.error ? null : data);
+      } else {
+        setCurrentMetadata(null);
+      }
+    } catch (err) {
+      setCurrentMetadata(null);
+    } finally {
+      setIsMetadataLoading(false);
     }
   };
 
@@ -240,6 +292,11 @@ export default function App() {
     const rawValue = e.target.value;
     const extracted = extractImdbId(rawValue);
     setUploadForm({ ...uploadForm, imdbId: extracted });
+    if (extracted && extracted !== uploadForm.imdbId) {
+       fetchCurrentMetadata(extracted);
+    } else if (!extracted) {
+       setCurrentMetadata(null);
+    }
   };
 
   const processFiles = useCallback((files) => {
@@ -531,6 +588,17 @@ export default function App() {
                 </div>
                 <span className="font-semibold text-sm">Library</span>
               </button>
+              <button
+                onClick={() => { setCurrentView('logs'); setIsNavOpen(false); }}
+                className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all group ${
+                  currentView === 'logs' ? 'bg-slate-800 text-white shadow-xl border border-slate-700' : 'text-slate-500 hover:bg-slate-800/50 hover:text-slate-300'
+                }`}
+              >
+                <div className={`p-1.5 rounded-lg ${currentView === 'logs' ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-500 group-hover:text-slate-300'}`}>
+                  <Shield className="w-4 h-4" />
+                </div>
+                <span className="font-semibold text-sm">Traffic Logs</span>
+              </button>
             </nav>
           </div>
 
@@ -655,13 +723,47 @@ export default function App() {
                 {/* IMDB ID Input */}
                 <div>
                   <label className="block text-sm font-medium text-slate-400 mb-2">IMDB ID (or URL)</label>
-                  <input
-                    type="text"
-                    value={uploadForm.imdbId}
-                    onChange={handleImdbChange}
-                    placeholder="Paste URL (e.g. https://imdb.com/title/tt4574334/) or ID"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 px-4 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={uploadForm.imdbId}
+                      onChange={handleImdbChange}
+                      placeholder="Paste URL (e.g. https://imdb.com/title/tt4574334/) or ID"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 px-4 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                    />
+                    {isMetadataLoading && (
+                       <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <Loader className="w-5 h-5 text-indigo-500 animate-spin" />
+                       </div>
+                    )}
+                  </div>
+
+                  {/* Metadata Preview */}
+                  {currentMetadata && (
+                    <div className="mt-4 flex gap-4 p-4 bg-slate-900/80 rounded-2xl border border-indigo-500/30 animate-in fade-in slide-in-from-top-2 duration-300">
+                      {currentMetadata.poster_path ? (
+                        <img 
+                          src={currentMetadata.poster_path} 
+                          alt="Poster" 
+                          className="w-20 h-28 object-cover rounded-lg shadow-lg"
+                        />
+                      ) : (
+                        <div className="w-20 h-28 bg-slate-800 rounded-lg flex items-center justify-center">
+                           <Film className="w-8 h-8 text-slate-700" />
+                        </div>
+                      )}
+                      <div className="flex-1 py-1">
+                        <h4 className="font-bold text-white text-lg leading-tight mb-1">{currentMetadata.title}</h4>
+                        <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed">{currentMetadata.overview}</p>
+                        {currentMetadata.release_date && (
+                           <span className="inline-block mt-2 px-2 py-0.5 bg-indigo-500/10 text-indigo-400 rounded text-[10px] font-bold">
+                             {currentMetadata.release_date.split('-')[0]}
+                           </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {!uploadForm.imdbId && stagedFiles.length > 0 && (
                     <p className="text-amber-400 text-xs mt-2 flex items-center gap-1">
                       <AlertCircle className="w-3 h-3" />
@@ -876,66 +978,118 @@ export default function App() {
               </form>
             </div>
           </div>
+        ) : currentView === 'logs' ? (
+          /* LOGS PAGE */
+          <div className="max-w-4xl animate-in fade-in duration-500">
+             <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
+               <div className="px-6 py-4 bg-slate-800/50 border-b border-slate-700/50 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                     <div className="p-2 bg-indigo-500 rounded-xl">
+                        <Shield className="w-4 h-4 text-white" />
+                     </div>
+                     <span className="font-bold text-white">Live Traffic Logs</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                     <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Live</span>
+                  </div>
+               </div>
+               <div className="p-6 h-[600px] overflow-y-auto font-mono text-sm space-y-2 scrollbar-hide">
+                  {logs.length > 0 ? logs.map((log, i) => (
+                    <div key={i} className="flex gap-4 p-3 rounded-xl border border-slate-800/30 bg-slate-950/20 group hover:bg-slate-800/20 transition-all">
+                       <span className="text-slate-600 flex-shrink-0">{log.ts}</span>
+                       <span className="text-slate-300 break-all">{log.message}</span>
+                    </div>
+                  )) : (
+                    <div className="h-full flex flex-col items-center justify-center text-slate-700 opacity-50">
+                       <RefreshCw className="w-10 h-10 mb-4 animate-spin-slow" />
+                       <p className="font-bold">Waiting for incoming traffic...</p>
+                    </div>
+                  )}
+               </div>
+             </div>
+          </div>
         ) : (
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          /* LIBRARY PAGE (Enhanced) */
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-in fade-in duration-500">
             {filteredSubtitles.length > 0 ? (
               filteredSubtitles.map((sub) => (
-                <div key={sub.id} className="bg-slate-900 rounded-3xl p-7 border border-slate-800/60 hover:border-indigo-500/40 transition-all flex flex-col h-full shadow-lg">
+                <div key={sub.id} className="group bg-slate-900 rounded-[2rem] border border-slate-800/60 hover:border-indigo-500/40 transition-all duration-300 flex flex-col h-full shadow-lg overflow-hidden relative">
                   
-                  {/* Header: Badges */}
-                  <div className="flex flex-wrap items-center gap-2 mb-5">
-                    <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
-                      sub.type === 'movie' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-purple-500/10 text-purple-400 border-purple-500/20'
-                    }`}>
-                      {sub.type}
-                    </span>
-                    <span className="px-3 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 text-[10px] font-black uppercase tracking-widest border border-emerald-500/20">
-                      {sub.language || 'MAL'}
-                    </span>
-                    {sub.type !== 'movie' && (
-                      <span className="px-3 py-1 rounded-lg bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest">
-                        S{sub.season} E{sub.episode}
-                      </span>
-                    )}
+                  {/* Poster Hover / Background (Optional) */}
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-[50px] -mr-16 -mt-16 pointer-events-none group-hover:bg-indigo-500/10 transition-all" />
+
+                  <div className="p-7 flex-grow">
+                    {/* Media Info with Poster */}
+                    <div className="flex gap-5 mb-6">
+                       {sub.metadata?.poster_path ? (
+                          <img 
+                            src={sub.metadata.poster_path} 
+                            alt="Poster" 
+                            className="w-16 h-24 object-cover rounded-xl shadow-lg ring-1 ring-white/5"
+                          />
+                       ) : (
+                          <div className="w-16 h-24 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700">
+                             <Clapperboard className="w-6 h-6 text-slate-700" />
+                          </div>
+                       )}
+                       <div className="flex-1 min-w-0">
+                          <h3 className="font-black text-white text-lg truncate leading-tight mb-1" title={sub.metadata?.title || sub.imdbId}>
+                             {sub.metadata?.title || sub.imdbId}
+                          </h3>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                             <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
+                               sub.type === 'movie' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' : 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                             }`}>
+                               {sub.type}
+                             </span>
+                             <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 text-[9px] font-black uppercase tracking-widest border border-emerald-500/20">
+                               {sub.language || 'MAL'}
+                             </span>
+                             {sub.type !== 'movie' && (
+                               <span className="px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest">
+                                 S{String(sub.season).padStart(2,'0')} E{String(sub.episode).padStart(2,'0')}
+                               </span>
+                             )}
+                          </div>
+                       </div>
+                    </div>
+
+                    {/* Filename with Lucide Icon */}
+                    <div className="flex items-start gap-3 p-4 bg-slate-950/40 rounded-2xl border border-slate-800/40 group-hover:bg-slate-950/60 transition-all">
+                       <FileText className="w-4 h-4 text-slate-600 mt-0.5 flex-shrink-0" />
+                       <p className="text-slate-400 text-sm leading-relaxed line-clamp-2">
+                          {sub.fileName}
+                       </p>
+                    </div>
                   </div>
 
-                  {/* Body: Filename */}
-                  <div className="mb-6 flex-grow">
-                    <p className="text-slate-200 font-medium text-base leading-snug break-all">
-                      {sub.fileName}
-                    </p>
-                  </div>
-
-                  {/* Info: IMDB ID */}
-                  <div className="flex items-center gap-2 mb-6">
-                     <div className="bg-slate-800 p-1.5 rounded-md">
-                        <Film className="w-3 h-3 text-slate-500" />
-                     </div>
-                     <span className="text-xs font-mono text-indigo-400 font-bold">{sub.imdbId}</span>
-                  </div>
-
-                  {/* Footer: Delete Action */}
-                  <div className="pt-5 border-t border-slate-800/80 flex items-center justify-between">
+                  {/* Footer: Date & Delete */}
+                  <div className="px-7 py-5 bg-slate-800/30 border-t border-slate-800/80 flex items-center justify-between">
                     <button
                       onClick={() => handleDelete(sub.id)}
-                      className="text-red-500 hover:text-red-400 font-extrabold text-sm transition-colors flex items-center gap-2"
+                      className="text-slate-500 hover:text-red-400 font-bold text-xs transition-all flex items-center gap-2 group/del"
                     >
-                      <Trash2 className="w-4 h-4" />
-                      <span>Delete Subtitle</span>
+                      <div className="p-1.5 rounded-lg bg-slate-800 group-hover/del:bg-red-500/10 transition-all">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </div>
+                      <span>Remove</span>
                     </button>
-                    <span className="text-[10px] text-slate-600 font-medium uppercase">{sub.date}</span>
+                    <div className="flex flex-col items-end">
+                       <span className="text-[10px] text-slate-600 font-bold uppercase">{sub.date}</span>
+                       <span className="text-[9px] font-mono text-indigo-500/60">{sub.imdbId}</span>
+                    </div>
                   </div>
                 </div>
               ))
             ) : (
               <div className="col-span-full py-20 text-center">
-                 <div className="bg-slate-900 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-slate-800">
-                    <Archive className="w-8 h-8 text-slate-700" />
+                 <div className="bg-slate-900 w-24 h-24 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 border border-slate-800/50 shadow-xl">
+                    <Archive className="w-10 h-10 text-slate-800" />
                  </div>
-                 <h3 className="text-slate-300 font-bold text-xl mb-2">No Subtitles Found</h3>
-                 <p className="text-slate-600 text-sm max-w-xs mx-auto">
-                    {searchQuery ? `No matches found for "${searchQuery}"` : "Your library is currently empty. Start uploading some files!"}
+                 <h3 className="text-white font-black text-2xl mb-3 tracking-tight">No Subtitles Found</h3>
+                 <p className="text-slate-500 text-sm max-w-xs mx-auto font-medium">
+                    {searchQuery ? `We couldn't find any results for "${searchQuery}"` : "Your library is sounding a bit empty. Time to upload some cinema!"}
                  </p>
               </div>
             )}

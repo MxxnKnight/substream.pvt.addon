@@ -1,5 +1,9 @@
 
 const { supabase } = require('../services/db');
+const { getMetadata } = require('../services/tmdb');
+
+// Simple cache for TMDB results to avoid hitting rate limits or slow responses
+const metadataCache = new Map();
 
 // Retry helper for transient Supabase network errors (ECONNRESET / fetch failed from localhost)
 const retrySupabase = async (fn, maxRetries = 3, delayMs = 600) => {
@@ -32,10 +36,39 @@ const listSubtitles = async (req, res) => {
       .limit(100);
 
     if (error) throw error;
-    res.json(data);
+
+    // Enhance records with TMDB metadata
+    const enhancedData = await Promise.all(data.map(async (sub) => {
+      const imdbId = sub.imdb_id;
+      if (!metadataCache.has(imdbId)) {
+        const metadata = await getMetadata(imdbId);
+        metadataCache.set(imdbId, metadata);
+      }
+      return {
+        ...sub,
+        metadata: metadataCache.get(imdbId)
+      };
+    }));
+
+    res.json(enhancedData);
   } catch (err) {
     console.error('[List] Error:', err);
     res.status(500).json({ error: 'Failed to fetch subtitles' });
+  }
+};
+
+const fetchMetadata = async (req, res) => {
+  const { imdbId } = req.query;
+  if (!imdbId) return res.status(400).json({ error: 'imdbId is required' });
+
+  try {
+    if (!metadataCache.has(imdbId)) {
+      const metadata = await getMetadata(imdbId);
+      metadataCache.set(imdbId, metadata);
+    }
+    res.json(metadataCache.get(imdbId) || { error: 'No metadata found' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch metadata' });
   }
 };
 
@@ -114,4 +147,4 @@ const deleteSubtitle = async (req, res) => {
   }
 };
 
-module.exports = { listSubtitles, deleteSubtitle };
+module.exports = { listSubtitles, deleteSubtitle, fetchMetadata };
