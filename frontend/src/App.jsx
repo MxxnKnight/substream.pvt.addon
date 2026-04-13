@@ -37,6 +37,7 @@ export default function App() {
   // Theme State
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
   const [accent, setAccent] = useState(localStorage.getItem('accent') || 'indigo');
+  const [mediaFilter, setMediaFilter] = useState('all'); // 'all', 'movie', 'series'
 
   useEffect(() => {
     localStorage.setItem('theme', theme);
@@ -483,16 +484,22 @@ export default function App() {
   };
 
   const filteredSubtitles = subtitles.filter(sub => {
+    // Search Query Match
     const query = searchQuery.toLowerCase().trim();
-    if (!query) return true;
     const epStr = sub.season != null ? `s${String(sub.season).padStart(2,'0')}e${String(sub.episode).padStart(2,'0')}` : '';
-    return (
+    const matchesSearch = !query || (
       (sub.fileName && sub.fileName.toLowerCase().includes(query)) ||
       (sub.imdbId && sub.imdbId.toLowerCase().includes(query)) ||
       (sub.type && sub.type.toLowerCase().includes(query)) ||
       (sub.language && sub.language.toLowerCase().includes(query)) ||
-      (epStr && epStr.includes(query.replace(/\s/g,'')))
+      (epStr && epStr.includes(query.replace(/\s/g,''))) ||
+      (sub.metadata?.title && sub.metadata.title.toLowerCase().includes(query))
     );
+
+    // Filter Match
+    const matchesFilter = mediaFilter === 'all' || sub.type === mediaFilter;
+
+    return matchesSearch && matchesFilter;
   });
 
   // --- Render ---
@@ -500,14 +507,14 @@ export default function App() {
   if (!user) {
     // Login Screen (Simplified & Theme Aware)
     return (
-      <div className={`min-h-screen ${theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'} flex items-center justify-center p-4 font-sans transition-theme`}>
-        <div className={`max-w-md w-full ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'} rounded-[2.5rem] shadow-2xl overflow-hidden border p-8 lg:p-12`}>
+      <div className={`min-h-screen ${theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'} flex items-center justify-center p-4 font-sans transition-theme`}>
+        <div className={`max-w-md w-full ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'} rounded-[2.5rem] shadow-2xl overflow-hidden border p-8 lg:p-12 transition-theme`}>
             <div className="text-center mb-10">
-              <div className={`${a.main} w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl ${a.shadow}`}>
+              <div className={`${a.main} w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl ${a.shadow} animate-in zoom-in duration-500`}>
                 <Film className="w-10 h-10 text-white" />
               </div>
-              <h2 className={`text-3xl font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>SubStream Admin</h2>
-              <p className={`mt-2 text-sm font-medium ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>Authenticate to manage your subtitles</p>
+              <h2 className={`text-4xl font-black tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>SubStream Admin</h2>
+              <p className={`mt-3 text-sm font-bold ${theme === 'dark' ? 'text-slate-500' : 'text-slate-500'}`}>Authenticate to manage your subtitles</p>
             </div>
             <form onSubmit={handleLogin} className="space-y-6">
               <div>
@@ -655,21 +662,21 @@ export default function App() {
           </div>
 
           <div className="p-8 mt-auto border-t border-slate-800/10">
-             <div className="flex items-center gap-4 px-4 py-2 mb-6">
+             <div className={`flex items-center gap-4 px-4 py-3 mb-6 rounded-2xl ${theme === 'dark' ? 'bg-white/5' : 'bg-slate-100 shadow-inner'}`}>
                 <div className={`w-10 h-10 rounded-2xl ${theme === 'dark' ? 'bg-slate-800' : 'bg-white shadow-lg'} flex items-center justify-center border ${theme === 'dark' ? 'border-slate-700' : 'border-slate-100'}`}>
                    <User className={`w-5 h-5 ${a.text}`} />
                 </div>
                 <div className="flex flex-col min-w-0">
-                   <span className="text-xs font-black truncate">Administrator</span>
+                   <span className={`text-xs font-black truncate ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>Administrator</span>
                    <div className="flex items-center gap-1.5">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">System Ready</span>
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/50" />
+                      <span className={`text-[9px] ${theme === 'dark' ? 'text-slate-500' : 'text-slate-600'} font-black uppercase tracking-tighter`}>System Synchronized</span>
                    </div>
                 </div>
              </div>
             <button
               onClick={handleLogout}
-              className={`w-full flex items-center justify-center gap-3 ${theme === 'dark' ? 'text-slate-600 hover:text-red-400 font-black px-6 py-4 rounded-2xl border border-transparent hover:border-red-500/10' : 'text-slate-400 hover:text-red-500 font-black px-6 py-4 rounded-2xl border border-transparent'} transition-all text-xs uppercase tracking-widest`}
+              className={`w-full flex items-center justify-center gap-3 ${theme === 'dark' ? 'text-slate-600 hover:text-red-400' : 'text-slate-400 hover:text-red-600'} font-black px-6 py-4 rounded-2xl border border-transparent transition-all text-[10px] uppercase tracking-[0.2em]`}
             >
               <LogOut className="w-4 h-4" />
               <span>Sign Out</span>
@@ -679,27 +686,55 @@ export default function App() {
       </aside>
 
       {/* Main Content */}
-      <main className={`flex-1 overflow-y-auto ${theme === 'dark' ? 'bg-slate-950' : 'bg-white'} pb-24 lg:pb-12 custom-scrollbar transition-theme`}>
+      <main className={`flex-1 overflow-y-auto ${theme === 'dark' ? 'bg-slate-950' : 'bg-slate-100'} pb-24 lg:pb-12 custom-scrollbar transition-theme`}>
         <div className="max-w-screen-2xl mx-auto p-4 lg:p-12">
           
           {/* Floating Header - Rounded Square Style */}
-          <header className={`flex flex-col lg:flex-row lg:justify-between lg:items-center mt-10 mb-16 gap-8 sticky top-10 z-30 p-8 rounded-[2rem] ${theme === 'dark' ? 'bg-slate-900/60' : 'bg-slate-50/60'} glass shadow-2xl transition-all border border-white/5`}>
-            <div className="flex items-center gap-5">
-              <div className={`${a.main} p-3 rounded-2xl hidden lg:block`}>
-                  {currentView === 'upload' ? <Upload className="w-5 h-5 text-white" /> : currentView === 'list' ? <Archive className="w-5 h-5 text-white" /> : <Shield className="w-5 h-5 text-white" />}
+          <header className={`flex flex-col lg:flex-row lg:justify-between lg:items-center mt-10 mb-16 gap-8 sticky top-10 z-30 p-8 rounded-[2rem] ${theme === 'dark' ? 'bg-slate-900/60' : 'bg-white/80 shadow-2xl shadow-black/5'} glass transition-all border border-white/5`}>
+            <div className="flex flex-col lg:flex-row lg:items-center gap-8">
+              <div className="flex items-center gap-5">
+                <div className={`${a.main} p-3 rounded-2xl hidden lg:block shadow-xl ${a.shadow}`}>
+                    {currentView === 'upload' ? <Upload className="w-5 h-5 text-white" /> : currentView === 'list' ? <Archive className="w-5 h-5 text-white" /> : <Shield className="w-5 h-5 text-white" />}
+                </div>
+                <h2 className={`text-4xl font-black tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                    {currentView === 'upload' ? 'Upload Center' : currentView === 'list' ? 'SubView Library' : 'Traffic Monitor'}
+                </h2>
               </div>
-              <h2 className="text-3xl font-black tracking-tighter">
-                  {currentView === 'upload' ? 'Upload Center' : currentView === 'list' ? 'SubView Library' : 'Traffic Monitor'}
-              </h2>
+
+              {/* Media Filter Toggle (Library Only) */}
               {currentView === 'list' && (
-                  <button
-                    onClick={fetchSubtitles}
-                    disabled={isRefreshing}
-                    className={`flex items-center gap-2 px-5 py-2.5 ${theme === 'dark' ? 'bg-slate-900 hover:bg-slate-800' : 'bg-white hover:bg-slate-100'} rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 shadow-lg`}
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-indigo-500' : ''}`} />
-                    <span>{isRefreshing ? 'Syncing...' : 'Sync Now'}</span>
-                  </button>
+                <div className={`flex p-1.5 rounded-[1.2rem] ${theme === 'dark' ? 'bg-slate-950' : 'bg-slate-200/50'} shadow-inner`}>
+                   {[
+                     { id: 'all', label: 'All Content' },
+                     { id: 'movie', label: 'Movies' },
+                     { id: 'series', label: 'Series' }
+                   ].map((btn) => (
+                     <button
+                        key={btn.id}
+                        onClick={() => setMediaFilter(btn.id)}
+                        className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                           mediaFilter === btn.id 
+                            ? `${a.main} text-white shadow-xl` 
+                            : `${theme === 'dark' ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-700'}`
+                        }`}
+                     >
+                        {btn.label}
+                     </button>
+                   ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col lg:flex-row items-center gap-6 w-full lg:w-auto">
+              {currentView === 'list' && (
+                <button
+                  onClick={fetchSubtitles}
+                  disabled={isRefreshing}
+                  className={`flex items-center gap-2 px-5 py-2.5 ${theme === 'dark' ? 'bg-slate-900 hover:bg-slate-800' : 'bg-white hover:bg-slate-200 border border-slate-200'} rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 shadow-lg`}
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin ' + a.text : ''}`} />
+                  <span className={theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}>{isRefreshing ? 'Syncing...' : 'Sync Now'}</span>
+                </button>
               )}
             </div>
 
@@ -1005,12 +1040,12 @@ export default function App() {
                                 <Clapperboard className="w-10 h-10 text-slate-700 opacity-20" />
                              </div>
                           )}
-                          <div className="flex-1 min-w-0 z-10 mb-2">
+                  <div className="flex-1 min-w-0 z-10 mb-2">
                              <div className="flex flex-wrap gap-2 mb-3">
                                 <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-lg ${firstSub.type === 'movie' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-purple-500/20 text-purple-400'}`}>{firstSub.type}</span>
                                 <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">Synced</span>
                              </div>
-                             <h3 className={`font-black tracking-tighter leading-[0.9] text-white ${mediaTitle.length > 20 ? 'text-xl' : 'text-3xl'} truncate`} title={mediaTitle}>
+                             <h3 className={`font-black tracking-tighter leading-[1.1] text-white ${mediaTitle.length > 30 ? 'text-lg line-clamp-2' : mediaTitle.length > 20 ? 'text-xl line-clamp-2' : 'text-3xl line-clamp-1'} break-words`} title={mediaTitle}>
                                 {mediaTitle}
                              </h3>
                              <div className="flex items-center gap-3 mt-4">
