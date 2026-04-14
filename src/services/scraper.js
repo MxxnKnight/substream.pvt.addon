@@ -215,49 +215,45 @@ const getDirectDownloadLink = async (pageUrl, source) => {
  */
 const getMetadataFromPage = async (pageUrl) => {
   try {
+    console.log(`[Scraper] Inspecting page: ${pageUrl}`);
     const response = await fetch(pageUrl, { headers });
     const html = await response.text();
+    console.log(`[Scraper] Page HTML length: ${html.length}`);
+
     const $ = cheerio.load(html);
     
-    // Look for IMDb link - more comprehensive patterns
+    // Look for IMDb ID in any links first
     let imdbId = null;
-    const selectors = [
-      'a[href*="imdb.com/title/tt"]',
-      'a.imdb-link',
-      'a.imdb-button',
-      '.imdb-id',
-      'span:contains("IMDb")',
-      'a:contains("IMDb")'
-    ];
 
-    for (const sel of selectors) {
-      const el = $(sel);
-      if (el.length > 0) {
-        const href = el.attr('href');
-        const text = el.text() || '';
-        
-        // Match link text exactly or with icon
-        if (text.toLowerCase().includes('imdb')) {
-           const idInParent = el.closest('div, p, span').text().match(/tt\d{7,}/);
-           if (idInParent) {
-             imdbId = idInParent[0];
-             break;
-           }
-        }
+    $('a').each((i, el) => {
+      const href = $(el).attr('href') || '';
+      const match = href.match(/tt\d{7,}/);
+      if (match) {
+        imdbId = match[0];
+        return false; // break each
+      }
+    });
 
-        // Check href
-        const hrefMatch = href?.match(/tt\d{7,}/);
-        if (hrefMatch) {
-          imdbId = hrefMatch[0];
+    // Fallback: Check text content of buttons or specific classes
+    if (!imdbId) {
+      const selectors = ['.imdb-link', '.imdb-id', 'button:contains("IMDb")', 'a:contains("IMDb")'];
+      for (const sel of selectors) {
+        const text = $(sel).text() + ($(sel).attr('href') || '');
+        const match = text.match(/tt\d{7,}/);
+        if (match) {
+          imdbId = match[0];
           break;
         }
       }
     }
-    
-    // Fallback: Global regex search in the entire HTML
+
+    // Ultimate Fallback: Global regex search in the entire HTML
     if (!imdbId) {
       const globalMatch = html.match(/tt\d{7,}/);
-      if (globalMatch) imdbId = globalMatch[0];
+      if (globalMatch) {
+         imdbId = globalMatch[0];
+         console.log(`[Scraper] Found ID via global regex: ${imdbId}`);
+      }
     }
     
     // Also check if it mentions Movie or Series/Season/TV
@@ -267,6 +263,7 @@ const getMetadataFromPage = async (pageUrl) => {
       type = 'series';
     }
 
+    console.log(`[Scraper] Metadata detected - ID: ${imdbId}, Type: ${type}`);
     return { imdbId, type };
   } catch (err) {
     console.error('[Scraper] Error getting metadata from page:', err);
