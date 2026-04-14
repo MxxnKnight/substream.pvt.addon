@@ -1,5 +1,5 @@
 
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+const fetch = require('node-fetch');
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
 const TMDB_URL = 'https://api.themoviedb.org/3';

@@ -1,6 +1,6 @@
 const { supabase } = require('../services/db');
 const { getMetadata } = require('../services/tmdb');
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+const fetch = require('node-fetch');
 
 // Simple cache for TMDB results to avoid hitting rate limits or slow responses
 const metadataCache = new Map();
@@ -176,7 +176,7 @@ const searchExternalSubtitles = async (req, res) => {
 
 
 const inspectExternalLink = async (req, res) => {
-  const { link } = req.query;
+  const { link, title } = req.query;
   if (!link) return res.status(400).json({ error: 'Link is required' });
   try {
     const metadata = await scraper.getMetadataFromPage(link);
@@ -188,6 +188,34 @@ const inspectExternalLink = async (req, res) => {
         metadata.type = tmdb.type;
         metadata.tmdbTitle = tmdb.title; // Extra info for UI
       }
+    } else if (title) {
+       // Fallback: If no IMDb found on page, search TMDB by title
+       // Clean title from common MalayalamSubtitles.in additions (like "- Malayalam", "(2023)", etc)
+       let cleanTitle = title.replace(/–|मलयालम|മലയാളം|പരിഭാഷ|Malayalam Subtitle|Malayalam/gi, '').trim();
+       cleanTitle = cleanTitle.replace(/\s*\([^)]*\)\s*/g, ' ').trim(); // Remove year in parenthesis (2023)
+       
+       console.log(`[Inspect] Searching TMDB by title fallback: ${cleanTitle}`);
+       if (process.env.TMDB_API_KEY) {
+          // Search TMDB for movie
+          const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${process.env.TMDB_API_KEY}&query=${encodeURIComponent(cleanTitle)}`);
+          if (searchRes.ok) {
+             const data = await searchRes.json();
+             const result = data.results?.[0];
+             if (result) {
+                // If we found a result by title, let's get its external IDs to get IMDB ID
+                const type = result.media_type === 'tv' ? 'tv' : 'movie';
+                const idRes = await fetch(`https://api.themoviedb.org/3/${type}/${result.id}/external_ids?api_key=${process.env.TMDB_API_KEY}`);
+                if (idRes.ok) {
+                   const idData = await idRes.json();
+                   if (idData.imdb_id) {
+                      metadata.imdbId = idData.imdb_id;
+                      metadata.type = type === 'tv' ? 'series' : 'movie';
+                      metadata.tmdbTitle = result.title || result.name;
+                   }
+                }
+             }
+          }
+       }
     }
     
     res.json(metadata);
@@ -197,7 +225,7 @@ const inspectExternalLink = async (req, res) => {
 };
 
 const importExternalSubtitle = async (req, res) => {
-  let { link, source, imdb_id, type, season, episode } = req.body;
+  let { link, title, source, imdb_id, type, season, episode } = req.body;
 
   if (!link || !source) {
     return res.status(400).json({ error: 'Missing required fields (link, source)' });
@@ -212,6 +240,27 @@ const importExternalSubtitle = async (req, res) => {
       const detected = await scraper.getMetadataFromPage(link);
       if (!imdb_id) imdb_id = detected.imdbId;
       if (!type) type = detected.type;
+      
+      // Fallback search by title if scraping failed
+      if (!imdb_id && title && process.env.TMDB_API_KEY) {
+         let cleanTitle = title.replace(/–|मलयालम|മലയാളം|പരിഭാഷ|Malayalam Subtitle|Malayalam/gi, '').trim();
+         cleanTitle = cleanTitle.replace(/\s*\([^)]*\)\s*/g, ' ').trim();
+         console.log(`[Import] Searching TMDB by title fallback: ${cleanTitle}`);
+         const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${process.env.TMDB_API_KEY}&query=${encodeURIComponent(cleanTitle)}`);
+         if (searchRes.ok) {
+            const data = await searchRes.json();
+            const result = data.results?.[0];
+            if (result) {
+               type = result.media_type === 'tv' ? 'series' : 'movie';
+               const typeParam = result.media_type === 'tv' ? 'tv' : 'movie';
+               const idRes = await fetch(`https://api.themoviedb.org/3/${typeParam}/${result.id}/external_ids?api_key=${process.env.TMDB_API_KEY}`);
+               if (idRes.ok) {
+                  const idData = await idRes.json();
+                  if (idData.imdb_id) imdb_id = idData.imdb_id;
+               }
+            }
+         }
+      }
     }
 
     if (!imdb_id) {

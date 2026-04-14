@@ -4,8 +4,7 @@ const AdmZip = require('adm-zip');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 
-// Dynamically import fetch for Node versions where it's not global
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+const fetch = require('node-fetch');
 
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.37 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.37';
 
@@ -177,6 +176,24 @@ const detectSeasonEpisode = (filename) => {
  */
 const getDirectDownloadLink = async (pageUrl, source) => {
   try {
+    // 1. Check if the pageUrl is ALREADY a direct download link
+    const headRes = await fetch(pageUrl, { headers, method: 'HEAD' });
+    const contentType = headRes.headers.get('content-type') || '';
+    const contentDisposition = headRes.headers.get('content-disposition') || '';
+    
+    if (
+      contentType.includes('application/zip') || 
+      contentType.includes('application/x-zip') ||
+      contentType.includes('application/octet-stream') ||
+      contentDisposition.includes('attachment') ||
+      pageUrl.toLowerCase().endsWith('.zip') || 
+      pageUrl.toLowerCase().endsWith('.srt')
+    ) {
+      console.log(`[Scraper] Link is already a direct download: ${pageUrl}`);
+      return pageUrl;
+    }
+
+    // 2. Otherwise, fetch the HTML and find the download button
     const response = await fetch(pageUrl, { headers });
     const html = await response.text();
     const $ = cheerio.load(html);
@@ -209,6 +226,7 @@ const getDirectDownloadLink = async (pageUrl, source) => {
     return null;
   }
 };
+
 
 /**
  * Scrapes IMDb ID from a page

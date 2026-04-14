@@ -230,7 +230,7 @@ export default function App() {
     const importId = result.link;
     setImportStatus(prev => ({ ...prev, [importId]: 'inspecting' }));
     try {
-      const res = await apiFetch(`/api/admin/inspect-external?link=${encodeURIComponent(result.link)}`);
+      const res = await apiFetch(`/api/admin/inspect-external?link=${encodeURIComponent(result.link)}&title=${encodeURIComponent(result.title)}`);
       if (res.ok) {
         const data = await res.json();
         // Update the result in the list with detected metadata
@@ -256,6 +256,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           link: result.link,
+          title: result.title,
           source: result.source,
           imdb_id: imdbId,
           type,
