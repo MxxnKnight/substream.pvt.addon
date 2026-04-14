@@ -236,6 +236,15 @@ const getMetadataFromPage = async (pageUrl) => {
         const href = el.attr('href');
         const text = el.text() || '';
         
+        // Match link text exactly or with icon
+        if (text.toLowerCase().includes('imdb')) {
+           const idInParent = el.closest('div, p, span').text().match(/tt\d{7,}/);
+           if (idInParent) {
+             imdbId = idInParent[0];
+             break;
+           }
+        }
+
         // Check href
         const hrefMatch = href?.match(/tt\d{7,}/);
         if (hrefMatch) {

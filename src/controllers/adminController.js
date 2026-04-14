@@ -1,6 +1,6 @@
-
 const { supabase } = require('../services/db');
 const { getMetadata } = require('../services/tmdb');
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
 // Simple cache for TMDB results to avoid hitting rate limits or slow responses
 const metadataCache = new Map();
