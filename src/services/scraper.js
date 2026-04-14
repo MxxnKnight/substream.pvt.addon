@@ -7,6 +7,10 @@ const path = require('path');
 // Dynamically import fetch for Node versions where it's not global
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
+const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.37 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.37';
+
+const headers = { 'User-Agent': USER_AGENT };
+
 /**
  * Normalizes movie name for search
  */
@@ -17,26 +21,29 @@ const normalize = (q) => encodeURIComponent(q.trim());
  */
 const searchMalayalamSubtitlesIn = async (query) => {
   try {
-    const searchUrl = `https://malayalamsubtitles.in/?s=${normalize(query)}`;
-    const response = await fetch(searchUrl);
+    // For Team GOAT, we'll fetch their search-and-download page and filter
+    const url = `https://malayalamsubtitles.in/search-and-download/`;
+    const response = await fetch(url, { headers });
     const html = await response.text();
     const $ = cheerio.load(html);
     
     const results = [];
-    $('.elementor-post').each((i, el) => {
-      const title = $(el).find('.elementor-post__title a').text().trim();
-      const link = $(el).find('.elementor-post__title a').attr('href');
-      const thumbnail = $(el).find('.elementor-post__thumbnail img').attr('src');
+    const q = query.toLowerCase().trim();
+
+    $('div.card').each((i, el) => {
+      const title = $(el).find('h5').text().trim();
+      const link = $(el).find('a.download-button').attr('href') || $(el).find('a').attr('href');
       
-      if (title && link) {
+      if (title.toLowerCase().includes(q)) {
         results.push({
           title,
           link,
-          thumbnail,
+          thumbnail: null,
           source: 'MalayalamSubtitles.in'
         });
       }
     });
+
     return results;
   } catch (err) {
     console.error('[Scraper] Error searching MalayalamSubtitles.in:', err);
@@ -49,18 +56,23 @@ const searchMalayalamSubtitlesIn = async (query) => {
  */
 const searchMovieMirror = async (query) => {
   try {
-    const searchUrl = `https://moviemirrorsubtitles.com/?s=${normalize(query)}`;
-    const response = await fetch(searchUrl);
+    // For MovieMirror, fetch their main subtitles page
+    const url = `https://moviemirrorsubtitles.com/subtitles/`;
+    const response = await fetch(url, { headers });
     const html = await response.text();
     const $ = cheerio.load(html);
     
     const results = [];
-    $('.elementor-post').each((i, el) => {
-      const title = $(el).find('.elementor-post__title a').text().trim();
-      const link = $(el).find('.elementor-post__title a').attr('href');
-      const thumbnail = $(el).find('.elementor-post__thumbnail img').attr('src');
+    const q = query.toLowerCase().trim();
+
+    // The grid items contain h3 for titles
+    $('h3').each((i, el) => {
+      const title = $(el).text().trim();
+      const parent = $(el).parent();
+      const link = parent.find('a.sub-btn').attr('href') || parent.attr('href');
+      const thumbnail = parent.find('img').attr('src');
       
-      if (title && link) {
+      if (title.toLowerCase().includes(q)) {
         results.push({
           title,
           link,
@@ -69,6 +81,7 @@ const searchMovieMirror = async (query) => {
         });
       }
     });
+
     return results;
   } catch (err) {
     console.error('[Scraper] Error searching MovieMirror:', err);
@@ -82,15 +95,15 @@ const searchMovieMirror = async (query) => {
 const searchMSone = async (query) => {
   try {
     const searchUrl = `https://malayalamsubtitles.org/?s=${normalize(query)}`;
-    const response = await fetch(searchUrl);
+    const response = await fetch(searchUrl, { headers });
     const html = await response.text();
     const $ = cheerio.load(html);
     
     const results = [];
-    $('.elementor-post').each((i, el) => {
-      const title = $(el).find('.elementor-post__title a').text().trim();
-      const link = $(el).find('.elementor-post__title a').attr('href');
-      const thumbnail = $(el).find('.elementor-post__thumbnail img').attr('src');
+    $('article.entry').each((i, el) => {
+      const title = $(el).find('h2.entry-title a').text().trim();
+      const link = $(el).find('h2.entry-title a').attr('href');
+      const thumbnail = $(el).find('.post-thumbnail img').attr('src');
       
       if (title && link) {
         results.push({
@@ -116,7 +129,6 @@ const extractSrtFromBuffer = (buffer) => {
     const zip = new AdmZip(buffer);
     const zipEntries = zip.getEntries();
     
-    // Find the first .srt or .vtt file
     const srtEntry = zipEntries.find(entry => 
       entry.entryName.toLowerCase().endsWith('.srt') || 
       entry.entryName.toLowerCase().endsWith('.vtt')
@@ -137,24 +149,25 @@ const extractSrtFromBuffer = (buffer) => {
  */
 const getDirectDownloadLink = async (pageUrl, source) => {
   try {
-    const response = await fetch(pageUrl);
+    const response = await fetch(pageUrl, { headers });
     const html = await response.text();
     const $ = cheerio.load(html);
     let downloadLink = null;
 
     if (source === 'MalayalamSubtitles.in') {
-      // Look for download buttons or direct .zip/.srt links
       downloadLink = $('a[href$=".zip"]').attr('href') || 
                      $('a[href$=".srt"]').attr('href') ||
-                     $('.elementor-button-link[href*="download"]').attr('href');
+                     $('.elementor-button-link[href*="download"]').attr('href') ||
+                     $('a:contains("Download")').attr('href');
     } else if (source === 'MovieMirrorSubtitles') {
       downloadLink = $('a[href$=".zip"]').attr('href') || 
                      $('a[href$=".srt"]').attr('href') ||
-                     $('.elementor-button-link[href*="download"]').attr('href');
+                     $('.elementor-button-link[href*="download"]').attr('href') ||
+                     $('a:contains("Download")').attr('href');
     } else if (source === 'MSone') {
-      // MSone often uses a "പരിഭാഷ" button
       downloadLink = $('a:contains("പരിഭാഷ")').attr('href') || 
-                     $('a[href*="download"]').attr('href');
+                     $('a[href*="download"]').attr('href') ||
+                     $('a.elementor-button').attr('href');
     }
 
     if (downloadLink && !downloadLink.startsWith('http')) {

@@ -662,6 +662,14 @@ export default function App() {
                   )}
                </div>
             </div>
+          ) : currentView === 'logs' ? (
+            <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-5 duration-700">
+               <div className={`rounded-[2.5rem] border overflow-hidden ${theme === 'dark' ? 'bg-slate-900 border-slate-800 shadow-2xl' : 'bg-white border-slate-100 shadow-xl'}`}>
+                  <div className="h-[600px] overflow-y-auto p-4 lg:p-8 font-mono text-[11px] space-y-2.5 custom-scrollbar">
+                     {logs.length > 0 ? logs.map((log, i) => <div key={i} className={`p-4 rounded-xl border flex gap-6 ${theme === 'dark' ? 'bg-slate-950/40 border-slate-800' : 'bg-slate-50 border-slate-100'}`}><span className="opacity-30 shrink-0">{log.ts}</span><span className="opacity-80 break-all">{log.message}</span></div>) : <div className="h-full flex flex-col items-center justify-center opacity-20"><RefreshCw className="w-10 h-10 animate-spin-slow mb-6" /><p className="font-black uppercase tracking-widest text-[10px]">Awaiting Signal Stream...</p></div>}
+                  </div>
+               </div>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 pb-20 animate-in fade-in duration-700">
                {Object.entries(subtitles.filter(sub => {
