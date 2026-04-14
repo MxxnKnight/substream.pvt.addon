@@ -541,7 +541,7 @@ export default function App() {
         <div className="max-w-screen-2xl mx-auto w-full p-4 lg:p-8 flex flex-col gap-8">
           
           {/* Mobile Header (Floating rounded square) */}
-          <header className={`lg:hidden flex flex-col gap-4 p-5 mx-4 rounded-[2.5rem] fixed top-[5px] left-0 right-0 z-50 border shadow-2xl transition-all ${theme === 'dark' ? 'bg-slate-900/90 border-slate-800' : 'bg-white/95 border-slate-200'} backdrop-blur-xl`}>
+          <header className={`lg:hidden flex flex-col gap-4 p-5 mx-4 rounded-[2.5rem] fixed top-[15px] left-0 right-0 z-50 border shadow-2xl transition-all ${theme === 'dark' ? 'bg-slate-900/90 border-slate-800' : 'bg-white/95 border-slate-200'} backdrop-blur-xl`}>
              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3"><div className={`${a.main} p-2 rounded-xl`}><Film className="w-4 h-4 text-white" /></div><span className="font-black tracking-tighter">SubStream</span></div>
                 <button onClick={() => setIsNavOpen(!isNavOpen)} className="p-2 opacity-50 hover:opacity-100 transition-all">{isNavOpen ? <X className="w-5 h-5" /> : <Palette className="w-5 h-5" />}</button>
@@ -556,7 +556,7 @@ export default function App() {
           </header>
 
           {/* Persistent Desktop Header */}
-          <header className={`hidden lg:flex items-center justify-between fixed top-[5px] left-8 lg:left-[calc(280px+2rem)] right-8 lg:right-10 z-50 py-4 px-6 border rounded-[2.5rem] transition-all ${theme === 'dark' ? 'bg-slate-925/80 border-slate-800' : 'bg-white/80 border-slate-200'} backdrop-blur-xl shadow-md`}>
+          <header className={`hidden lg:flex items-center justify-between fixed top-[15px] left-8 lg:left-[calc(280px+2rem)] right-8 lg:right-10 z-50 py-4 px-6 border rounded-[2.5rem] transition-all ${theme === 'dark' ? 'bg-slate-925/80 border-slate-800' : 'bg-white/80 border-slate-200'} backdrop-blur-xl shadow-md`}>
              <div className="flex items-center gap-8">
                 <h2 className="text-lg font-black tracking-tight">{currentView === 'upload' ? 'Upload Feed' : currentView === 'list' ? 'SubView Library' : currentView === 'search' ? 'Search & Import' : 'Live Traffic'}</h2>
                 {currentView === 'list' && (
@@ -573,11 +573,11 @@ export default function App() {
              </div>
           </header>
 
-          <div className="h-16 lg:h-20" /> {/* Spacer for fixed header */}
+          <div className="h-10 lg:h-12" /> {/* Reduced spacer for fixed header */}
 
           {currentView === 'upload' ? (
-            <div className="max-w-6xl mx-auto w-full animate-in fade-in duration-700">
-              <div className={`rounded-[2.5rem] border p-8 lg:p-14 ${theme === 'dark' ? 'bg-slate-900 border-slate-800 shadow-2xl' : 'bg-white border-slate-100 shadow-xl'}`}>
+            <div className="max-w-[1400px] mx-auto w-full animate-in fade-in duration-700">
+              <div className={`rounded-[2.5rem] border p-6 lg:p-10 ${theme === 'dark' ? 'bg-slate-900 border-slate-800 shadow-2xl' : 'bg-white border-slate-100 shadow-xl'}`}>
                 <form onSubmit={handleUploadSubmit} className="space-y-8">
                   <div className="grid grid-cols-2 gap-4">
                     {['movie', 'series'].map(t => (
@@ -600,8 +600,8 @@ export default function App() {
               </div>
             </div>
           ) : currentView === 'search' ? (
-            <div className="max-w-6xl mx-auto w-full animate-in fade-in duration-700 space-y-8">
-               <div className={`rounded-[2.5rem] border p-8 lg:p-12 ${theme === 'dark' ? 'bg-slate-900 border-slate-800 shadow-2xl' : 'bg-white border-slate-100 shadow-xl'}`}>
+            <div className="max-w-[1400px] mx-auto w-full animate-in fade-in duration-700 space-y-6">
+               <div className={`rounded-[2.5rem] border p-6 lg:p-10 ${theme === 'dark' ? 'bg-slate-900 border-slate-800 shadow-2xl' : 'bg-white border-slate-100 shadow-xl'}`}>
                   <form onSubmit={searchExternal} className="flex gap-4">
                      <div className="relative flex-1">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 opacity-20" />
@@ -662,19 +662,19 @@ export default function App() {
                                      </div>
                                   </div>
                                   
-                                  <div className="flex gap-2">
-                                     <input 
-                                       type="number" 
-                                       placeholder="S" 
-                                       className={`w-12 py-2 px-2 rounded-lg text-[10px] border ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}
-                                       onChange={(e) => { result.season = e.target.value; }}
-                                     />
-                                     <input 
-                                       type="number" 
-                                       placeholder="E" 
-                                       className={`w-12 py-2 px-2 rounded-lg text-[10px] border ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}
-                                       onChange={(e) => { result.episode = e.target.value; }}
-                                     />
+                                   <div className="flex gap-2">
+                                      <input 
+                                        type="number" 
+                                        placeholder="S" 
+                                        className={`w-14 py-2 px-2 rounded-lg text-[10px] border [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}
+                                        onChange={(e) => { result.season = e.target.value; }}
+                                      />
+                                      <input 
+                                        type="number" 
+                                        placeholder="E" 
+                                        className={`w-14 py-2 px-2 rounded-lg text-[10px] border [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}
+                                        onChange={(e) => { result.episode = e.target.value; }}
+                                      />
                                      <button 
                                        onClick={() => inspectLink(result)}
                                        className={`p-2 rounded-lg border ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'} ${status === 'inspecting' ? 'animate-spin' : ''}`}
@@ -706,7 +706,7 @@ export default function App() {
                </div>
             </div>
           ) : currentView === 'logs' ? (
-            <div className="max-w-5xl mx-auto w-full animate-in fade-in duration-700">
+            <div className="w-full animate-in fade-in duration-700">
                <div className={`rounded-[2rem] border overflow-hidden ${theme === 'dark' ? 'bg-[#0a0a0f] border-slate-800 shadow-[0_0_50px_rgba(0,0,0,0.5)]' : 'bg-slate-900 border-slate-800 shadow-xl'}`}>
                   <div className="flex items-center gap-2 px-6 py-4 border-b border-slate-800 bg-slate-900/50">
                      <div className="flex gap-2">
@@ -714,9 +714,9 @@ export default function App() {
                         <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
                         <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
                      </div>
-                     <span className="text-[10px] font-mono opacity-40 ml-4 font-black tracking-widest uppercase">System Flux Monitor.sh</span>
+                     <span className="text-[10px] font-mono opacity-40 ml-4 font-black tracking-widest uppercase">System Flux Monitor.sh — {logs.length} events</span>
                   </div>
-                  <div className="h-[600px] overflow-y-auto p-10 font-mono text-[13px] leading-relaxed custom-scrollbar bg-black/20 selection:bg-emerald-500/30">
+                  <div className="h-[calc(100vh-280px)] min-h-[500px] overflow-y-auto p-8 font-mono text-[13px] leading-relaxed custom-scrollbar bg-black/20 selection:bg-emerald-500/30">
                      {logs.length > 0 ? (
                        <div className="space-y-3">
                          {logs.map((log, i) => (
