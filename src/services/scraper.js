@@ -242,7 +242,9 @@ const getMetadataFromPage = async (pageUrl) => {
           imdbId = hrefMatch[0];
           break;
         }
-        
+      }
+    }
+    
     // Fallback: Global regex search in the entire HTML
     if (!imdbId) {
       const globalMatch = html.match(/tt\d{7,}/);
