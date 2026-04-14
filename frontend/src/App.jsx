@@ -226,6 +226,27 @@ export default function App() {
     }
   };
 
+  const inspectLink = async (result) => {
+    const importId = result.link;
+    setImportStatus(prev => ({ ...prev, [importId]: 'inspecting' }));
+    try {
+      const res = await apiFetch(`/api/admin/inspect-external?link=${encodeURIComponent(result.link)}`);
+      if (res.ok) {
+        const data = await res.json();
+        // Update the result in the list with detected metadata
+        setExternalResults(prev => prev.map(r => 
+          r.link === result.link ? { ...r, imdbId: data.imdbId, type: data.type } : r
+        ));
+        setImportStatus(prev => ({ ...prev, [importId]: 'idle' }));
+        return data;
+      }
+    } catch (err) {
+      console.error("Link inspection failed", err);
+    }
+    setImportStatus(prev => ({ ...prev, [importId]: 'error' }));
+    return null;
+  };
+
   const importExternal = async (result, imdbId, type, season, episode) => {
     const importId = result.link;
     setImportStatus(prev => ({ ...prev, [importId]: 'importing' }));
@@ -242,11 +263,15 @@ export default function App() {
           episode
         })
       });
+      const data = await res.json();
       if (res.ok) {
         setImportStatus(prev => ({ ...prev, [importId]: 'success' }));
         fetchSubtitles();
+        // Alert how many were imported
+        alert(data.message);
       } else {
         setImportStatus(prev => ({ ...prev, [importId]: 'error' }));
+        alert(data.error);
       }
     } catch (err) {
       setImportStatus(prev => ({ ...prev, [importId]: 'error' }));
@@ -639,6 +664,13 @@ export default function App() {
                                        className={`w-12 py-2 px-2 rounded-lg text-[10px] border ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}
                                        onChange={(e) => { result.episode = e.target.value; }}
                                      />
+                                     <button 
+                                       onClick={() => inspectLink(result)}
+                                       className={`p-2 rounded-lg border ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'} ${status === 'inspecting' ? 'animate-spin' : ''}`}
+                                       title="Auto-detect IMDb ID and Type"
+                                     >
+                                        <RefreshCw className="w-3.5 h-3.5 opacity-40" />
+                                     </button>
                                      <button 
                                        onClick={() => importExternal(result, result.imdbId, result.type || 'movie', result.season, result.episode)}
                                        disabled={status !== 'idle' && status !== 'error'}

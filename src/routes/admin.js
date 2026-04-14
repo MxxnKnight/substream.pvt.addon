@@ -19,6 +19,7 @@ router.delete('/subtitles/:id', authenticate, deleteSubtitle);
 // External Search & Import
 router.get('/search-external', authenticate, searchExternalSubtitles);
 router.post('/import-external', authenticate, importExternalSubtitle);
+router.get('/inspect-external', authenticate, inspectExternalLink);
 
 // Add logs endpoint
 router.get('/logs', authenticate, (req, res) => {

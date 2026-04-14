@@ -173,77 +173,124 @@ const searchExternalSubtitles = async (req, res) => {
   }
 };
 
-const importExternalSubtitle = async (req, res) => {
-  const { link, source, imdb_id, type, season, episode } = req.body;
 
-  if (!link || !source || !imdb_id || !type) {
-    return res.status(400).json({ error: 'Missing required fields (link, source, imdb_id, type)' });
+const inspectExternalLink = async (req, res) => {
+  const { link } = req.query;
+  if (!link) return res.status(400).json({ error: 'Link is required' });
+  try {
+    const metadata = await scraper.getMetadataFromPage(link);
+    res.json(metadata);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to inspect link' });
+  }
+};
+
+const importExternalSubtitle = async (req, res) => {
+  let { link, source, imdb_id, type, season, episode } = req.body;
+
+  if (!link || !source) {
+    return res.status(400).json({ error: 'Missing required fields (link, source)' });
   }
 
   console.log(`[Import] Attempting to import from ${source}: ${link}`);
 
   try {
-    // 1. Get the direct download link from the page
-    const downloadUrl = await scraper.getDirectDownloadLink(link, source);
-    if (!downloadUrl) {
-      throw new Error(`Could not find a download link on the page: ${link}`);
+    // 1. Auto-detect metadata if missing
+    if (!imdb_id || !type) {
+      console.log('[Import] Missing metadata, detecting from page...');
+      const detected = await scraper.getMetadataFromPage(link);
+      if (!imdb_id) imdb_id = detected.imdbId;
+      if (!type) type = detected.type;
     }
 
-    console.log(`[Import] Found direct download link: ${downloadUrl}`);
+    if (!imdb_id) {
+      throw new Error('IMDb ID could not be detected. Please enter it manually.');
+    }
 
-    // 2. Download the file
+    // 2. Get the direct download link
+    const downloadUrl = await scraper.getDirectDownloadLink(link, source);
+    if (!downloadUrl) throw new Error(`Could not find a download link on the page: ${link}`);
+
+    // 3. Download the file
     const response = await fetch(downloadUrl);
     if (!response.ok) throw new Error(`Failed to download subtitle from upstream: ${response.statusText}`);
 
     let buffer = await response.arrayBuffer();
     buffer = Buffer.from(buffer);
 
-    let finalBuffer = buffer;
-    let fileName = downloadUrl.split('/').pop() || 'subtitle';
+    const isZip = downloadUrl.toLowerCase().endsWith('.zip') || response.headers.get('content-type')?.includes('zip');
+    
+    // List to hold files to upload
+    let filesToProcess = [];
 
-    // 3. Extract if ZIP
-    if (downloadUrl.toLowerCase().endsWith('.zip') || response.headers.get('content-type')?.includes('zip')) {
-      console.log('[Import] ZIP detected, extracting...');
-      const extracted = scraper.extractSrtFromBuffer(buffer);
-      if (!extracted) throw new Error('Failed to extract .srt from ZIP file');
-      finalBuffer = extracted;
-      fileName = fileName.replace(/\.zip$/i, '.srt');
-      if (!fileName.endsWith('.srt')) fileName += '.srt';
+    if (isZip) {
+      console.log('[Import] ZIP detected, extracting all files...');
+      const extractedFiles = scraper.extractAllSrtsFromBuffer(buffer);
+      if (extractedFiles.length === 0) throw new Error('No .srt or .vtt files found in ZIP');
+      filesToProcess = extractedFiles;
+    } else {
+      let fileName = downloadUrl.split('/').pop() || 'subtitle.srt';
+      if (!fileName.toLowerCase().endsWith('.srt') && !fileName.toLowerCase().endsWith('.vtt')) fileName += '.srt';
+      filesToProcess = [{ name: fileName, data: buffer }];
     }
 
-    // 4. Upload to Supabase Storage
-    const storagePath = `${imdb_id}/${uuidv4()}_${fileName}`;
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('subtitles')
-      .upload(storagePath, finalBuffer, {
-        contentType: 'application/x-subrip',
-        upsert: false
-      });
+    const results = [];
 
-    if (uploadError) throw uploadError;
+    // 4. Process each file
+    for (const file of filesToProcess) {
+      let fSeason = season;
+      let fEpisode = episode;
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('subtitles')
-      .getPublicUrl(storagePath);
+      // Auto-detect S/E if it's a series and we don't have manual info
+      if (type === 'series') {
+        const detected = scraper.detectSeasonEpisode(file.name);
+        if (detected.season !== null && !fSeason) fSeason = detected.season;
+        if (detected.episode !== null && !fEpisode) fEpisode = detected.episode;
+      }
 
-    // 5. Save to DB
-    const { data: dbRecord, error: dbError } = await supabase
-      .from('subtitles')
-      .insert([{
-        imdb_id,
-        type,
-        season: type === 'series' ? parseInt(season, 10) : null,
-        episode: type === 'series' ? parseInt(episode, 10) : null,
-        language: 'Malayalam', // We only fetch Malayalam
-        file_path: publicUrl
-      }])
-      .select()
-      .single();
+      // Upload to Supabase Storage
+      const storagePath = `${imdb_id}/${uuidv4()}_${file.name}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('subtitles')
+        .upload(storagePath, file.data, {
+          contentType: 'application/x-subrip',
+          upsert: false
+        });
 
-    if (dbError) throw dbError;
+      if (uploadError) {
+        console.error(`[Import] Upload failed for ${file.name}:`, uploadError);
+        continue;
+      }
 
-    console.log(`[Import] Successfully imported: ${dbRecord.id}`);
-    res.json({ message: 'Subtitle imported successfully', data: dbRecord });
+      const { data: { publicUrl } } = supabase.storage
+        .from('subtitles')
+        .getPublicUrl(storagePath);
+
+      // Save to DB
+      const { data: dbRecord, error: dbError } = await supabase
+        .from('subtitles')
+        .insert([{
+          imdb_id,
+          type,
+          season: type === 'series' ? (parseInt(fSeason, 10) || null) : null,
+          episode: type === 'series' ? (parseInt(fEpisode, 10) || null) : null,
+          language: 'Malayalam',
+          file_path: publicUrl
+        }])
+        .select()
+        .single();
+
+      if (dbError) {
+        console.error(`[Import] DB insert failed for ${file.name}:`, dbError);
+      } else {
+        results.push(dbRecord);
+      }
+    }
+
+    if (results.length === 0) throw new Error('Failed to import any subtitles from the file(s)');
+
+    console.log(`[Import] Successfully imported ${results.length} files for ${imdb_id}`);
+    res.json({ message: `Successfully imported ${results.length} subtitle(s)`, data: results });
 
   } catch (err) {
     console.error('[Import] Error:', err);
@@ -256,5 +303,6 @@ module.exports = {
   deleteSubtitle, 
   fetchMetadata, 
   searchExternalSubtitles, 
-  importExternalSubtitle 
+  importExternalSubtitle,
+  inspectExternalLink
 };
