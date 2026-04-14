@@ -177,20 +177,31 @@ const detectSeasonEpisode = (filename) => {
 const getDirectDownloadLink = async (pageUrl, source) => {
   try {
     // 1. Check if the pageUrl is ALREADY a direct download link
-    const headRes = await fetch(pageUrl, { headers, method: 'HEAD' });
-    const contentType = headRes.headers.get('content-type') || '';
-    const contentDisposition = headRes.headers.get('content-disposition') || '';
-    
-    if (
-      contentType.includes('application/zip') || 
-      contentType.includes('application/x-zip') ||
-      contentType.includes('application/octet-stream') ||
-      contentDisposition.includes('attachment') ||
-      pageUrl.toLowerCase().endsWith('.zip') || 
-      pageUrl.toLowerCase().endsWith('.srt')
-    ) {
-      console.log(`[Scraper] Link is already a direct download: ${pageUrl}`);
-      return pageUrl;
+    let headRes = null;
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+      headRes = await fetch(pageUrl, { headers, method: 'HEAD', signal: controller.signal });
+      clearTimeout(timeout);
+    } catch (e) {
+      console.log(`[Scraper] HEAD request skipped or timed out for: ${pageUrl}`);
+    }
+
+    if (headRes) {
+      const contentType = headRes.headers.get('content-type') || '';
+      const contentDisposition = headRes.headers.get('content-disposition') || '';
+      
+      if (
+        contentType.includes('application/zip') || 
+        contentType.includes('application/x-zip') ||
+        contentType.includes('application/octet-stream') ||
+        contentDisposition.includes('attachment') ||
+        pageUrl.toLowerCase().endsWith('.zip') || 
+        pageUrl.toLowerCase().endsWith('.srt')
+      ) {
+        console.log(`[Scraper] Link is already a direct download: ${pageUrl}`);
+        return pageUrl;
+      }
     }
 
     // 2. Otherwise, fetch the HTML and find the download button
