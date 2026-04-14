@@ -174,11 +174,22 @@ const searchExternalSubtitles = async (req, res) => {
 };
 
 
+
 const inspectExternalLink = async (req, res) => {
   const { link } = req.query;
   if (!link) return res.status(400).json({ error: 'Link is required' });
   try {
     const metadata = await scraper.getMetadataFromPage(link);
+    
+    // VERIFY WITH TMDB if we found an ID
+    if (metadata.imdbId) {
+      const tmdb = await getMetadata(metadata.imdbId);
+      if (tmdb && tmdb.type) {
+        metadata.type = tmdb.type;
+        metadata.tmdbTitle = tmdb.title; // Extra info for UI
+      }
+    }
+    
     res.json(metadata);
   } catch (err) {
     res.status(500).json({ error: 'Failed to inspect link' });
@@ -207,11 +218,17 @@ const importExternalSubtitle = async (req, res) => {
       throw new Error('IMDb ID could not be detected. Please enter it manually.');
     }
 
-    // 2. Get the direct download link
+    // 2. Double check type with TMDB for 100% accuracy
+    const tmdbData = await getMetadata(imdb_id);
+    if (tmdbData && tmdbData.type) {
+      type = tmdbData.type;
+    }
+
+    // 3. Get the direct download link
     const downloadUrl = await scraper.getDirectDownloadLink(link, source);
     if (!downloadUrl) throw new Error(`Could not find a download link on the page: ${link}`);
 
-    // 3. Download the file
+    // 4. Download the file
     const response = await fetch(downloadUrl);
     if (!response.ok) throw new Error(`Failed to download subtitle from upstream: ${response.statusText}`);
 
@@ -236,7 +253,7 @@ const importExternalSubtitle = async (req, res) => {
 
     const results = [];
 
-    // 4. Process each file
+    // 5. Process each file
     for (const file of filesToProcess) {
       let fSeason = season;
       let fEpisode = episode;

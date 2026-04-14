@@ -541,9 +541,18 @@ export default function App() {
         <div className="max-w-screen-2xl mx-auto w-full p-4 lg:p-8 flex flex-col gap-8">
           
           {/* Mobile Header (Floating rounded square) */}
-          <header className={`lg:hidden flex items-center justify-between p-4 rounded-[1.5rem] sticky top-4 z-50 border shadow-2xl transition-all ${theme === 'dark' ? 'bg-slate-900/90 border-slate-800' : 'bg-white/95 border-slate-200'} backdrop-blur-xl`}>
-             <div className="flex items-center gap-3"><div className={`${a.main} p-2 rounded-xl`}><Film className="w-4 h-4 text-white" /></div><span className="font-black tracking-tighter">SubStream</span></div>
-             <button onClick={() => setIsNavOpen(!isNavOpen)} className="p-2 opacity-50 hover:opacity-100 transition-all">{isNavOpen ? <X className="w-5 h-5" /> : <Palette className="w-5 h-5" />}</button>
+          <header className={`lg:hidden flex flex-col gap-4 p-4 rounded-[1.5rem] sticky top-4 z-50 border shadow-2xl transition-all ${theme === 'dark' ? 'bg-slate-900/90 border-slate-800' : 'bg-white/95 border-slate-200'} backdrop-blur-xl`}>
+             <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3"><div className={`${a.main} p-2 rounded-xl`}><Film className="w-4 h-4 text-white" /></div><span className="font-black tracking-tighter">SubStream</span></div>
+                <button onClick={() => setIsNavOpen(!isNavOpen)} className="p-2 opacity-50 hover:opacity-100 transition-all">{isNavOpen ? <X className="w-5 h-5" /> : <Palette className="w-5 h-5" />}</button>
+             </div>
+             {currentView === 'list' && (
+                <div className={`flex p-1 rounded-2xl ${theme === 'dark' ? 'bg-slate-950/50' : 'bg-slate-100/50'} border ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
+                   {['movie', 'series'].map(m => (
+                      <button key={m} onClick={() => setMediaFilter(m)} className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${mediaFilter === m ? `${a.main} text-white shadow-lg` : 'opacity-40'}`}>{m}</button>
+                   ))}
+                </div>
+             )}
           </header>
 
           {/* Persistent Desktop Header */}

@@ -16,14 +16,17 @@ const getMetadata = async (imdbId) => {
     const data = await res.json();
     
     // Check results in movies, tv_results, etc.
-    const result = data.movie_results?.[0] || data.tv_results?.[0] || data.tv_episode_results?.[0];
+    const movie = data.movie_results?.[0];
+    const tv = data.tv_results?.[0] || data.tv_episode_results?.[0];
+    const result = movie || tv;
     
     if (result) {
       return {
         title: result.title || result.name,
         poster_path: result.poster_path ? `https://image.tmdb.org/t/p/w500${result.poster_path}` : null,
         release_date: result.release_date || result.first_air_date,
-        overview: result.overview
+        overview: result.overview,
+        type: movie ? 'movie' : 'series'
       };
     }
     return null;

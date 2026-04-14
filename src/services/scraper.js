@@ -219,14 +219,43 @@ const getMetadataFromPage = async (pageUrl) => {
     const html = await response.text();
     const $ = cheerio.load(html);
     
-    // Look for IMDb link
-    const imdbLink = $('a[href*="imdb.com/title/tt"]').attr('href');
-    const imdbId = imdbLink ? imdbLink.match(/tt\d{7,}/)?.[0] : null;
+    // Look for IMDb link - more comprehensive patterns
+    let imdbId = null;
+    const selectors = [
+      'a[href*="imdb.com/title/tt"]',
+      'a.imdb-link',
+      'a.imdb-button',
+      '.imdb-id',
+      'span:contains("IMDb")',
+      'a:contains("IMDb")'
+    ];
+
+    for (const sel of selectors) {
+      const el = $(sel);
+      if (el.length > 0) {
+        const href = el.attr('href');
+        const text = el.text() || '';
+        
+        // Check href
+        const hrefMatch = href?.match(/tt\d{7,}/);
+        if (hrefMatch) {
+          imdbId = hrefMatch[0];
+          break;
+        }
+        
+        // Check text content inside or parent
+        const textMatch = (text + (el.parent()?.text() || '')).match(/tt\d{7,}/);
+        if (textMatch) {
+          imdbId = textMatch[0];
+          break;
+        }
+      }
+    }
     
-    // Also check if it mentions Movie or Series
-    const text = $('body').text().toLowerCase();
+    // Also check if it mentions Movie or Series/Season/TV
+    const bodyText = $('body').text().toLowerCase();
     let type = 'movie';
-    if (text.includes('series') || text.includes('season') || text.includes('episode') || text.includes('പരമ്പര')) {
+    if (bodyText.includes('series') || bodyText.includes('season') || bodyText.includes('episode') || bodyText.includes('പരമ്പര')) {
       type = 'series';
     }
 
