@@ -651,14 +651,17 @@ export default function App() {
                                      </div>
                                      <div className="space-y-1">
                                         <label className="text-[8px] font-black uppercase opacity-40 px-1">Type</label>
-                                        <select 
-                                          className={`w-full py-2 px-3 rounded-lg text-[10px] font-black uppercase border ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}
-                                          onChange={(e) => { result.type = e.target.value; }}
-                                          defaultValue={result.type || 'movie'}
-                                        >
-                                           <option value="movie">Movie</option>
-                                           <option value="series">Series</option>
-                                        </select>
+                                        <div className="relative">
+                                          <select 
+                                            className={`w-full py-2 px-3 rounded-lg text-[10px] font-black uppercase border appearance-none cursor-pointer ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}
+                                            onChange={(e) => { result.type = e.target.value; }}
+                                            defaultValue={result.type || 'movie'}
+                                          >
+                                             <option value="movie">Movie</option>
+                                             <option value="series">Series</option>
+                                          </select>
+                                          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-20"><Tv className="w-3 h-3" /></div>
+                                        </div>
                                      </div>
                                   </div>
                                   
