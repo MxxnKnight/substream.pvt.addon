@@ -243,13 +243,10 @@ const getMetadataFromPage = async (pageUrl) => {
           break;
         }
         
-        // Check text content inside or parent
-        const textMatch = (text + (el.parent()?.text() || '')).match(/tt\d{7,}/);
-        if (textMatch) {
-          imdbId = textMatch[0];
-          break;
-        }
-      }
+    // Fallback: Global regex search in the entire HTML
+    if (!imdbId) {
+      const globalMatch = html.match(/tt\d{7,}/);
+      if (globalMatch) imdbId = globalMatch[0];
     }
     
     // Also check if it mentions Movie or Series/Season/TV
