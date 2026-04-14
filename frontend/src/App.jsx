@@ -104,6 +104,12 @@ export default function App() {
   const [currentMetadata, setCurrentMetadata] = useState(null);
   const [isMetadataLoading, setIsMetadataLoading] = useState(false);
 
+  // External Search State
+  const [externalSearchQuery, setExternalSearchQuery] = useState('');
+  const [externalResults, setExternalResults] = useState([]);
+  const [isSearchingExternal, setIsSearchingExternal] = useState(false);
+  const [importStatus, setImportStatus] = useState({}); // { id: 'idle' | 'importing' | 'success' | 'error' }
+
   // --- Check Auth on Load ---
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -190,6 +196,7 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         setCurrentMetadata(data.error ? null : data);
+        return data.error ? null : data;
       } else {
         setCurrentMetadata(null);
       }
@@ -197,6 +204,52 @@ export default function App() {
       setCurrentMetadata(null);
     } finally {
       setIsMetadataLoading(false);
+    }
+    return null;
+  };
+
+  const searchExternal = async (e) => {
+    e?.preventDefault();
+    if (!externalSearchQuery) return;
+    setIsSearchingExternal(true);
+    setExternalResults([]);
+    try {
+      const res = await apiFetch(`/api/admin/search-external?query=${encodeURIComponent(externalSearchQuery)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setExternalResults(data);
+      }
+    } catch (err) {
+      console.error("External search failed", err);
+    } finally {
+      setIsSearchingExternal(false);
+    }
+  };
+
+  const importExternal = async (result, imdbId, type, season, episode) => {
+    const importId = result.link;
+    setImportStatus(prev => ({ ...prev, [importId]: 'importing' }));
+    try {
+      const res = await apiFetch('/api/admin/import-external', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          link: result.link,
+          source: result.source,
+          imdb_id: imdbId,
+          type,
+          season,
+          episode
+        })
+      });
+      if (res.ok) {
+        setImportStatus(prev => ({ ...prev, [importId]: 'success' }));
+        fetchSubtitles();
+      } else {
+        setImportStatus(prev => ({ ...prev, [importId]: 'error' }));
+      }
+    } catch (err) {
+      setImportStatus(prev => ({ ...prev, [importId]: 'error' }));
     }
   };
 
@@ -438,7 +491,12 @@ export default function App() {
           <div className="p-6">
             <button onClick={copyManifestUrl} className={`w-full flex items-center justify-center gap-2 px-4 py-3 ${a.main} text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl ${a.shadow}`}>Copy Addon Link</button>
             <nav className="mt-8 space-y-1">
-              {[ { id: 'upload', label: 'Upload Feed', icon: Upload }, { id: 'list', label: 'Manage Library', icon: Archive }, { id: 'logs', label: 'Live Traffic', icon: Shield } ].map((item) => (
+              {[ 
+                { id: 'upload', label: 'Upload Feed', icon: Upload }, 
+                { id: 'search', label: 'Search & Import', icon: Globe },
+                { id: 'list', label: 'Manage Library', icon: Archive }, 
+                { id: 'logs', label: 'Live Traffic', icon: Shield } 
+              ].map((item) => (
                 <button key={item.id} onClick={() => { setCurrentView(item.id); if(item.id === 'list') fetchSubtitles(); setIsNavOpen(false); }} className={`w-full flex items-center gap-4 px-6 py-3.5 rounded-2xl transition-all ${currentView === item.id ? `${theme === 'dark' ? 'bg-slate-800 text-white' : 'bg-white shadow-sm text-slate-900'} border ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}` : 'opacity-40 hover:opacity-100'}`}>
                   <item.icon className={`w-4 h-4 ${currentView === item.id ? a.text : ''}`} /><span className="font-bold text-xs">{item.label}</span>
                 </button>
@@ -466,7 +524,7 @@ export default function App() {
           {/* Persistent Desktop Header */}
           <header className={`hidden lg:flex items-center justify-between sticky top-0 z-30 py-4 px-6 border rounded-2xl transition-all ${theme === 'dark' ? 'bg-slate-925/80 border-slate-800' : 'bg-white/80 border-slate-200'} backdrop-blur-xl shadow-sm`}>
              <div className="flex items-center gap-8">
-                <h2 className="text-lg font-black tracking-tight">{currentView === 'upload' ? 'Upload Feed' : currentView === 'list' ? 'SubView Library' : 'Live Traffic'}</h2>
+                <h2 className="text-lg font-black tracking-tight">{currentView === 'upload' ? 'Upload Feed' : currentView === 'list' ? 'SubView Library' : currentView === 'search' ? 'Search & Import' : 'Live Traffic'}</h2>
                 {currentView === 'list' && (
                   <div className={`flex p-1 rounded-full ${theme === 'dark' ? 'bg-slate-900' : 'bg-slate-100'} border ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
                     {['movie', 'series'].map(m => (
@@ -505,12 +563,103 @@ export default function App() {
                 </form>
               </div>
             </div>
-          ) : currentView === 'logs' ? (
-            <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-5 duration-700">
-               <div className={`rounded-[2.5rem] border overflow-hidden ${theme === 'dark' ? 'bg-slate-900 border-slate-800 shadow-2xl' : 'bg-white border-slate-100 shadow-xl'}`}>
-                  <div className="h-[600px] overflow-y-auto p-4 lg:p-8 font-mono text-[11px] space-y-2.5 custom-scrollbar">
-                     {logs.length > 0 ? logs.map((log, i) => <div key={i} className={`p-4 rounded-xl border flex gap-6 ${theme === 'dark' ? 'bg-slate-950/40 border-slate-800' : 'bg-slate-50 border-slate-100'}`}><span className="opacity-30 shrink-0">{log.ts}</span><span className="opacity-80 break-all">{log.message}</span></div>) : <div className="h-full flex flex-col items-center justify-center opacity-20"><RefreshCw className="w-10 h-10 animate-spin-slow mb-6" /><p className="font-black uppercase tracking-widest text-[10px]">Awaiting Signal Stream...</p></div>}
-                  </div>
+          ) : currentView === 'search' ? (
+            <div className="max-w-6xl mx-auto w-full animate-in fade-in slide-in-from-bottom-5 duration-700 space-y-8">
+               <div className={`rounded-[2.5rem] border p-8 lg:p-12 ${theme === 'dark' ? 'bg-slate-900 border-slate-800 shadow-2xl' : 'bg-white border-slate-100 shadow-xl'}`}>
+                  <form onSubmit={searchExternal} className="flex gap-4">
+                     <div className="relative flex-1">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 opacity-20" />
+                        <input 
+                           type="text" 
+                           value={externalSearchQuery} 
+                           onChange={(e) => setExternalSearchQuery(e.target.value)} 
+                           placeholder="Search Malayalam Subtitles by Name..." 
+                           className={`w-full py-4 pl-12 pr-4 rounded-2xl border-2 outline-none font-bold ${theme === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-transparent focus:bg-white'}`} 
+                        />
+                     </div>
+                     <button type="submit" disabled={isSearchingExternal} className={`px-8 rounded-2xl font-black text-white ${a.main} ${a.hover} transition-all active:scale-95 disabled:opacity-50`}>
+                        {isSearchingExternal ? <RefreshCw className="w-5 h-5 animate-spin" /> : 'Search'}
+                     </button>
+                  </form>
+
+                  {externalResults.length > 0 && (
+                    <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                       {externalResults.map((result, idx) => {
+                          const status = importStatus[result.link] || 'idle';
+                          return (
+                            <div key={idx} className={`p-6 rounded-[2rem] border-2 flex flex-col gap-4 group transition-all hover:scale-[1.02] ${theme === 'dark' ? 'bg-slate-950 border-slate-800 hover:border-indigo-500/50' : 'bg-slate-50 border-slate-100 hover:border-indigo-400'}`}>
+                               <div className="flex gap-4 items-start">
+                                  {result.thumbnail ? (
+                                    <img src={result.thumbnail} className="w-16 h-20 object-cover rounded-xl shadow-lg" alt="" />
+                                  ) : (
+                                    <div className="w-16 h-20 bg-slate-900 rounded-xl flex items-center justify-center"><Film className="w-6 h-6 opacity-20" /></div>
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                     <span className="text-[8px] font-black uppercase opacity-40 px-2 py-0.5 rounded-full bg-slate-800 text-white mb-2 inline-block">{result.source}</span>
+                                     <h4 className="font-bold text-sm line-clamp-2 leading-tight mb-1" title={result.title}>{result.title}</h4>
+                                     <a href={result.link} target="_blank" rel="noreferrer" className="text-[10px] text-indigo-500 hover:underline flex items-center gap-1"><ExternalLink className="w-2.5 h-2.5" /> View Site</a>
+                                  </div>
+                               </div>
+
+                               <div className="mt-auto pt-4 border-t border-slate-500/10 space-y-4">
+                                  <div className="grid grid-cols-2 gap-2">
+                                     <div className="space-y-1">
+                                        <label className="text-[8px] font-black uppercase opacity-40 px-1">IMDb ID</label>
+                                        <input 
+                                          type="text" 
+                                          placeholder="tt1234567" 
+                                          className={`w-full py-2 px-3 rounded-lg text-[10px] font-mono border ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}
+                                          onBlur={(e) => { result.imdbId = extractImdbId(e.target.value); }}
+                                          defaultValue={result.imdbId || ''}
+                                        />
+                                     </div>
+                                     <div className="space-y-1">
+                                        <label className="text-[8px] font-black uppercase opacity-40 px-1">Type</label>
+                                        <select 
+                                          className={`w-full py-2 px-3 rounded-lg text-[10px] font-black uppercase border ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}
+                                          onChange={(e) => { result.type = e.target.value; }}
+                                          defaultValue={result.type || 'movie'}
+                                        >
+                                           <option value="movie">Movie</option>
+                                           <option value="series">Series</option>
+                                        </select>
+                                     </div>
+                                  </div>
+                                  
+                                  <div className="flex gap-2">
+                                     <input 
+                                       type="number" 
+                                       placeholder="S" 
+                                       className={`w-12 py-2 px-2 rounded-lg text-[10px] border ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}
+                                       onChange={(e) => { result.season = e.target.value; }}
+                                     />
+                                     <input 
+                                       type="number" 
+                                       placeholder="E" 
+                                       className={`w-12 py-2 px-2 rounded-lg text-[10px] border ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}
+                                       onChange={(e) => { result.episode = e.target.value; }}
+                                     />
+                                     <button 
+                                       onClick={() => importExternal(result, result.imdbId, result.type || 'movie', result.season, result.episode)}
+                                       disabled={status !== 'idle' && status !== 'error'}
+                                       className={`flex-1 py-2 rounded-lg font-black text-[10px] text-white transition-all ${status === 'success' ? 'bg-emerald-500' : status === 'error' ? 'bg-red-500' : `${a.main} hover:opacity-90`}`}
+                                     >
+                                        {status === 'importing' ? 'Importing...' : status === 'success' ? 'Imported' : status === 'error' ? 'Failed' : 'Import'}
+                                     </button>
+                                  </div>
+                               </div>
+                            </div>
+                          );
+                       })}
+                    </div>
+                  )}
+
+                  {!isSearchingExternal && externalResults.length === 0 && externalSearchQuery && (
+                    <div className="mt-20 text-center opacity-30">
+                       <Search className="w-12 h-12 mx-auto mb-4" />
+                       <p className="text-[10px] font-black uppercase tracking-widest">No results found on external sites</p>
+                    </div>
+                  )}
                </div>
             </div>
           ) : (

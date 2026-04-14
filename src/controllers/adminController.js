@@ -147,4 +147,114 @@ const deleteSubtitle = async (req, res) => {
   }
 };
 
-module.exports = { listSubtitles, deleteSubtitle, fetchMetadata };
+
+const scraper = require('../services/scraper');
+const { v4: uuidv4 } = require('uuid');
+
+const searchExternalSubtitles = async (req, res) => {
+  const { query } = req.query;
+  if (!query) return res.status(400).json({ error: 'Query is required' });
+
+  console.log(`[External Search] Searching for: "${query}"`);
+
+  try {
+    const [results1, results2, results3] = await Promise.all([
+      scraper.searchMSone(query),
+      scraper.searchMalayalamSubtitlesIn(query),
+      scraper.searchMovieMirror(query)
+    ]);
+
+    const allResults = [...results1, ...results2, ...results3];
+    console.log(`[External Search] Found ${allResults.length} results total`);
+    res.json(allResults);
+  } catch (err) {
+    console.error('[External Search] Error:', err);
+    res.status(500).json({ error: 'Failed to search external sites' });
+  }
+};
+
+const importExternalSubtitle = async (req, res) => {
+  const { link, source, imdb_id, type, season, episode } = req.body;
+
+  if (!link || !source || !imdb_id || !type) {
+    return res.status(400).json({ error: 'Missing required fields (link, source, imdb_id, type)' });
+  }
+
+  console.log(`[Import] Attempting to import from ${source}: ${link}`);
+
+  try {
+    // 1. Get the direct download link from the page
+    const downloadUrl = await scraper.getDirectDownloadLink(link, source);
+    if (!downloadUrl) {
+      throw new Error(`Could not find a download link on the page: ${link}`);
+    }
+
+    console.log(`[Import] Found direct download link: ${downloadUrl}`);
+
+    // 2. Download the file
+    const response = await fetch(downloadUrl);
+    if (!response.ok) throw new Error(`Failed to download subtitle from upstream: ${response.statusText}`);
+
+    let buffer = await response.arrayBuffer();
+    buffer = Buffer.from(buffer);
+
+    let finalBuffer = buffer;
+    let fileName = downloadUrl.split('/').pop() || 'subtitle';
+
+    // 3. Extract if ZIP
+    if (downloadUrl.toLowerCase().endsWith('.zip') || response.headers.get('content-type')?.includes('zip')) {
+      console.log('[Import] ZIP detected, extracting...');
+      const extracted = scraper.extractSrtFromBuffer(buffer);
+      if (!extracted) throw new Error('Failed to extract .srt from ZIP file');
+      finalBuffer = extracted;
+      fileName = fileName.replace(/\.zip$/i, '.srt');
+      if (!fileName.endsWith('.srt')) fileName += '.srt';
+    }
+
+    // 4. Upload to Supabase Storage
+    const storagePath = `${imdb_id}/${uuidv4()}_${fileName}`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('subtitles')
+      .upload(storagePath, finalBuffer, {
+        contentType: 'application/x-subrip',
+        upsert: false
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('subtitles')
+      .getPublicUrl(storagePath);
+
+    // 5. Save to DB
+    const { data: dbRecord, error: dbError } = await supabase
+      .from('subtitles')
+      .insert([{
+        imdb_id,
+        type,
+        season: type === 'series' ? parseInt(season, 10) : null,
+        episode: type === 'series' ? parseInt(episode, 10) : null,
+        language: 'Malayalam', // We only fetch Malayalam
+        file_path: publicUrl
+      }])
+      .select()
+      .single();
+
+    if (dbError) throw dbError;
+
+    console.log(`[Import] Successfully imported: ${dbRecord.id}`);
+    res.json({ message: 'Subtitle imported successfully', data: dbRecord });
+
+  } catch (err) {
+    console.error('[Import] Error:', err);
+    res.status(500).json({ error: err.message || 'Failed to import subtitle' });
+  }
+};
+
+module.exports = { 
+  listSubtitles, 
+  deleteSubtitle, 
+  fetchMetadata, 
+  searchExternalSubtitles, 
+  importExternalSubtitle 
+};
