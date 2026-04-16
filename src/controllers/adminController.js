@@ -289,7 +289,8 @@ const importExternalSubtitle = async (req, res) => {
     let buffer = await response.arrayBuffer();
     buffer = Buffer.from(buffer);
 
-    const isZip = downloadUrl.toLowerCase().endsWith('.zip') || response.headers.get('content-type')?.includes('zip');
+    // Bullet-proof ZIP detection: first 4 bytes of ZIP are 50 4B 03 04 ("PK\x03\x04")
+    const isZip = buffer.length > 4 && buffer[0] === 0x50 && buffer[1] === 0x4b && buffer[2] === 0x03 && buffer[3] === 0x04;
     
     // List to hold files to upload
     let filesToProcess = [];
@@ -314,9 +315,11 @@ const importExternalSubtitle = async (req, res) => {
 
       // Auto-detect S/E if it's a series and we don't have manual info
       if (type === 'series') {
-        const detected = scraper.detectSeasonEpisode(file.name);
-        if (detected.season !== null && !fSeason) fSeason = detected.season;
-        if (detected.episode !== null && !fEpisode) fEpisode = detected.episode;
+        const detectedFromFilename = scraper.detectSeasonEpisode(file.name);
+        const detectedFromTitle = title ? scraper.detectSeasonEpisode(title) : { season: null, episode: null };
+        
+        if (!fSeason) fSeason = detectedFromFilename.season || detectedFromTitle.season;
+        if (!fEpisode) fEpisode = detectedFromFilename.episode || detectedFromTitle.episode;
       }
 
       // Upload to Supabase Storage

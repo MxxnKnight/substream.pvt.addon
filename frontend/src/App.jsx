@@ -23,6 +23,7 @@ import {
   Globe,
   Sun,
   Moon,
+  Menu,
   Palette,
   ExternalLink
 } from 'lucide-react';
@@ -37,7 +38,7 @@ export default function App() {
 
   // Theme State
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
-  const [accent, setAccent] = useState(localStorage.getItem('accent') || 'indigo');
+  const [accent, setAccent] = useState(localStorage.getItem('accent') || 'gold');
   const [mediaFilter, setMediaFilter] = useState('movie'); // 'movie', 'series'
 
   useEffect(() => {
@@ -54,14 +55,14 @@ export default function App() {
   }, [accent]);
 
   const ACCENTS = {
-    indigo: { main: 'bg-indigo-600', hover: 'hover:bg-indigo-500', text: 'text-indigo-600', border: 'border-indigo-600', shadow: 'shadow-indigo-600/20', ring: 'ring-indigo-500' },
-    rose: { main: 'bg-rose-600', hover: 'hover:bg-rose-500', text: 'text-rose-600', border: 'border-rose-600', shadow: 'shadow-rose-600/20', ring: 'ring-rose-500' },
-    emerald: { main: 'bg-emerald-600', hover: 'hover:bg-emerald-500', text: 'text-emerald-600', border: 'border-emerald-600', shadow: 'shadow-emerald-600/20', ring: 'ring-emerald-500' },
-    amber: { main: 'bg-amber-600', hover: 'hover:bg-amber-500', text: 'text-amber-600', border: 'border-amber-600', shadow: 'shadow-amber-600/20', ring: 'ring-amber-500' },
+    gold: { main: 'bg-amber-500', hover: 'hover:bg-amber-400', text: 'text-amber-500', border: 'border-amber-500', shadow: 'shadow-amber-500/20', ring: 'ring-amber-400' },
+    crimson: { main: 'bg-rose-700', hover: 'hover:bg-rose-600', text: 'text-rose-700', border: 'border-rose-700', shadow: 'shadow-rose-700/20', ring: 'ring-rose-600' },
+    royal: { main: 'bg-blue-600', hover: 'hover:bg-blue-500', text: 'text-blue-600', border: 'border-blue-600', shadow: 'shadow-blue-600/20', ring: 'ring-blue-500' },
+    violet: { main: 'bg-violet-600', hover: 'hover:bg-violet-500', text: 'text-violet-600', border: 'border-violet-600', shadow: 'shadow-violet-600/20', ring: 'ring-violet-500' },
     sky: { main: 'bg-sky-600', hover: 'hover:bg-sky-500', text: 'text-sky-600', border: 'border-sky-600', shadow: 'shadow-sky-600/20', ring: 'ring-sky-500' },
   };
 
-  const a = ACCENTS[accent] || ACCENTS.indigo;
+  const a = ACCENTS[accent] || ACCENTS.gold;
 
 
   // Login Form State
@@ -167,7 +168,10 @@ export default function App() {
         const formatted = data.map(sub => ({
           id: sub.id,
           imdbId: sub.imdb_id,
-          fileName: sub.file_path.split('/').pop(),
+          fileName: (() => {
+            let raw = sub.file_path.split('/').pop();
+            return decodeURIComponent(raw).replace(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_/, '');
+          })(),
           date: new Date(sub.created_at).toISOString().split('T')[0],
           size: 'Unknown',
           type: sub.type,
@@ -487,18 +491,18 @@ export default function App() {
 
   if (!user) {
     return (
-      <div className={`min-h-screen ${theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'} flex items-center justify-center p-4 font-sans transition-theme`}>
-        <div className={`max-w-md w-full ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'} rounded-[2.5rem] shadow-2xl overflow-hidden border p-8 lg:p-12 transition-theme`}>
+      <div className={`min-h-screen ${theme === 'dark' ? 'bg-black text-neutral-100' : 'bg-neutral-100 text-neutral-900'} flex items-center justify-center p-4 font-sans transition-theme`}>
+        <div className={`max-w-md w-full ${theme === 'dark' ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-200'} rounded-[2.5rem] shadow-2xl overflow-hidden border p-8 lg:p-12 transition-theme`}>
             <div className="text-center mb-10">
               <div className={`${a.main} w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl ${a.shadow}`}>
                 <Film className="w-10 h-10 text-white" />
               </div>
-              <h2 className={`text-4xl font-black tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>SubStream</h2>
+              <h2 className={`text-4xl font-black tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-neutral-900'}`}>SubStream</h2>
               <p className="mt-3 text-sm font-bold opacity-50 uppercase tracking-widest">Administrator Portal</p>
             </div>
             <form onSubmit={handleLogin} className="space-y-6">
-              <div className="relative group"><User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 opacity-20" /><input type="text" value={loginForm.username} onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })} className={`w-full ${theme === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'} border rounded-2xl py-4 pl-12 pr-4 outline-none focus:ring-4 ${a.ring}/10 transition-all`} placeholder="username" /></div>
-              <div className="relative group"><Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 opacity-20" /><input type="password" value={loginForm.password} onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })} className={`w-full ${theme === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'} border rounded-2xl py-4 pl-12 pr-4 outline-none focus:ring-4 ${a.ring}/10 transition-all`} placeholder="password" /></div>
+              <div className="relative group"><User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 opacity-20" /><input type="text" value={loginForm.username} onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })} className={`w-full ${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800' : 'bg-neutral-50 border-neutral-200'} border rounded-2xl py-4 pl-12 pr-4 outline-none focus:ring-4 ${a.ring}/10 transition-all`} placeholder="username" /></div>
+              <div className="relative group"><Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 opacity-20" /><input type="password" value={loginForm.password} onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })} className={`w-full ${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800' : 'bg-neutral-50 border-neutral-200'} border rounded-2xl py-4 pl-12 pr-4 outline-none focus:ring-4 ${a.ring}/10 transition-all`} placeholder="password" /></div>
               {loginError && <div className="text-red-500 text-xs font-bold text-center bg-red-500/10 py-3 rounded-xl">{loginError}</div>}
               <button type="submit" disabled={loginLoading} className={`w-full ${a.main} ${a.hover} text-white font-black py-4 rounded-2xl transition-all shadow-xl ${a.shadow}`}>Sign In</button>
             </form>
@@ -508,10 +512,10 @@ export default function App() {
   }
 
   return (
-    <div className={`min-h-screen ${theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-white text-slate-900'} font-sans flex flex-col lg:flex-row h-screen overflow-hidden transition-theme`}>
+    <div className={`min-h-screen ${theme === 'dark' ? 'bg-black text-neutral-100' : 'bg-white text-neutral-900'} font-sans flex flex-col lg:flex-row h-screen overflow-hidden transition-theme`}>
 
       {/* Sidebar */}
-      <aside className={`fixed inset-0 z-40 lg:relative lg:z-0 lg:flex w-full lg:w-72 ${theme === 'dark' ? 'bg-slate-900' : 'bg-slate-50'} border-b lg:border-b-0 lg:border-r ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'} transition-all duration-500 ${isNavOpen ? 'translate-y-0' : '-translate-y-full lg:translate-y-0'}`}>
+      <aside className={`fixed inset-0 z-40 lg:relative lg:z-0 lg:flex w-full lg:w-72 ${theme === 'dark' ? 'bg-black lg:bg-[#0a0a0a]' : 'bg-neutral-50'} border-b lg:border-b-0 lg:border-r ${theme === 'dark' ? 'border-neutral-800' : 'border-neutral-200'} transition-all duration-500 ${isNavOpen ? 'translate-y-0' : '-translate-y-full lg:translate-y-0'}`}>
         <div className="flex flex-col h-full w-full pt-20 lg:pt-0">
           <div className="p-8 flex items-center gap-4"><div className={`${a.main} p-2.5 rounded-2xl`}><Film className="w-5 h-5 text-white" /></div><h1 className="font-black text-xl tracking-tighter">SubStream</h1></div>
           <div className="p-6">
@@ -523,13 +527,13 @@ export default function App() {
                 { id: 'list', label: 'Manage Library', icon: Archive }, 
                 { id: 'logs', label: 'Live Traffic', icon: Shield } 
               ].map((item) => (
-                <button key={item.id} onClick={() => { setCurrentView(item.id); if(item.id === 'list') fetchSubtitles(); setIsNavOpen(false); }} className={`w-full flex items-center gap-4 px-6 py-3.5 rounded-2xl transition-all ${currentView === item.id ? `${theme === 'dark' ? 'bg-slate-800 text-white' : 'bg-white shadow-sm text-slate-900'} border ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}` : 'opacity-40 hover:opacity-100'}`}>
+                <button key={item.id} onClick={() => { setCurrentView(item.id); if(item.id === 'list') fetchSubtitles(); setIsNavOpen(false); }} className={`w-full flex items-center gap-4 px-6 py-3.5 rounded-2xl transition-all ${currentView === item.id ? `${theme === 'dark' ? 'bg-neutral-800 text-white' : 'bg-white shadow-sm text-neutral-900'} border ${theme === 'dark' ? 'border-neutral-700' : 'border-neutral-200'}` : 'opacity-40 hover:opacity-100'}`}>
                   <item.icon className={`w-4 h-4 ${currentView === item.id ? a.text : ''}`} /><span className="font-bold text-xs">{item.label}</span>
                 </button>
               ))}
             </nav>
-            <div className="mt-10 pt-10 border-t border-slate-500/10 space-y-6">
-               <div className="flex items-center justify-between px-2"><span className="text-[10px] font-black uppercase opacity-40">Appearance</span><button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className={`p-2 rounded-xl ${theme === 'dark' ? 'bg-slate-800' : 'bg-slate-100'}`}>{theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}</button></div>
+            <div className="mt-10 pt-10 border-t border-neutral-500/10 space-y-6">
+               <div className="flex items-center justify-between px-2"><span className="text-[10px] font-black uppercase opacity-40">Appearance</span><button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className={`p-2 rounded-xl ${theme === 'dark' ? 'bg-neutral-800' : 'bg-neutral-100'}`}>{theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}</button></div>
                <div className="px-2 pb-10"><div className="flex flex-wrap gap-2">{Object.keys(ACCENTS).map(c => <button key={c} onClick={() => setAccent(c)} className={`w-6 h-6 rounded-full ${ACCENTS[c].main} transition-all ${accent === c ? 'ring-2 ring-offset-2 ring-indigo-500 scale-110' : 'opacity-30'}`} />)}</div></div>
             </div>
           </div>
@@ -542,13 +546,13 @@ export default function App() {
         <div className="max-w-screen-2xl mx-auto w-full p-4 lg:p-8 flex flex-col gap-8">
           
           {/* Mobile Header (Floating rounded square) */}
-          <header className={`lg:hidden flex flex-col gap-4 p-5 mx-4 rounded-[2.5rem] fixed top-[15px] left-0 right-0 z-50 border shadow-2xl transition-all ${theme === 'dark' ? 'bg-slate-900/90 border-slate-800' : 'bg-white/95 border-slate-200'} backdrop-blur-xl`}>
+          <header className={`lg:hidden flex flex-col gap-4 p-5 mx-4 rounded-[2.5rem] fixed top-[15px] left-0 right-0 z-50 border shadow-2xl transition-all ${theme === 'dark' ? 'bg-black/90 border-neutral-800' : 'bg-white/95 border-neutral-200'} backdrop-blur-xl`}>
              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3"><div className={`${a.main} p-2 rounded-xl`}><Film className="w-4 h-4 text-white" /></div><span className="font-black tracking-tighter">SubStream</span></div>
-                <button onClick={() => setIsNavOpen(!isNavOpen)} className="p-2 opacity-50 hover:opacity-100 transition-all">{isNavOpen ? <X className="w-5 h-5" /> : <Palette className="w-5 h-5" />}</button>
+                <button onClick={() => setIsNavOpen(!isNavOpen)} className="p-2 opacity-50 hover:opacity-100 transition-all">{isNavOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}</button>
              </div>
              {currentView === 'list' && (
-                <div className={`flex p-1 rounded-2xl ${theme === 'dark' ? 'bg-slate-950/50' : 'bg-slate-100/50'} border ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
+                <div className={`flex p-1 rounded-2xl ${theme === 'dark' ? 'bg-[#0a0a0a]/50' : 'bg-neutral-100/50'} border ${theme === 'dark' ? 'border-neutral-800' : 'border-neutral-200'}`}>
                    {['movie', 'series'].map(m => (
                       <button key={m} onClick={() => setMediaFilter(m)} className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${mediaFilter === m ? `${a.main} text-white shadow-lg` : 'opacity-40'}`}>{m}</button>
                    ))}
@@ -557,11 +561,11 @@ export default function App() {
           </header>
 
           {/* Persistent Desktop Header */}
-          <header className={`hidden lg:flex items-center justify-between fixed top-[15px] left-8 lg:left-[calc(280px+2rem)] right-8 lg:right-10 z-50 py-4 px-6 border rounded-[2.5rem] transition-all ${theme === 'dark' ? 'bg-slate-925/80 border-slate-800' : 'bg-white/80 border-slate-200'} backdrop-blur-xl shadow-md`}>
+          <header className={`hidden lg:flex items-center justify-between fixed top-[15px] left-8 lg:left-[calc(280px+2rem)] right-8 lg:right-10 z-50 py-4 px-6 border rounded-[2.5rem] transition-all ${theme === 'dark' ? 'bg-black/80 border-neutral-800' : 'bg-white/80 border-neutral-200'} backdrop-blur-xl shadow-md`}>
              <div className="flex items-center gap-8">
                 <h2 className="text-lg font-black tracking-tight">{currentView === 'upload' ? 'Upload Feed' : currentView === 'list' ? 'SubView Library' : currentView === 'search' ? 'Search & Import' : 'Live Traffic'}</h2>
                 {currentView === 'list' && (
-                  <div className={`flex p-1 rounded-full ${theme === 'dark' ? 'bg-slate-900' : 'bg-slate-100'} border ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
+                  <div className={`flex p-1 rounded-full ${theme === 'dark' ? bg-black lg:bg-[#0a0a0a] : 'bg-neutral-100'} border ${theme === 'dark' ? 'border-neutral-800' : 'border-neutral-200'}`}>
                     {['movie', 'series'].map(m => (
                       <button key={m} onClick={() => setMediaFilter(m)} className={`px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${mediaFilter === m ? `${a.main} text-white shadow-lg` : 'opacity-40 hover:opacity-100'}`}>{m}</button>
                     ))}
@@ -569,32 +573,32 @@ export default function App() {
                 )}
              </div>
              <div className="flex items-center gap-3">
-                {currentView === 'list' && <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 opacity-30" /><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className={`pl-8 pr-4 py-1.5 rounded-lg text-[10px] outline-none border transition-all ${theme === 'dark' ? 'bg-slate-900 border-slate-800 focus:border-indigo-500' : 'bg-slate-50 border-slate-200 focus:border-indigo-400'}`} placeholder="Search IMDB or Files..." /></div>}
+                {currentView === 'list' && <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 opacity-30" /><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className={`pl-8 pr-4 py-1.5 rounded-lg text-[10px] outline-none border transition-all ${theme === 'dark' ? 'bg-neutral-900 border-neutral-800 focus:border-indigo-500' : 'bg-neutral-50 border-neutral-200 focus:border-indigo-400'}`} placeholder="Search IMDB or Files..." /></div>}
                 {currentView === 'list' && <button onClick={fetchSubtitles} disabled={isRefreshing} className={`p-2 rounded-lg opacity-40 hover:opacity-100 transition-all ${isRefreshing ? 'animate-spin' : ''}`}><RefreshCw className="w-3.5 h-3.5" /></button>}
              </div>
           </header>
 
-          <div className="h-28 lg:h-24" /> {/* Spacer for fixed header */}
+          <div className="h-40 lg:h-24 shrink-0" /> {/* Spacer for fixed header */}
 
           {currentView === 'upload' ? (
             <div className="max-w-[1400px] mx-auto w-full animate-in fade-in duration-700">
-              <div className={`rounded-[2.5rem] border p-6 lg:p-10 ${theme === 'dark' ? 'bg-slate-900 border-slate-800 shadow-2xl' : 'bg-white border-slate-100 shadow-xl'}`}>
+              <div className={`rounded-[2.5rem] border p-6 lg:p-10 ${theme === 'dark' ? 'bg-neutral-900 border-neutral-800 shadow-2xl' : 'bg-white border-neutral-100 shadow-xl'}`}>
                 <form onSubmit={handleUploadSubmit} className="space-y-8">
                   <div className="grid grid-cols-2 gap-4">
                     {['movie', 'series'].map(t => (
-                      <button key={t} type="button" onClick={() => setUploadForm({...uploadForm, type: t})} className={`p-6 rounded-[2rem] border-2 transition-all flex flex-col items-center gap-3 ${uploadForm.type === t ? `${a.main} border-transparent text-white shadow-xl ${a.shadow}` : `${theme === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-100'}`}`}>
+                      <button key={t} type="button" onClick={() => setUploadForm({...uploadForm, type: t})} className={`p-6 rounded-[2rem] border-2 transition-all flex flex-col items-center gap-3 ${uploadForm.type === t ? `${a.main} border-transparent text-white shadow-xl ${a.shadow}` : `${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800' : 'bg-neutral-50 border-neutral-100'}`}`}>
                          {t === 'movie' ? <Film className="w-5 h-5" /> : <Tv className="w-5 h-5" />}
                          <span className="text-[10px] font-black uppercase tracking-widest">{t}</span>
                       </button>
                     ))}
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-3"><label className="text-[10px] font-black uppercase opacity-40 px-2">Subtitle Language</label><div className="flex gap-2">{[ {code: 'eng', label: 'English'}, {code: 'mal', label: 'Malayalam'} ].map(l => <button key={l.code} type="button" onClick={() => setUploadForm({...uploadForm, language: l.code})} className={`flex-1 py-3 rounded-xl border-2 text-[10px] font-black uppercase transition-all ${uploadForm.language === l.code ? `${a.main} border-transparent text-white` : `${theme === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-transparent'}`}`}>{l.label}</button>)}</div></div>
-                    <div className="space-y-3"><label className="text-[10px] font-black uppercase opacity-40 px-2">IMDB Identity</label><div className="relative"><input type="text" value={uploadForm.imdbId} onChange={handleImdbChange} placeholder="tt1234567" className={`w-full py-3.5 px-4 rounded-xl border-2 outline-none font-mono text-xs ${theme === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-transparent focus:bg-white'}`} />{isMetadataLoading && <RefreshCw className={`absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 ${a.text} animate-spin`} />}</div></div>
+                    <div className="space-y-3"><label className="text-[10px] font-black uppercase opacity-40 px-2">Subtitle Language</label><div className="flex gap-2">{[ {code: 'eng', label: 'English'}, {code: 'mal', label: 'Malayalam'} ].map(l => <button key={l.code} type="button" onClick={() => setUploadForm({...uploadForm, language: l.code})} className={`flex-1 py-3 rounded-xl border-2 text-[10px] font-black uppercase transition-all ${uploadForm.language === l.code ? `${a.main} border-transparent text-white` : `${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800' : 'bg-neutral-100 border-transparent'}`}`}>{l.label}</button>)}</div></div>
+                    <div className="space-y-3"><label className="text-[10px] font-black uppercase opacity-40 px-2">IMDB Identity</label><div className="relative"><input type="text" value={uploadForm.imdbId} onChange={handleImdbChange} placeholder="tt1234567" className={`w-full py-3.5 px-4 rounded-xl border-2 outline-none font-mono text-xs ${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800' : 'bg-neutral-50 border-transparent focus:bg-white'}`} />{isMetadataLoading && <RefreshCw className={`absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 ${a.text} animate-spin`} />}</div></div>
                   </div>
-                  {currentMetadata && <div className={`flex gap-6 p-4 rounded-[1.8rem] border-2 animate-in slide-in-from-left-4 ${theme === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-100'}`}>{currentMetadata.poster_path ? <img src={currentMetadata.poster_path} alt="Poster" className="w-16 h-24 object-cover rounded-xl shadow-lg" /> : <div className="w-16 h-24 bg-slate-900 rounded-xl" />}<div className="flex flex-col justify-center min-w-0"><h4 className="font-black text-lg truncate">{currentMetadata.title}</h4><p className="text-[10px] opacity-40 line-clamp-2">{currentMetadata.overview}</p></div></div>}
-                  <div onDragOver={(e)=>e.preventDefault()} onDrop={handleDrop} className={`min-h-[160px] border-4 border-dashed rounded-[2.5rem] flex flex-col items-center justify-center p-8 transition-all cursor-pointer ${theme === 'dark' ? 'border-slate-800 bg-slate-950/20 hover:border-indigo-500/50' : 'border-slate-100 bg-slate-50 hover:border-indigo-400'}`} onClick={()=>fileInputRef.current.click()}><input ref={fileInputRef} type="file" multiple hidden onChange={handleFileSelection} /><Archive className="w-8 h-8 opacity-20 mb-4" /><p className="text-[10px] font-black uppercase tracking-widest opacity-40">Drop packs or click to select</p></div>
-                  {stagedFiles.length > 0 && <div className={`rounded-2xl border divide-y overflow-hidden ${theme === 'dark' ? 'bg-slate-950 border-slate-800 divide-slate-800' : 'bg-slate-50 border-slate-100 divide-slate-100'}`}>{stagedFiles.map((f, i) => <div key={i} className="flex items-center justify-between p-3.5 hover:bg-white/5 transition-colors"><div className="flex items-center gap-3 min-w-0"><div className="p-2 rounded-lg bg-slate-900"><FileText className="w-3 h-3 opacity-40" /></div><span className="text-xs font-bold truncate opacity-80">{f.name}</span></div><button type="button" onClick={()=>removeStagedFile(i)} className="p-2 hover:text-red-500 transition-colors"><X className="w-4 h-4" /></button></div>)}</div>}
+                  {currentMetadata && <div className={`flex gap-6 p-4 rounded-[1.8rem] border-2 animate-in slide-in-from-left-4 ${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800' : 'bg-neutral-50 border-neutral-100'}`}>{currentMetadata.poster_path ? <img src={currentMetadata.poster_path} alt="Poster" className="w-16 h-24 object-cover rounded-xl shadow-lg" /> : <div className="w-16 h-24 bg-neutral-900 rounded-xl" />}<div className="flex flex-col justify-center min-w-0"><h4 className="font-black text-lg truncate">{currentMetadata.title}</h4><p className="text-[10px] opacity-40 line-clamp-2">{currentMetadata.overview}</p></div></div>}
+                  <div onDragOver={(e)=>e.preventDefault()} onDrop={handleDrop} className={`min-h-[160px] border-4 border-dashed rounded-[2.5rem] flex flex-col items-center justify-center p-8 transition-all cursor-pointer ${theme === 'dark' ? 'border-neutral-800 bg-[#0a0a0a]/20 hover:border-indigo-500/50' : 'border-neutral-100 bg-neutral-50 hover:border-indigo-400'}`} onClick={()=>fileInputRef.current.click()}><input ref={fileInputRef} type="file" multiple hidden onChange={handleFileSelection} /><Archive className="w-8 h-8 opacity-20 mb-4" /><p className="text-[10px] font-black uppercase tracking-widest opacity-40">Drop packs or click to select</p></div>
+                  {stagedFiles.length > 0 && <div className={`rounded-2xl border divide-y overflow-hidden ${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800 divide-neutral-800' : 'bg-neutral-50 border-neutral-100 divide-neutral-100'}`}>{stagedFiles.map((f, i) => <div key={i} className="flex items-center justify-between p-3.5 hover:bg-white/5 transition-colors"><div className="flex items-center gap-3 min-w-0"><div className="p-2 rounded-lg bg-neutral-900"><FileText className="w-3 h-3 opacity-40" /></div><span className="text-xs font-bold truncate opacity-80">{f.name}</span></div><button type="button" onClick={()=>removeStagedFile(i)} className="p-2 hover:text-red-500 transition-colors"><X className="w-4 h-4" /></button></div>)}</div>}
                   <button type="button" onClick={handleUploadSubmit} disabled={!uploadForm.imdbId || stagedFiles.length === 0 || isUploading} className={`w-full py-5 rounded-2xl font-black text-white transition-all shadow-2xl ${!uploadForm.imdbId || stagedFiles.length === 0 || isUploading ? 'opacity-20 cursor-not-allowed' : `${a.main} ${a.hover} ${a.shadow} active:scale-95`}`}>{isUploading ? 'Synchronizing Cluster...' : `Commit ${stagedFiles.length} Subtitles`}</button>
                   {uploadSuccess && <div className="p-4 rounded-xl bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase text-center border border-emerald-500/20">Protocol Complete. Cluster Updated.</div>}
                 </form>
@@ -602,7 +606,7 @@ export default function App() {
             </div>
           ) : currentView === 'search' ? (
             <div className="max-w-[1400px] mx-auto w-full animate-in fade-in duration-700 space-y-6">
-               <div className={`rounded-[2.5rem] border p-6 lg:p-10 ${theme === 'dark' ? 'bg-slate-900 border-slate-800 shadow-2xl' : 'bg-white border-slate-100 shadow-xl'}`}>
+               <div className={`rounded-[2.5rem] border p-6 lg:p-10 ${theme === 'dark' ? 'bg-neutral-900 border-neutral-800 shadow-2xl' : 'bg-white border-neutral-100 shadow-xl'}`}>
                   <form onSubmit={searchExternal} className="flex gap-4">
                      <div className="relative flex-1">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 opacity-20" />
@@ -611,7 +615,7 @@ export default function App() {
                            value={externalSearchQuery} 
                            onChange={(e) => setExternalSearchQuery(e.target.value)} 
                            placeholder="Search Malayalam Subtitles by Name..." 
-                           className={`w-full py-4 pl-12 pr-4 rounded-2xl border-2 outline-none font-bold ${theme === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-transparent focus:bg-white'}`} 
+                           className={`w-full py-4 pl-12 pr-4 rounded-2xl border-2 outline-none font-bold ${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800' : 'bg-neutral-50 border-transparent focus:bg-white'}`} 
                         />
                      </div>
                      <button type="submit" disabled={isSearchingExternal} className={`px-8 rounded-2xl font-black text-white ${a.main} ${a.hover} transition-all active:scale-95 disabled:opacity-50`}>
@@ -624,28 +628,28 @@ export default function App() {
                        {externalResults.map((result, idx) => {
                           const status = importStatus[result.link] || 'idle';
                           return (
-                            <div key={idx} className={`p-6 rounded-[2rem] border-2 flex flex-col gap-4 group transition-all hover:scale-[1.02] ${theme === 'dark' ? 'bg-slate-950 border-slate-800 hover:border-indigo-500/50' : 'bg-slate-50 border-slate-100 hover:border-indigo-400'}`}>
+                            <div key={idx} className={`p-6 rounded-[2rem] border-2 flex flex-col gap-4 group transition-all hover:scale-[1.02] ${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800 hover:border-indigo-500/50' : 'bg-neutral-50 border-neutral-100 hover:border-indigo-400'}`}>
                                <div className="flex gap-4 items-start">
                                   {result.thumbnail ? (
                                     <img src={result.thumbnail} className="w-16 h-20 object-cover rounded-xl shadow-lg" alt="" />
                                   ) : (
-                                    <div className="w-16 h-20 bg-slate-900 rounded-xl flex items-center justify-center"><Film className="w-6 h-6 opacity-20" /></div>
+                                    <div className="w-16 h-20 bg-neutral-900 rounded-xl flex items-center justify-center"><Film className="w-6 h-6 opacity-20" /></div>
                                   )}
                                   <div className="flex-1 min-w-0">
-                                     <span className="text-[8px] font-black uppercase opacity-40 px-2 py-0.5 rounded-full bg-slate-800 text-white mb-2 inline-block">{result.source}</span>
+                                     <span className="text-[8px] font-black uppercase opacity-40 px-2 py-0.5 rounded-full bg-neutral-800 text-white mb-2 inline-block">{result.source}</span>
                                      <h4 className="font-bold text-sm line-clamp-2 leading-tight mb-1" title={result.title}>{result.title}</h4>
                                      <a href={result.link} target="_blank" rel="noreferrer" className="text-[10px] text-indigo-500 hover:underline flex items-center gap-1"><ExternalLink className="w-2.5 h-2.5" /> View Site</a>
                                   </div>
                                </div>
 
-                               <div className="mt-auto pt-4 border-t border-slate-500/10 space-y-4">
+                               <div className="mt-auto pt-4 border-t border-neutral-500/10 space-y-4">
                                   <div className="grid grid-cols-2 gap-2">
                                      <div className="space-y-1">
                                         <label className="text-[8px] font-black uppercase opacity-40 px-1">IMDb ID</label>
                                         <input 
                                           type="text" 
                                           placeholder="tt1234567" 
-                                          className={`w-full py-2 px-3 rounded-lg text-[10px] font-mono border ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}
+                                          className={`w-full py-2 px-3 rounded-lg text-[10px] font-mono border ${theme === 'dark' ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-200'}`}
                                           onBlur={(e) => { result.imdbId = extractImdbId(e.target.value); }}
                                           defaultValue={result.imdbId || ''}
                                         />
@@ -654,7 +658,7 @@ export default function App() {
                                         <label className="text-[8px] font-black uppercase opacity-40 px-1">Type</label>
                                         <div className="relative">
                                           <select 
-                                            className={`w-full py-2 px-3 rounded-lg text-[10px] font-black uppercase border appearance-none cursor-pointer ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}
+                                            className={`w-full py-2 px-3 rounded-lg text-[10px] font-black uppercase border appearance-none cursor-pointer ${theme === 'dark' ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-200'}`}
                                             onChange={(e) => { result.type = e.target.value; }}
                                             defaultValue={result.type || 'movie'}
                                           >
@@ -670,18 +674,18 @@ export default function App() {
                                       <input 
                                         type="number" 
                                         placeholder="S" 
-                                        className={`w-14 py-2 px-2 rounded-lg text-[10px] border [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}
+                                        className={`w-14 py-2 px-2 rounded-lg text-[10px] border [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${theme === 'dark' ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-200'}`}
                                         onChange={(e) => { result.season = e.target.value; }}
                                       />
                                       <input 
                                         type="number" 
                                         placeholder="E" 
-                                        className={`w-14 py-2 px-2 rounded-lg text-[10px] border [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}
+                                        className={`w-14 py-2 px-2 rounded-lg text-[10px] border [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${theme === 'dark' ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-200'}`}
                                         onChange={(e) => { result.episode = e.target.value; }}
                                       />
                                      <button 
                                        onClick={() => inspectLink(result)}
-                                       className={`p-2 rounded-lg border ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'} ${status === 'inspecting' ? 'animate-spin' : ''}`}
+                                       className={`p-2 rounded-lg border ${theme === 'dark' ? 'border-neutral-800' : 'border-neutral-200'} ${status === 'inspecting' ? 'animate-spin' : ''}`}
                                        title="Auto-detect IMDb ID and Type"
                                      >
                                         <RefreshCw className="w-3.5 h-3.5 opacity-40" />
@@ -711,8 +715,8 @@ export default function App() {
             </div>
           ) : currentView === 'logs' ? (
             <div className="w-full animate-in fade-in duration-700">
-               <div className={`rounded-[2rem] border overflow-hidden ${theme === 'dark' ? 'bg-[#0a0a0f] border-slate-800 shadow-[0_0_50px_rgba(0,0,0,0.5)]' : 'bg-slate-900 border-slate-800 shadow-xl'}`}>
-                  <div className="flex items-center gap-2 px-6 py-4 border-b border-slate-800 bg-slate-900/50">
+               <div className={`rounded-[2rem] border overflow-hidden ${theme === 'dark' ? 'bg-[#0a0a0f] border-neutral-800 shadow-[0_0_50px_rgba(0,0,0,0.5)]' : 'bg-neutral-900 border-neutral-800 shadow-xl'}`}>
+                  <div className="flex items-center gap-2 px-6 py-4 border-b border-neutral-800 bg-neutral-900/50">
                      <div className="flex gap-2">
                         <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
                         <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
@@ -771,18 +775,18 @@ export default function App() {
                   const title = m?.title || first.imdbId;
                   
                   return (
-                     <div key={groupKey} className={`flex flex-col h-full border rounded-[1.8rem] overflow-hidden transition-all duration-300 ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                     <div key={groupKey} className={`flex flex-col h-full border rounded-[1.8rem] overflow-hidden transition-all duration-300 ${theme === 'dark' ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-200'}`}>
                         <div className="relative h-32 shrink-0 overflow-hidden">
-                           {m?.poster_path ? <img src={m.poster_path} className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-10" /> : <div className="absolute inset-0 bg-slate-950" />}
+                           {m?.poster_path ? <img src={m.poster_path} className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-10" /> : <div className="absolute inset-0 bg-[#0a0a0a]" />}
                            <div className="absolute inset-0 p-4 flex gap-3 items-end">
                               {m?.poster_path && <img src={m.poster_path} className="w-12 h-18 object-cover rounded-lg shadow-xl" />}
                               <div className="flex-1 min-w-0">
                                  <div className="flex flex-wrap gap-1 mb-1 items-center">
                                     <span className={`text-[6px] font-black uppercase px-2 py-0.5 rounded-full ${isSeries ? 'bg-purple-600' : 'bg-indigo-600'} text-white shadow-sm`}>{first.type}</span>
-                                    {isSeries && <span className="text-[6px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-700 text-white shadow-sm">S{String(first.season || 0).padStart(2,'0')}</span>}
+                                    {isSeries && first.season != null && <span className="text-[6px] font-black uppercase px-2 py-0.5 rounded-full bg-neutral-700 text-white shadow-sm">S{String(first.season).padStart(2,'0')}</span>}
                                     <span className={`text-[6px] font-black uppercase px-2 py-0.5 rounded-full ${theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-600'}`}>{first.language?.toUpperCase()}</span>
                                  </div>
-                                 <h4 className={`font-bold leading-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'} ${title.length > 20 ? 'text-[10px]' : 'text-xs'} line-clamp-2`} title={title}>{title}</h4>
+                                 <h4 className={`font-bold leading-tight ${theme === 'dark' ? 'text-white' : 'text-neutral-900'} ${title.length > 20 ? 'text-[10px]' : 'text-xs'} line-clamp-2`} title={title}>{title}</h4>
                                  <p className="text-[8px] opacity-30 font-mono">{first.imdbId}</p>
                               </div>
                            </div>
@@ -794,9 +798,9 @@ export default function App() {
                            </div>
                            <div className="space-y-1 overflow-y-auto max-h-[160px] custom-scrollbar pr-1">
                               {groupSubs.sort((a,b)=>(a.episode||0)-(b.episode||0)).map(s => (
-                                 <div key={s.id} className={`flex items-center justify-between p-2 rounded-xl border ${theme === 'dark' ? 'bg-slate-950/40 border-slate-800' : 'bg-slate-50 border-slate-100'} group/item`}>
+                                 <div key={s.id} className={`flex items-center justify-between p-2 rounded-xl border ${theme === 'dark' ? 'bg-[#0a0a0a]/40 border-neutral-800' : 'bg-neutral-50 border-neutral-100'} group/item`}>
                                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                                       {isSeries && <span className={`text-[8px] font-black ${a.text}`}>E{String(s.episode).padStart(2,'0')}</span>}
+                                       {isSeries && s.episode != null && <span className={`text-[8px] font-black ${a.text}`}>E{String(s.episode).padStart(2,'0')}</span>}
                                        <span className="text-[10px] font-medium truncate opacity-60" title={s.fileName}>{s.fileName}</span>
                                     </div>
                                     <button onClick={()=>handleDelete(s.id)} className="p-1 opacity-0 group-hover/item:opacity-100 hover:text-red-500 transition-all"><Trash2 className="w-3 h-3" /></button>
@@ -804,7 +808,7 @@ export default function App() {
                               ))}
                            </div>
                         </div>
-                        <div className={`p-3 border-t flex items-center justify-between ${theme === 'dark' ? 'border-slate-800' : 'border-slate-100'}`}>
+                        <div className={`p-3 border-t flex items-center justify-between ${theme === 'dark' ? 'border-neutral-800' : 'border-neutral-100'}`}>
                            <div className="flex items-center gap-1 opacity-20"><div className="w-1 h-1 rounded-full bg-emerald-500" /> <span className="text-[7px] font-black uppercase">Synced</span></div>
                            <button onClick={()=>window.open(`https://www.imdb.com/title/${first.imdbId}`, '_blank')} className="opacity-20 hover:opacity-100 transition-all"><ExternalLink className="w-3 h-3" /></button>
                         </div>
