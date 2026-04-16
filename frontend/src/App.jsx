@@ -159,28 +159,36 @@ export default function App() {
     return res;
   };
 
+  
   const fetchSubtitles = async () => {
     setIsRefreshing(true);
     try {
       const res = await apiFetch('/api/admin/subtitles');
       if (res.ok) {
         const data = await res.json();
-        const formatted = data.map(sub => ({
-          id: sub.id,
-          imdbId: sub.imdb_id,
-          fileName: (() => {
-            let raw = sub.file_path.split('/').pop();
-            return decodeURIComponent(raw).replace(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_/, '');
-          })(),
-          date: new Date(sub.created_at).toISOString().split('T')[0],
-          size: 'Unknown',
-          type: sub.type,
-          season: sub.season,
-          episode: sub.episode,
-          language: sub.language,
-          metadata: sub.metadata // Store metadata from backend
-        }));
-        setSubtitles(formatted);
+        // Group by IMDb ID
+        const groups = {};
+        data.forEach(sub => {
+          const id = sub.imdb_id;
+          if (!groups[id]) {
+            groups[id] = {
+              imdbId: id,
+              title: sub.metadata?.title || 'Unknown Title',
+              type: sub.type,
+              files: []
+            };
+          }
+          groups[id].files.push({
+            id: sub.id,
+            filename: decodeURIComponent(sub.file_path.split('/').pop()).replace(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_/, ''),
+            season: sub.season,
+            episode: sub.episode,
+            language: sub.language,
+            poster_path: sub.metadata?.poster_path,
+            type: sub.type
+          });
+        });
+        setSubtitles(Object.values(groups));
       }
     } catch (err) {
       console.error("Failed to fetch subtitles", err);
@@ -761,7 +769,7 @@ export default function App() {
                                 </div>
                              </div>
                              <div className="space-y-2 max-h-[140px] overflow-y-auto custom-scrollbar pr-1">
-                                {sub.files.map((file, fIdx) => (
+                                {sub?.files?.map((file, fIdx) => (
                                    <div key={fIdx} className={`p-2.5 rounded-xl text-[10px] border ${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800' : 'bg-neutral-50 border-neutral-100'}`}>
                                       <p className="truncate opacity-80">{file.filename.split('-').slice(1).join('-') || file.filename}</p>
                                       {isSeries && (
@@ -783,7 +791,7 @@ export default function App() {
                )}
             </div>
           ) : currentView === 'logs' ? (
-            <div className="flex-1 w-full animate-in fade-in duration-700 flex flex-col">
+            <div className="flex-1 w-full animate-in fade-in duration-700 flex flex-col pb-10">
                <div className={`flex-1 flex flex-col rounded-[0.8rem] border overflow-hidden ${theme === 'dark' ? 'bg-[#0a0a0f] border-neutral-800' : 'bg-black border-neutral-800'}`}>
                   <div className="flex items-center gap-2 px-6 py-4 border-b border-neutral-800 bg-black/50">
                      <div className="flex gap-2">
