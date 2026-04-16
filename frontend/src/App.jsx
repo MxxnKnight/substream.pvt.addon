@@ -565,7 +565,7 @@ export default function App() {
              <div className="flex items-center gap-8">
                 <h2 className="text-lg font-black tracking-tight">{currentView === 'upload' ? 'Upload Feed' : currentView === 'list' ? 'SubView Library' : currentView === 'search' ? 'Search & Import' : 'Live Traffic'}</h2>
                 {currentView === 'list' && (
-                  <div className={`flex p-1 rounded-full ${theme === 'dark' ? bg-black lg:bg-[#0a0a0a] : 'bg-neutral-100'} border ${theme === 'dark' ? 'border-neutral-800' : 'border-neutral-200'}`}>
+                  <div className={`flex p-1 rounded-full ${theme === 'dark' ? 'bg-black lg:bg-[#0a0a0a]' : 'bg-neutral-100'} border ${theme === 'dark' ? 'border-neutral-800' : 'border-neutral-200'}`}>
                     {['movie', 'series'].map(m => (
                       <button key={m} onClick={() => setMediaFilter(m)} className={`px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${mediaFilter === m ? `${a.main} text-white shadow-lg` : 'opacity-40 hover:opacity-100'}`}>{m}</button>
                     ))}
