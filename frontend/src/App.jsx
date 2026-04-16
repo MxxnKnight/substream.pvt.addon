@@ -545,7 +545,7 @@ export default function App() {
       
       
       <main className={`flex-1 flex flex-col relative ${currentView === 'logs' ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar'}`}>
-        <div className="max-w-full mx-auto w-full p-4 lg:p-4 pt-2 lg:pt-2 flex flex-col flex-1 gap-4">
+        <div className="max-w-full mx-auto w-full p-4 lg:p-10 pt-4 lg:pt-6 pb-20 flex flex-col flex-1 gap-4">
           
           {/* Mobile Header */}
           <header className={`lg:hidden flex flex-col sticky top-0 z-50 p-2`}> 
@@ -738,9 +738,14 @@ export default function App() {
                ) : (
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {subtitles
-                      .filter(s => s.type === mediaFilter && (s.title.toLowerCase().includes(searchQuery.toLowerCase()) || (s.imdbId && s.imdbId.includes(searchQuery))))
+                      .filter(s => {
+                        const title = s?.title?.toLowerCase() || '';
+                        const imdbId = s?.imdbId || '';
+                        const query = searchQuery?.toLowerCase() || '';
+                        return s?.type === mediaFilter && (title.includes(query) || imdbId.includes(query));
+                      })
                       .map((sub, idx) => {
-                        const first = sub.files[0] || {};
+                        const first = sub?.files?.[0] || {};
                         const isSeries = sub.type === 'series';
                         return (
                           <div key={idx} className={`p-6 rounded-[0.8rem] border-2 transition-all hover:scale-[1.02] ${theme === 'dark' ? 'bg-black border-neutral-800 hover:border-indigo-500/50' : 'bg-white border-neutral-100 hover:border-indigo-400'}`}>
@@ -788,7 +793,7 @@ export default function App() {
                      </div>
                      <span className="text-[10px] font-mono opacity-40 ml-4 font-black tracking-widest uppercase">System Flux Monitor.sh — {logs.length} events</span>
                   </div>
-                  <div className="flex-1 overflow-y-auto p-8 font-mono text-[13px] leading-relaxed custom-scrollbar bg-black/20 selection:bg-emerald-500/30">
+                  <div className="flex-1 overflow-y-auto p-4 lg:p-10 pb-20 font-mono text-[11px] lg:text-[13px] leading-relaxed custom-scrollbar bg-black/20 selection:bg-emerald-500/30 w-full overflow-x-hidden">
                      {logs.length > 0 ? (
                        <div className="space-y-3">
                          {logs.map((log, i) => (
