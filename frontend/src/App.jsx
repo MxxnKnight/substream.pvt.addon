@@ -543,10 +543,10 @@ export default function App() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto custom-scrollbar flex flex-col relative">
-        <div className="max-w-full mx-auto w-full p-4 lg:p-4 flex flex-col flex-1 gap-4">
+        <div className="max-w-full mx-auto w-full p-4 lg:p-4 pt-24 lg:pt-24 flex flex-col flex-1 gap-4">
           
           {/* Mobile Header (Floating rounded square) */}
-          <header className={`lg:hidden flex flex-col border-b ${theme === 'dark' ? 'bg-black border-neutral-800' : 'bg-white border-neutral-200'} sticky top-0 z-50`}>
+          <header className={`lg:hidden flex flex-col fixed top-3 left-3 right-3 z-50 rounded-[2rem] border transition-all ${theme === 'dark' ? 'bg-black/90 border-neutral-800' : 'bg-white/95 border-neutral-200'} backdrop-blur-xl shadow-lg`}>
              <div className="flex items-center justify-between p-4 px-6">
                 <div className="flex items-center gap-3"><div className={`${a.main} p-2 rounded-xl`}>
                    <Film className="w-4 h-4 text-white" />
@@ -585,7 +585,7 @@ export default function App() {
           </header>
 
           {/* Persistent Desktop Header */}
-          <header className={`hidden lg:flex items-center justify-between sticky top-0 z-50 py-4 px-8 border-b transition-all ${theme === 'dark' ? 'bg-black border-neutral-800' : 'bg-white border-neutral-200'} backdrop-blur-xl`}>
+          <header className={`hidden lg:flex items-center justify-between fixed top-4 left-4 lg:left-[calc(288px+1.5rem)] right-4 z-50 py-4 px-8 border rounded-full transition-all ${theme === 'dark' ? 'bg-black/80 border-neutral-800' : 'bg-white/80 border-neutral-200'} backdrop-blur-xl shadow-md`}>
              <div className="flex items-center gap-4">
                 <h2 className="text-lg font-black tracking-tight">{currentView === 'upload' ? 'Upload Feed' : currentView === 'list' ? 'SubView Library' : currentView === 'search' ? 'Search & Import' : 'Live Traffic'}</h2>
                 {currentView === 'list' && (
