@@ -321,10 +321,11 @@ const importExternalSubtitle = async (req, res) => {
 
       // Upload to Supabase Storage
       const storagePath = `${imdb_id}/${uuidv4()}_${file.name}`;
+      const mimeType = file.name.toLowerCase().endsWith('.vtt') ? 'text/vtt' : 'text/plain';
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('subtitles')
         .upload(storagePath, file.data, {
-          contentType: 'application/x-subrip',
+          contentType: mimeType,
           upsert: false
         });
 

@@ -574,7 +574,7 @@ export default function App() {
              </div>
           </header>
 
-          <div className="h-10 lg:h-12" /> {/* Reduced spacer for fixed header */}
+          <div className="h-28 lg:h-24" /> {/* Spacer for fixed header */}
 
           {currentView === 'upload' ? (
             <div className="max-w-[1400px] mx-auto w-full animate-in fade-in duration-700">
