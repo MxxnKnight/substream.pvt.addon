@@ -25,7 +25,7 @@ import {
   Moon,
   Menu,
   Palette,
-  ExternalLink
+  ExternalLink, Share2
 } from 'lucide-react';
 
 export default function App() {
@@ -553,7 +553,7 @@ export default function App() {
       
       
       <main className={`flex-1 flex flex-col relative ${currentView === 'logs' ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar'}`}>
-        <div className="max-w-full mx-auto w-full p-4 lg:p-10 pt-4 lg:pt-6 pb-20 flex flex-col flex-1 gap-4">
+        <div className={`max-w-full mx-auto w-full flex flex-col flex-1 ${currentView === 'logs' ? 'p-0 h-full overflow-hidden' : 'p-4 lg:p-6 pb-20 gap-4'}`}>
           
           {/* Mobile Header */}
           <header className={`lg:hidden flex flex-col sticky top-0 z-50 p-2`}> 
@@ -791,8 +791,8 @@ export default function App() {
                )}
             </div>
           ) : currentView === 'logs' ? (
-            <div className="flex-1 w-full animate-in fade-in duration-700 flex flex-col pb-10">
-               <div className={`flex-1 flex flex-col rounded-[0.8rem] border overflow-hidden ${theme === 'dark' ? 'bg-[#0a0a0f] border-neutral-800' : 'bg-black border-neutral-800'}`}>
+            <div className="flex-1 w-full animate-in fade-in duration-700 flex flex-col h-full">
+               <div className={`flex-1 flex flex-col rounded-none lg:rounded-[1rem] border-x-0 lg:border-x border-y shadow-2xl h-full flex flex-col ${theme === 'dark' ? 'bg-[#0a0a0f] border-neutral-800' : 'bg-black border-neutral-800'}`}>
                   <div className="flex items-center gap-2 px-6 py-4 border-b border-neutral-800 bg-black/50">
                      <div className="flex gap-2">
                         <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
