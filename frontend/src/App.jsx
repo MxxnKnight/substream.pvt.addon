@@ -76,16 +76,19 @@ export default function App() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const ThemeDropdown = () => (
+  const ThemeDropdown = ({ isMinimal = false }) => (
     <div className="relative" ref={themeMenuRef}>
-      <button onClick={() => setIsThemeMenuOpen(!isThemeMenuOpen)} className={`flex items-center gap-2 p-1.5 px-3 rounded-full border transition-all ${theme === 'dark' ? 'bg-[#111] border-neutral-800 hover:border-neutral-700 text-white' : 'bg-white border-neutral-300 hover:border-neutral-400 text-neutral-900 shadow-sm'}`}>
+      <button 
+        onClick={() => setIsThemeMenuOpen(!isThemeMenuOpen)} 
+        className={`flex items-center gap-2 ${isMinimal ? 'p-2 rounded-xl' : 'p-1.5 px-3 rounded-full'} border transition-all ${theme === 'dark' ? 'bg-[#111] border-neutral-800 hover:border-neutral-700 text-white' : 'bg-white border-neutral-300 hover:border-neutral-400 text-neutral-900 shadow-sm'}`}
+      >
         <div className={`w-3 h-3 rounded-full ${a.main}`} />
-        <span className="text-[10px] font-black uppercase tracking-widest">{a.label}</span>
-        <Menu className="w-3 h-3 opacity-40 ml-1" />
+        {!isMinimal && <span className="text-[10px] font-black uppercase tracking-widest">{a.label}</span>}
+        <Palette className="w-3.5 h-3.5 opacity-40" />
       </button>
 
       {isThemeMenuOpen && (
-        <div className={`absolute right-0 top-full mt-3 w-56 rounded-3xl border shadow-2xl overflow-hidden z-[100] animate-in fade-in zoom-in duration-200 ${theme === 'dark' ? 'bg-[#0f0f0f] border-neutral-800' : 'bg-white border-neutral-200'} p-2`}>
+        <div className={`absolute ${isMinimal ? 'right-0 top-full' : 'left-0 bottom-full mb-3'} mt-3 w-56 rounded-3xl border shadow-2xl overflow-hidden z-[100] animate-in fade-in zoom-in duration-200 ${theme === 'dark' ? 'bg-[#0f0f0f] border-neutral-800' : 'bg-white border-neutral-200'} p-2`}>
            <div className="px-5 py-3 border-b border-neutral-800/10 mb-2">
              <span className="text-[10px] font-black uppercase opacity-40">Select Theme</span>
            </div>
@@ -676,9 +679,12 @@ export default function App() {
                       </div>
                       <span className="font-black tracking-tighter">SubStream</span>
                    </div>
-                   <button onClick={() => setIsNavOpen(!isNavOpen)} className="p-2 opacity-50 hover:opacity-100 transition-all">
-                      {isNavOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-                   </button>
+                   <div className="flex items-center gap-2">
+                      <ThemeDropdown isMinimal={true} />
+                      <button onClick={() => setIsNavOpen(!isNavOpen)} className="p-2 opacity-50 hover:opacity-100 transition-all">
+                         {isNavOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                      </button>
+                   </div>
                 </div>
                 
                 {currentView === 'list' && !isNavOpen && (
@@ -708,8 +714,7 @@ export default function App() {
                              <item.icon className={`w-4 h-4 ${currentView === item.id ? a.text : ''}`} /><span className="font-bold text-xs">{item.label}</span>
                            </button>
                          ))}
-                         <div className={`pt-4 mt-4 border-t ${theme === 'dark' ? 'border-neutral-800' : 'border-neutral-200'} flex items-center justify-between px-6 pb-2`}>
-                           <ThemeDropdown />
+                         <div className={`pt-4 mt-4 border-t ${theme === 'dark' ? 'border-neutral-800' : 'border-neutral-200'} flex items-center justify-center pb-2`}>
                            <button onClick={handleLogout} className="flex items-center gap-2 opacity-40 text-[10px] uppercase font-black"><LogOut className="w-4 h-4" /> Sign Out</button>
                          </div>
                       </nav>
@@ -732,7 +737,7 @@ export default function App() {
                    )}
                 </div>
                  <div className="flex items-center gap-3">
-                   <ThemeDropdown />
+                   <ThemeDropdown isMinimal={false} />
                  </div>
                    {currentView === 'list' && (
                       <div className="relative">
