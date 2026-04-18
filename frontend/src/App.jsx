@@ -55,14 +55,59 @@ export default function App() {
   }, [accent]);
 
   const ACCENTS = {
-    gold: { main: 'bg-amber-500', hover: 'hover:bg-amber-400', text: 'text-amber-500', border: 'border-amber-500', shadow: '', ring: '' },
-    crimson: { main: 'bg-rose-700', hover: 'hover:bg-rose-600', text: 'text-rose-700', border: 'border-rose-700', shadow: '', ring: '' },
-    royal: { main: 'bg-blue-600', hover: 'hover:bg-blue-500', text: 'text-blue-600', border: 'border-blue-600', shadow: '', ring: '' },
-    violet: { main: 'bg-violet-600', hover: 'hover:bg-violet-500', text: 'text-violet-600', border: 'border-violet-600', shadow: '', ring: '' },
-    sky: { main: 'bg-sky-600', hover: 'hover:bg-sky-500', text: 'text-sky-600', border: 'border-sky-600', shadow: '', ring: '' },
+    mint: { label: 'Ocean Mint', main: 'bg-emerald-500', hover: 'hover:bg-emerald-400', text: 'text-emerald-500', border: 'border-emerald-500', ring: 'ring-emerald-500' },
+    rose: { label: 'Rose Pink', main: 'bg-rose-500', hover: 'hover:bg-rose-400', text: 'text-rose-500', border: 'border-rose-500', ring: 'ring-rose-500' },
+    lavender: { label: 'Lavender', main: 'bg-violet-500', hover: 'hover:bg-violet-400', text: 'text-violet-500', border: 'border-violet-500', ring: 'ring-violet-500' },
+    peach: { label: 'Peach', main: 'bg-orange-500', hover: 'hover:bg-orange-400', text: 'text-orange-500', border: 'border-orange-500', ring: 'ring-orange-500' },
+    sky: { label: 'Sky Blue', main: 'bg-sky-500', hover: 'hover:bg-sky-400', text: 'text-sky-500', border: 'border-sky-500', ring: 'ring-sky-500' },
   };
 
-  const a = ACCENTS[accent] || ACCENTS.gold;
+  const a = ACCENTS[accent] || ACCENTS.mint;
+  const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
+  const themeMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+        if (themeMenuRef.current && !themeMenuRef.current.contains(event.target)) {
+            setIsThemeMenuOpen(false);
+        }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const ThemeDropdown = () => (
+    <div className="relative" ref={themeMenuRef}>
+      <button onClick={() => setIsThemeMenuOpen(!isThemeMenuOpen)} className={`flex items-center gap-2 p-1.5 px-3 rounded-full border transition-all ${theme === 'dark' ? 'bg-[#111] border-neutral-800 hover:border-neutral-700 text-white' : 'bg-white border-neutral-300 hover:border-neutral-400 text-neutral-900 shadow-sm'}`}>
+        <div className={`w-3 h-3 rounded-full ${a.main}`} />
+        <span className="text-[10px] font-black uppercase tracking-widest">{a.label}</span>
+        <Menu className="w-3 h-3 opacity-40 ml-1" />
+      </button>
+
+      {isThemeMenuOpen && (
+        <div className={`absolute right-0 top-full mt-3 w-56 rounded-3xl border shadow-2xl overflow-hidden z-[100] animate-in fade-in zoom-in duration-200 ${theme === 'dark' ? 'bg-[#0f0f0f] border-neutral-800' : 'bg-white border-neutral-200'} p-2`}>
+           <div className="px-5 py-3 border-b border-neutral-800/10 mb-2">
+             <span className="text-[10px] font-black uppercase opacity-40">Select Theme</span>
+           </div>
+           {Object.keys(ACCENTS).map(c => (
+              <button key={c} onClick={() => { setAccent(c); setIsThemeMenuOpen(false); }} className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all ${accent === c ? (theme === 'dark' ? 'bg-neutral-800/50' : 'bg-neutral-100') : 'hover:bg-white/5'}`}>
+                 <div className="flex items-center gap-3">
+                   <div className={`w-4 h-4 rounded-full ${ACCENTS[c].main}`} />
+                   <span className={`text-[11px] font-bold ${accent === c ? 'opacity-100' : 'opacity-60'}`}>{ACCENTS[c].label}</span>
+                 </div>
+                 {accent === c && <Check className="w-3 h-3 text-emerald-500" />}
+              </button>
+           ))}
+           <div className={`mt-2 pt-2 border-t ${theme === 'dark' ? 'border-neutral-800' : 'border-neutral-100'}`}>
+              <button onClick={() => { setTheme(theme === 'dark' ? 'light' : 'dark'); setIsThemeMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-neutral-800/10 transition-all opacity-80 hover:opacity-100">
+                {theme === 'dark' ? <Sun className="w-4 h-4 text-orange-400" /> : <Moon className="w-4 h-4 text-indigo-500" />}
+                <span className="text-[11px] font-bold">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+              </button>
+           </div>
+        </div>
+      )}
+    </div>
+  );
 
 
   // Login Form State
@@ -553,8 +598,7 @@ export default function App() {
               ))}
             </nav>
             <div className="mt-10 pt-10 border-t border-neutral-500/10 space-y-6">
-               <div className="flex items-center justify-between px-2"><span className="text-[10px] font-black uppercase opacity-40">Appearance</span><button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className={`p-2 rounded-xl ${theme === 'dark' ? 'bg-neutral-800' : 'bg-neutral-100'}`}>{theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}</button></div>
-               <div className="px-2 pb-10"><div className="flex flex-wrap gap-2">{Object.keys(ACCENTS).map(c => <button key={c} onClick={() => setAccent(c)} className={`w-6 h-6 rounded-full ${ACCENTS[c].main} transition-all ${accent === c ? 'ring-2 ring-offset-2 ring-indigo-500 scale-110' : 'opacity-30'}`} />)}</div></div>
+                <div className="px-2"><ThemeDropdown /></div>
             </div>
           </div>
           <div className="mt-auto p-6 flex flex-col gap-3"><button onClick={handleLogout} className="flex items-center justify-center gap-2 opacity-30 hover:opacity-100 transition-all text-[10px] uppercase font-black tracking-widest py-4"><LogOut className="w-4 h-4" /> Sign Out</button></div>
@@ -610,9 +654,7 @@ export default function App() {
                            </button>
                          ))}
                          <div className={`pt-4 mt-4 border-t ${theme === 'dark' ? 'border-neutral-800' : 'border-neutral-200'} flex items-center justify-between px-6 pb-2`}>
-                           <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className={`p-2 rounded-xl ${theme === 'dark' ? 'bg-neutral-800' : 'bg-neutral-200'}`}>
-                              {theme === 'dark' ? <Sun className="w-3.5 h-3.5 text-amber-500" /> : <Moon className="w-3.5 h-3.5 text-indigo-600" />}
-                           </button>
+                           <ThemeDropdown />
                            <button onClick={handleLogout} className="flex items-center gap-2 opacity-40 text-[10px] uppercase font-black"><LogOut className="w-4 h-4" /> Sign Out</button>
                          </div>
                       </nav>
@@ -634,18 +676,9 @@ export default function App() {
                      </div>
                    )}
                 </div>
-                <div className="flex items-center gap-3">
-                   <div className={`flex items-center gap-2 p-1.5 rounded-xl border ${theme === 'dark' ? 'bg-black border-neutral-800' : 'bg-neutral-50 border-neutral-200'}`}>
-                      <div className="flex gap-1.5 px-1">
-                         {Object.keys(ACCENTS).map(c => (
-                            <button key={c} onClick={() => setAccent(c)} className={`w-4 h-4 rounded-full ${ACCENTS[c].main} transition-all ${accent === c ? 'ring-2 ring-offset-2 ring-white scale-110' : 'opacity-20 hover:opacity-100'}`} />
-                         ))}
-                      </div>
-                      <div className="w-px h-4 bg-neutral-800/50 mx-1" />
-                      <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className={`p-1 px-2 rounded-lg transition-all ${theme === 'dark' ? 'hover:bg-neutral-800' : 'hover:bg-neutral-200'}`}>
-                         {theme === 'dark' ? <Sun className="w-3.5 h-3.5 text-amber-500" /> : <Moon className="w-3.5 h-3.5 text-indigo-600" />}
-                      </button>
-                   </div>
+                 <div className="flex items-center gap-3">
+                   <ThemeDropdown />
+                 </div>
                    {currentView === 'list' && (
                       <div className="relative">
                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 opacity-30" />
@@ -768,7 +801,7 @@ export default function App() {
                         const first = sub?.files?.[0] || {};
                         const isSeries = sub.type === 'series';
                         return (
-                          <div key={idx} className={`group flex flex-col rounded-3xl border ${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800 hover:border-neutral-700' : 'bg-white border-neutral-200 hover:border-neutral-300'} overflow-hidden transition-colors`}>
+                          <div key={idx} className={`group flex flex-col rounded-3xl border ${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800 hover:border-neutral-700' : 'bg-white border-neutral-300 hover:border-neutral-400'} overflow-hidden transition-colors shadow-sm`}>
                             {/* Card Header/Info */}
                             <div className="p-5 flex gap-5">
                               <div className="shrink-0 relative">
@@ -779,10 +812,15 @@ export default function App() {
                                     <Film className="w-10 h-10" />
                                   </div>
                                 )}
-                                <div className="absolute -top-2 -left-2">
+                                <div className="absolute -top-2 -left-2 flex flex-col gap-1">
                                   <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-lg ${isSeries ? 'bg-indigo-600' : 'bg-amber-500'} text-white shadow-xl`}>
                                     {first.type}
                                   </span>
+                                  {isSeries && (
+                                    <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-lg bg-white text-black shadow-xl border border-neutral-200">
+                                      S{String(first.season).padStart(2, '0')}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                               
@@ -813,9 +851,9 @@ export default function App() {
                             </div>
 
                             {/* Subtitles List */}
-                            <div className={`mt-auto border-t ${theme === 'dark' ? 'border-neutral-800 bg-black/40' : 'bg-neutral-50/50 border-neutral-100'} p-3 space-y-2`}>
+                            <div className={`mt-auto border-t ${theme === 'dark' ? 'border-neutral-800 bg-black/40' : 'bg-neutral-100 border-neutral-200'} p-3 space-y-2`}>
                               {sub?.files?.map((file, fIdx) => (
-                                <div key={fIdx} className={`group/item flex items-center justify-between gap-3 p-3 rounded-xl border ${theme === 'dark' ? 'bg-[#0e0e0e] border-neutral-800' : 'bg-white border-neutral-200'} transition-all`}>
+                                <div key={fIdx} className={`group/item flex items-center justify-between gap-3 p-3 rounded-xl border ${theme === 'dark' ? 'bg-[#0e0e0e] border-neutral-800' : 'bg-white border-neutral-300'} transition-all`}>
                                   <div className="min-w-0 flex-1">
                                     <p className="text-[11px] font-bold truncate opacity-90 leading-none mb-1.5">
                                       {file.filename.split('-').slice(1).join('-') || file.filename}
@@ -828,7 +866,7 @@ export default function App() {
                                   </div>
                                   <button 
                                     onClick={() => handleDelete(file.id)}
-                                    className="p-1.5 rounded-lg opacity-0 lg:group-hover/item:opacity-100 hover:bg-red-500/10 hover:text-red-500 transition-all text-neutral-500"
+                                    className="p-1.5 rounded-lg opacity-100 lg:opacity-0 lg:group-hover/item:opacity-100 hover:bg-red-500/10 hover:text-red-500 transition-all text-neutral-500"
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </button>
