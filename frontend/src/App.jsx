@@ -687,8 +687,7 @@ export default function App() {
                    )}
                    {currentView === 'list' && <button onClick={fetchSubtitles} disabled={isRefreshing} className={`p-2 rounded-lg opacity-40 hover:opacity-100 transition-all ${isRefreshing ? 'animate-spin' : ''}`}><RefreshCw className="w-3.5 h-3.5" /></button>}
                 </div>
-             </div>
-          </header>
+           </header>
 
           {/* PAGE CONTENT BLOCKS */}
           {currentView === 'upload' ? (
