@@ -76,7 +76,7 @@ export default function App() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const ThemeDropdown = ({ isMinimal = false }) => (
+  const ThemeDropdown = ({ isMinimal = false, direction = 'up', align = 'left' }) => (
     <div className="relative" ref={themeMenuRef}>
       <button 
         onClick={() => setIsThemeMenuOpen(!isThemeMenuOpen)} 
@@ -88,7 +88,7 @@ export default function App() {
       </button>
 
       {isThemeMenuOpen && (
-        <div className={`absolute ${isMinimal ? 'right-0 top-full' : 'left-0 bottom-full mb-3'} mt-3 w-56 rounded-3xl border shadow-2xl overflow-hidden z-[100] animate-in fade-in zoom-in duration-200 ${theme === 'dark' ? 'bg-[#0f0f0f] border-neutral-800' : 'bg-white border-neutral-200'} p-2`}>
+        <div className={`absolute ${direction === 'up' ? 'bottom-full mb-3' : 'top-full mt-3'} ${align === 'right' ? 'right-0' : 'left-0'} w-56 rounded-3xl border shadow-2xl overflow-hidden z-[100] animate-in fade-in zoom-in duration-200 ${theme === 'dark' ? 'bg-[#0f0f0f] border-neutral-800' : 'bg-white border-neutral-200'} p-2`}>
            <div className="px-5 py-3 border-b border-neutral-800/10 mb-2">
              <span className="text-[10px] font-black uppercase opacity-40">Select Theme</span>
            </div>
@@ -674,7 +674,7 @@ export default function App() {
                       <span className="font-black tracking-tighter">SubStream</span>
                    </div>
                    <div className="flex items-center gap-2">
-                      <ThemeDropdown isMinimal={true} />
+                      <ThemeDropdown isMinimal={true} direction="down" align="right" />
                       <button onClick={() => setIsNavOpen(!isNavOpen)} className="p-2 opacity-50 hover:opacity-100 transition-all">
                          {isNavOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                       </button>
@@ -731,7 +731,7 @@ export default function App() {
                    )}
                 </div>
                  <div className="flex items-center gap-3">
-                   <ThemeDropdown isMinimal={false} />
+                   <ThemeDropdown isMinimal={false} direction="down" align="right" />
                  </div>
                    {currentView === 'list' && (
                       <div className="relative">
