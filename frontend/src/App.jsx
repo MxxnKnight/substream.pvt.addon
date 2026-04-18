@@ -145,6 +145,9 @@ export default function App() {
   // Refs for file inputs
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
+  const scrollRef = useRef(null);
+  const stagedScrollRef = useRef(null);
+  const themeRef = useRef(null);
 
   // Metadata for current upload
   const [currentMetadata, setCurrentMetadata] = useState(null);
@@ -211,19 +214,23 @@ export default function App() {
       const res = await apiFetch('/api/admin/subtitles');
       if (res.ok) {
         const data = await res.json();
-        // Group by IMDb ID
+        // Group by IMDb ID and Season
         const groups = {};
         data.forEach(sub => {
-          const id = sub.imdb_id;
-          if (!groups[id]) {
-            groups[id] = {
-              imdbId: id,
+          const isSeries = sub.type === 'series';
+          const groupKey = isSeries ? `${sub.imdb_id}-S${sub.season || 1}` : sub.imdb_id;
+          
+          if (!groups[groupKey]) {
+            groups[groupKey] = {
+              imdbId: sub.imdb_id,
+              groupKey: groupKey,
               title: sub.metadata?.title || 'Unknown Title',
               type: sub.type,
+              season: sub.season,
               files: []
             };
           }
-          groups[id].files.push({
+          groups[groupKey].files.push({
             id: sub.id,
             filename: decodeURIComponent(sub.file_path.split('/').pop()).replace(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_/, ''),
             season: sub.season,
@@ -384,7 +391,7 @@ export default function App() {
           const data = await zipEntry.async('blob');
           const cleanName = relativePath.split('/').pop();
           const fileObj = new File([data], cleanName, { type: 'text/plain' });
-          extractedFiles.push({ file: fileObj, name: cleanName, size: data.size, isFromZip: true, isEditing: false, originalZip: file.name });
+          extractedFiles.push({ file: fileObj, name: cleanName, size: data.size, isFromZip: true, isEditing: false, tempName: cleanName, originalZip: file.name });
         }
       }
       setStagedFiles(prev => [...prev, ...extractedFiles]);
@@ -437,16 +444,49 @@ export default function App() {
     else if (!extracted) setCurrentMetadata(null);
   };
 
-  const processFiles = useCallback((files) => {
-    if (files.length === 0) return;
+  const processFiles = useCallback(async (items) => {
     setUploadSuccess(false);
-    files.forEach(file => {
-      const isZip = file.name.toLowerCase().endsWith('.zip') || file.type === 'application/zip';
-      if (isZip) handleZipFile(file);
-      else if (/\.(srt|vtt|sub|ass)$/i.test(file.name)) {
-        setStagedFiles(prev => [...prev, { file: file, name: file.name, size: file.size, isFromZip: false, isEditing: false }]);
+    
+    // items can be FileList or DataTransferItemList
+    const entries = Array.from(items);
+    
+    const handleEntry = async (entry) => {
+      if (entry.isFile) {
+        const file = await new Promise(resolve => entry.file(resolve));
+        if (/\.(srt|vtt|sub|ass)$/i.test(file.name)) {
+          setStagedFiles(prev => [...prev, { file: file, name: file.name, size: file.size, isFromZip: false, isEditing: false, tempName: file.name }]);
+        } else if (file.name.toLowerCase().endsWith('.zip')) {
+          handleZipFile(file);
+        }
+      } else if (entry.isDirectory) {
+        const reader = entry.createReader();
+        const readEntries = () => {
+          reader.readEntries(async (subEntries) => {
+            if (subEntries.length > 0) {
+              for (const sub of subEntries) await handleEntry(sub);
+              readEntries();
+            }
+          });
+        };
+        readEntries();
+      } else if (entry instanceof File) {
+         // Fallback for standard selection
+         if (entry.name.toLowerCase().endsWith('.zip')) {
+           handleZipFile(entry);
+         } else if (/\.(srt|vtt|sub|ass)$/i.test(entry.name)) {
+           setStagedFiles(prev => [...prev, { file: entry, name: entry.name, size: entry.size, isFromZip: false, isEditing: false, tempName: entry.name }]);
+         }
       }
-    });
+    };
+
+    for (const item of entries) {
+      if (item.webkitGetAsEntry) {
+        const entry = item.webkitGetAsEntry();
+        if (entry) await handleEntry(entry);
+      } else {
+        await handleEntry(item);
+      }
+    }
   }, []);
 
   const handleFileSelection = (e) => {
@@ -457,31 +497,46 @@ export default function App() {
   const handleDragOver = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isExtracting) return;
-    processFiles(Array.from(e.dataTransfer.files || []));
+    setIsDragging(false);
+    if (e.dataTransfer.items) processFiles(e.dataTransfer.items);
+    else processFiles(e.dataTransfer.files);
   };
 
-  const toggleEditFile = (index) => {
-    const newFiles = [...stagedFiles];
-    newFiles[index].isEditing = !newFiles[index].isEditing;
-    if (newFiles[index].isEditing) newFiles[index].tempName = newFiles[index].name;
-    setStagedFiles(newFiles);
+  const removeStagedFile = (idx) => {
+    setStagedFiles(prev => prev.filter((_, i) => i !== idx));
   };
 
-  const saveFileName = (index) => {
-    const newFiles = [...stagedFiles];
-    if (newFiles[index].tempName !== newFiles[index].name) {
-       const oldFile = newFiles[index].file;
-       newFiles[index].file = new File([oldFile], newFiles[index].tempName, { type: oldFile.type });
-       newFiles[index].name = newFiles[index].tempName;
-    }
-    newFiles[index].isEditing = false;
-    setStagedFiles(newFiles);
+  const startEditing = (idx) => {
+    setStagedFiles(prev => prev.map((f, i) => i === idx ? { ...f, isEditing: true, tempName: f.name } : f));
+  };
+
+  const saveEdit = (idx) => {
+    setStagedFiles(prev => prev.map((f, i) => {
+      if (i !== idx) return f;
+      let newName = f.tempName.trim();
+      if (!newName.match(/\.(srt|vtt|sub|ass)$/i)) newName += '.srt';
+      return { ...f, isEditing: false, name: newName };
+    }));
+  };
+
+  const cancelEdit = (idx) => {
+    setStagedFiles(prev => prev.map((f, i) => i === idx ? { ...f, isEditing: false } : f));
+  };
+
+  const handleNameChange = (idx, val) => {
+    setStagedFiles(prev => prev.map((f, i) => i === idx ? { ...f, tempName: val } : f));
   };
 
   const updateTempName = (index, value) => {
@@ -528,15 +583,15 @@ export default function App() {
     setIsUploading(true);
     let successCount = 0;
     for (const staged of stagedFiles) {
-        const formData = new FormData();
-        formData.append('file', staged.file);
-        formData.append('imdb_id', uploadForm.imdbId);
-        formData.append('type', uploadForm.type);
-        formData.append('language', uploadForm.language);
-        try {
-            const res = await apiFetch('/api/admin/upload', { method: 'POST', body: formData });
-            if (res.ok) successCount++;
-        } catch (err) { console.error(err); }
+      const formData = new FormData();
+      formData.append('file', staged.file, staged.name);
+      formData.append('imdb_id', uploadForm.imdbId);
+      formData.append('type', uploadForm.type);
+      formData.append('language', uploadForm.language);
+      try {
+        const res = await apiFetch('/api/admin/upload', { method: 'POST', body: formData });
+        if (res.ok) successCount++;
+      } catch (err) { console.error(err); }
     }
     setIsUploading(false);
     if (successCount > 0) {
@@ -707,8 +762,53 @@ export default function App() {
                     <div className="space-y-3"><label className="text-[10px] font-black uppercase opacity-40 px-2">IMDB Identity</label><div className="relative"><input type="text" value={uploadForm.imdbId} onChange={handleImdbChange} placeholder="tt1234567" className={`w-full py-3.5 px-4 rounded-xl border-2 outline-none font-mono text-xs ${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800' : 'bg-neutral-50 border-transparent focus:bg-white'}`} />{isMetadataLoading && <RefreshCw className={`absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 ${a.text} animate-spin`} />}</div></div>
                   </div>
                   {currentMetadata && <div className={`flex gap-6 p-4 rounded-[0.8rem] border-2 animate-in slide-in-from-left-4 ${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800' : 'bg-neutral-50 border-neutral-100'}`}>{currentMetadata.poster_path ? <img src={currentMetadata.poster_path} alt="Poster" className="w-16 h-24 object-cover rounded-xl" /> : <div className="w-16 h-24 bg-black rounded-xl" />}<div className="flex flex-col justify-center min-w-0"><h4 className="font-black text-lg truncate">{currentMetadata.title}</h4><p className="text-[10px] opacity-40 line-clamp-2">{currentMetadata.overview}</p></div></div>}
-                  <div onDragOver={(e)=>e.preventDefault()} onDrop={handleDrop} className={`min-h-[160px] border-4 border-dashed rounded-[1rem] flex flex-col items-center justify-center p-8 transition-all cursor-pointer ${theme === 'dark' ? 'border-neutral-800 bg-[#0a0a0a]/20 hover:border-indigo-500/50' : 'border-neutral-100 bg-neutral-50 hover:border-indigo-400'}`} onClick={()=>fileInputRef.current.click()}><input ref={fileInputRef} type="file" multiple hidden onChange={handleFileSelection} /><Archive className="w-8 h-8 opacity-20 mb-4" /><p className="text-[10px] font-black uppercase tracking-widest opacity-40">Drop packs or click to select</p></div>
-                  {stagedFiles.length > 0 && <div className={`rounded-2xl border divide-y overflow-hidden ${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800 divide-neutral-800' : 'bg-neutral-50 border-neutral-100 divide-neutral-100'}`}>{stagedFiles.map((f, i) => <div key={i} className="flex items-center justify-between p-3.5 hover:bg-white/5 transition-colors"><div className="flex items-center gap-3 min-w-0"><div className="p-2 rounded-lg bg-black"><FileText className="w-3 h-3 opacity-40" /></div><span className="text-xs font-bold truncate opacity-80">{f.name}</span></div><button type="button" onClick={()=>removeStagedFile(i)} className="p-2 hover:text-red-500 transition-colors"><X className="w-4 h-4" /></button></div>)}</div>}
+                  <div onDragOver={(e)=>e.preventDefault()} onDrop={handleDrop} className={`min-h-[160px] border-4 border-dashed rounded-[1rem] flex flex-col items-center justify-center p-8 transition-all cursor-pointer ${theme === 'dark' ? 'border-neutral-800 bg-[#0a0a0a]/20 hover:border-indigo-500/50' : 'border-neutral-100 bg-neutral-50 hover:border-indigo-400'}`} onClick={()=>fileInputRef.current.click()}>
+                    <input ref={fileInputRef} type="file" multiple hidden onChange={handleFileSelection} />
+                    <input ref={folderInputRef} type="file" webkitdirectory="true" hidden onChange={handleFileSelection} />
+                    <div className="flex gap-4 mb-4">
+                       <div className="p-4 rounded-3xl bg-indigo-500/10"><Archive className="w-8 h-8 text-indigo-500" /></div>
+                       <div className="p-4 rounded-3xl bg-emerald-500/10" onClick={(e) => { e.stopPropagation(); folderInputRef.current.click(); }}><FolderInput className="w-8 h-8 text-emerald-500" /></div>
+                    </div>
+                    <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Drop packs, folders or click to select</p>
+                  </div>
+                  {stagedFiles.length > 0 && (
+                    <div className={`rounded-2xl border divide-y overflow-hidden ${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800 divide-neutral-800' : 'bg-neutral-50 border-neutral-100 divide-neutral-100'}`}>
+                      {stagedFiles.map((f, i) => (
+                        <div key={i} className="flex items-center justify-between p-3.5 hover:bg-white/5 transition-colors gap-4">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div className="p-2 rounded-lg bg-black"><FileText className="w-3 h-3 opacity-40" /></div>
+                            {f.isEditing ? (
+                              <input 
+                                autoFocus
+                                value={f.tempName} 
+                                onChange={(e) => handleNameChange(i, e.target.value)}
+                                className={`flex-1 bg-transparent border-b border-indigo-500 outline-none text-xs font-bold py-1`}
+                                onKeyDown={(e) => { if(e.key === 'Enter') saveEdit(i); if(e.key === 'Escape') cancelEdit(i); }}
+                              />
+                            ) : (
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-xs font-bold truncate opacity-80">{f.name}</span>
+                                {f.isFromZip && <span className="text-[8px] opacity-30 uppercase font-black tracking-tighter">From {f.originalZip}</span>}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {f.isEditing ? (
+                              <>
+                                <button type="button" onClick={() => saveEdit(i)} className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-all"><Check className="w-4 h-4" /></button>
+                                <button type="button" onClick={() => cancelEdit(i)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-all"><X className="w-4 h-4" /></button>
+                              </>
+                            ) : (
+                              <>
+                                <button type="button" onClick={() => startEditing(i)} className="p-2 opacity-30 hover:opacity-100 hover:text-indigo-500 transition-all"><Edit2 className="w-4 h-4" /></button>
+                                <button type="button" onClick={() => removeStagedFile(i)} className="p-2 opacity-30 hover:opacity-100 hover:text-red-500 transition-all"><X className="w-4 h-4" /></button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <button type="button" onClick={handleUploadSubmit} disabled={!uploadForm.imdbId || stagedFiles.length === 0 || isUploading} className={`w-full py-5 rounded-2xl font-black text-white transition-all ${!uploadForm.imdbId || stagedFiles.length === 0 || isUploading ? 'opacity-20 cursor-not-allowed' : `${a.main} ${a.hover} active:scale-95`}`}>{isUploading ? 'Synchronizing Cluster...' : `Commit ${stagedFiles.length} Subtitles`}</button>
                   {uploadSuccess && <div className="p-4 rounded-xl bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase text-center border border-emerald-500/20">Protocol Complete. Cluster Updated.</div>}
                 </form>
@@ -825,7 +925,9 @@ export default function App() {
                               
                               <div className="flex-1 min-w-0 flex flex-col">
                                 <div className="flex justify-between items-start gap-2">
-                                  <h3 className="font-black text-xl leading-tight truncate text-balance">{sub.title}</h3>
+                                  <h3 className="font-black text-xl leading-tight truncate text-balance">
+                                    {sub.title} {sub.season ? `Season ${sub.season}` : ''}
+                                  </h3>
                                   <button 
                                     onClick={() => handleDeleteSeason(sub.imdbId, null, sub.files)}
                                     className="p-2 -mt-1 -mr-1 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-500 transition-all text-neutral-600"

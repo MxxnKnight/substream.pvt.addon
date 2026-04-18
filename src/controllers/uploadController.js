@@ -35,20 +35,18 @@ const uploadSubtitle = async (req, res) => {
           season = parsed.season;
           episode = parsed.episode;
         } else {
-          console.warn(`Could not parse season/episode from: ${originalName} (type: ${type})`);
-          return null;
+          console.warn(`Could not parse season/episode from: ${originalName} (type: ${type}) - defaulting to S1E1`);
+          season = 1;
+          episode = 1;
         }
       }
 
-      // Generate target filename
-      let newFilename;
+      // Preserve original name but sanitize
+      // Keep original name so user can see it in library as they edited in UI
       const fileExt = path.extname(originalName).toLowerCase();
-      if (type === 'movie') {
-        // Sanitize filename — keep it readable, no timestamp prefix
-        newFilename = originalName.replace(/[^a-z0-9._-]/gi, '_');
-      } else {
-        newFilename = `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}${fileExt}`;
-      }
+      const baseName = path.basename(originalName, fileExt);
+      const sanitizedBase = baseName.replace(/[^a-z0-9._-]/gi, '_');
+      const newFilename = `${sanitizedBase}${fileExt}`;
 
       const storagePath = `${imdb_id}/${newFilename}`;
       console.log(`Saving subtitle to Supabase Storage: ${storagePath}`);

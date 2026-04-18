@@ -247,48 +247,50 @@ const getMetadataFromPage = async (pageUrl) => {
     console.log(`[Scraper] Inspecting page: ${pageUrl}`);
     const response = await fetch(pageUrl, { headers });
     const html = await response.text();
-    console.log(`[Scraper] Page HTML length: ${html.length}`);
-
     const $ = cheerio.load(html);
     
-    // Look for IMDb ID in any links first
     let imdbId = null;
 
-    $('a').each((i, el) => {
-      const href = $(el).attr('href') || '';
-      const match = href.match(/tt\d{7,}/);
-      if (match) {
-        imdbId = match[0];
-        return false; // break each
-      }
-    });
+    // 1. Look for ID in specifically likely containers (Info sections, lists)
+    const prioritySelectors = [
+      '.elementor-widget-container', 
+      '.movie-info', 
+      '.series-info',
+      'a[href*="imdb.com/title/tt"]'
+    ];
 
-    // Fallback: Check text content of buttons or specific classes
-    if (!imdbId) {
-      const selectors = ['.imdb-link', '.imdb-id', 'button:contains("IMDb")', 'a:contains("IMDb")'];
-      for (const sel of selectors) {
-        const text = $(sel).text() + ($(sel).attr('href') || '');
+    for (const sel of prioritySelectors) {
+      if (imdbId) break;
+      $(sel).each((i, el) => {
+        const text = $(el).text() + ($(el).attr('href') || '');
         const match = text.match(/tt\d{7,}/);
         if (match) {
           imdbId = match[0];
-          break;
+          return false;
         }
-      }
+      });
     }
 
-    // Ultimate Fallback: Global regex search in the entire HTML
+    // 2. Global search fallback
     if (!imdbId) {
       const globalMatch = html.match(/tt\d{7,}/);
-      if (globalMatch) {
-         imdbId = globalMatch[0];
-         console.log(`[Scraper] Found ID via global regex: ${imdbId}`);
-      }
+      if (globalMatch) imdbId = globalMatch[0];
     }
     
-    // Also check if it mentions Movie or Series/Season/TV
+    // 3. Type detection - look for specific markers
     const bodyText = $('body').text().toLowerCase();
+    const headText = $('title').text().toLowerCase();
+    const combinedText = bodyText + ' ' + headText;
+    
     let type = 'movie';
-    if (bodyText.includes('series') || bodyText.includes('season') || bodyText.includes('episode') || bodyText.includes('പരമ്പര')) {
+    // More precise series markers
+    const seriesMarkers = [
+       'tv series', 'tv-series', 'web series', 'web-series', 
+       'season 0', 'season 1', 'season 2', 'season 3', 'episode',
+       'പരമ്പര', 'സീസൺ'
+    ];
+    
+    if (seriesMarkers.some(m => combinedText.includes(m))) {
       type = 'series';
     }
 
