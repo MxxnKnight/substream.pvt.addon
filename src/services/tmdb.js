@@ -36,4 +36,47 @@ const getMetadata = async (imdbId) => {
   }
 };
 
-module.exports = { getMetadata };
+const searchByTitle = async (title) => {
+  if (!TMDB_API_KEY || !title) return null;
+  try {
+    let cleanTitle = typeof title === 'string' ? title : '';
+    // Strip common extensions and episode codes
+    cleanTitle = cleanTitle.replace(/\.(srt|vtt|zip|rar)$/gi, ' ');
+    cleanTitle = cleanTitle.replace(/[sS]\d{1,2}[eE]\d{1,2}|[sS]\d{1,2}/g, ' ');
+    // Strip common release tags and language marks
+    cleanTitle = cleanTitle.replace(/[._-]/g, ' ').replace(/1080p|720p|480p|WEBRip|HDRip|x264|BluRay|Malayalam|Subtitle/gi, ' ');
+    // Remove bracketed info [MSone], (2023) etc.
+    cleanTitle = cleanTitle.replace(/\[.*?\]|\(.*?\)/g, ' ').trim();
+    // Collapse spaces
+    cleanTitle = cleanTitle.replace(/\s+/g, ' ').trim();
+    
+    if (!cleanTitle) return null;
+    console.log(`[TMDB] Searching by cleaned title: ${cleanTitle}`);
+    
+    const searchRes = await fetch(`${TMDB_URL}/search/multi?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(cleanTitle)}`);
+    if (!searchRes.ok) return null;
+    
+    const data = await searchRes.json();
+    const result = data.results?.[0];
+    if (result && (result.media_type === 'movie' || result.media_type === 'tv')) {
+      const type = result.media_type === 'tv' ? 'tv' : 'movie';
+      const idRes = await fetch(`${TMDB_URL}/${type}/${result.id}/external_ids?api_key=${TMDB_API_KEY}`);
+      if (idRes.ok) {
+         const idData = await idRes.json();
+         if (idData.imdb_id) {
+            return {
+               imdbId: idData.imdb_id,
+               type: type === 'tv' ? 'series' : 'movie',
+               title: result.title || result.name
+            };
+         }
+      }
+    }
+    return null;
+  } catch (err) {
+    console.error('[TMDB] Search by title error:', err);
+    return null;
+  }
+};
+
+module.exports = { getMetadata, searchByTitle };

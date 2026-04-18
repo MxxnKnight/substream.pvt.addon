@@ -442,9 +442,24 @@ export default function App() {
   const handleImdbChange = (e) => {
     const rawValue = e.target.value;
     const extracted = extractImdbId(rawValue);
-    setUploadForm({ ...uploadForm, imdbId: extracted });
+    setUploadForm(prev => ({ ...prev, imdbId: extracted }));
     if (extracted && extracted !== uploadForm.imdbId) fetchCurrentMetadata(extracted);
     else if (!extracted) setCurrentMetadata(null);
+  };
+
+  const attemptAutofillMetadata = async (fileName) => {
+    try {
+      const res = await apiFetch(`/api/admin/tmdb/search?query=${encodeURIComponent(fileName)}`);
+      if (res.ok) {
+          const data = await res.json();
+          if (data.imdbId) {
+             setUploadForm(prev => ({ ...prev, imdbId: data.imdbId, type: data.type || 'movie' }));
+             fetchCurrentMetadata(data.imdbId);
+          }
+      }
+    } catch (err) {
+      console.error("Autofill failed", err);
+    }
   };
 
   const processFiles = useCallback(async (items) => {
@@ -452,10 +467,12 @@ export default function App() {
     
     // items can be FileList or DataTransferItemList
     const entries = Array.from(items);
+    let firstFileName = null;
     
     const handleEntry = async (entry) => {
       if (entry.isFile) {
         const file = await new Promise(resolve => entry.file(resolve));
+        if (!firstFileName) firstFileName = file.name;
         if (/\.(srt|vtt|sub|ass)$/i.test(file.name)) {
           setStagedFiles(prev => [...prev, { file: file, name: file.name, size: file.size, isFromZip: false, isEditing: false, tempName: file.name }]);
         } else if (file.name.toLowerCase().endsWith('.zip')) {
@@ -474,6 +491,7 @@ export default function App() {
         readEntries();
       } else if (entry instanceof File) {
          // Fallback for standard selection
+         if (!firstFileName) firstFileName = entry.name;
          if (entry.name.toLowerCase().endsWith('.zip')) {
            handleZipFile(entry);
          } else if (/\.(srt|vtt|sub|ass)$/i.test(entry.name)) {
@@ -490,6 +508,14 @@ export default function App() {
         await handleEntry(item);
       }
     }
+    
+    // Trigger autofill if we are holding an empty form
+    setUploadForm(prev => {
+        if (!prev.imdbId && firstFileName) {
+            attemptAutofillMetadata(firstFileName);
+        }
+        return prev;
+    });
   }, []);
 
   const handleFileSelection = (e) => {

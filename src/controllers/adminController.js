@@ -1,5 +1,5 @@
 const { supabase } = require('../services/db');
-const { getMetadata } = require('../services/tmdb');
+const { getMetadata, searchByTitle } = require('../services/tmdb');
 const fetch = require('node-fetch');
 
 // Simple cache for TMDB results to avoid hitting rate limits or slow responses
@@ -173,6 +173,14 @@ const searchExternalSubtitles = async (req, res) => {
   }
 };
 
+const searchTmdbByTitle = async (req, res) => {
+  const { query } = req.query;
+  if (!query) return res.status(400).json({ error: 'Query is required' });
+  const result = await searchByTitle(query);
+  if (result) res.json(result);
+  else res.status(404).json({ error: 'Not found' });
+};
+
 
 
 const inspectExternalLink = async (req, res) => {
@@ -192,30 +200,15 @@ const inspectExternalLink = async (req, res) => {
        // Fallback: If no IMDb found on page, search TMDB by title
        // Clean title from common MalayalamSubtitles.in additions (like "- Malayalam", "(2023)", etc)
        let cleanTitle = title.replace(/–|मलयालम|മലയാളം|പരിഭാഷ|Malayalam Subtitle|Malayalam/gi, '').trim();
-       cleanTitle = cleanTitle.replace(/\s*\([^)]*\)\s*/g, ' ').trim(); // Remove year in parenthesis (2023)
-       cleanTitle = cleanTitle.replace(/[^\w\s-]/gi, '').trim(); // Remove remaining Malayalam letters to prevent TMDB ECONNRESET
+       cleanTitle = cleanTitle.replace(/\s*\([^)]*\)\s*/g, ' ').trim(); // Remove year in parenthesis
+       cleanTitle = cleanTitle.replace(/[^\w\s-]/gi, '').trim(); 
        
        console.log(`[Inspect] Searching TMDB by title fallback: ${cleanTitle}`);
-       if (process.env.TMDB_API_KEY && cleanTitle.length > 0) {
-          // Search TMDB for movie
-          const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${process.env.TMDB_API_KEY}&query=${encodeURIComponent(cleanTitle)}`);
-          if (searchRes.ok) {
-             const data = await searchRes.json();
-             const result = data.results?.[0];
-             if (result) {
-                // If we found a result by title, let's get its external IDs to get IMDB ID
-                const type = result.media_type === 'tv' ? 'tv' : 'movie';
-                const idRes = await fetch(`https://api.themoviedb.org/3/${type}/${result.id}/external_ids?api_key=${process.env.TMDB_API_KEY}`);
-                if (idRes.ok) {
-                   const idData = await idRes.json();
-                   if (idData.imdb_id) {
-                      metadata.imdbId = idData.imdb_id;
-                      metadata.type = type === 'tv' ? 'series' : 'movie';
-                      metadata.tmdbTitle = result.title || result.name;
-                   }
-                }
-             }
-          }
+       const tmdbFallback = await searchByTitle(cleanTitle);
+       if (tmdbFallback) {
+         metadata.imdbId = tmdbFallback.imdbId;
+         metadata.type = tmdbFallback.type;
+         metadata.tmdbTitle = tmdbFallback.title;
        }
     }
     
@@ -242,28 +235,16 @@ const importExternalSubtitle = async (req, res) => {
       if (!imdb_id) imdb_id = detected.imdbId;
       if (!type) type = detected.type;
       
-      // Fallback search by title if scraping failed
-      if (!imdb_id && title && typeof title === 'string' && process.env.TMDB_API_KEY) {
+      if (!imdb_id && title && typeof title === 'string') {
          let cleanTitle = title.replace(/–|मलयालम|മലയാളം|പരിഭാഷ|Malayalam Subtitle|Malayalam/gi, '').trim();
          cleanTitle = cleanTitle.replace(/\s*\([^)]*\)\s*/g, ' ').trim();
-         cleanTitle = cleanTitle.replace(/[^\w\s-]/gi, '').trim(); // Remove remaining Malayalam letters to prevent TMDB ECONNRESET
+         cleanTitle = cleanTitle.replace(/[^\w\s-]/gi, '').trim();
          console.log(`[Import] Searching TMDB by title fallback: ${cleanTitle}`);
          
-         if (cleanTitle.length > 0) {
-            const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${process.env.TMDB_API_KEY}&query=${encodeURIComponent(cleanTitle)}`);
-            if (searchRes.ok) {
-               const data = await searchRes.json();
-               const result = data.results?.[0];
-               if (result) {
-                  type = result.media_type === 'tv' ? 'series' : 'movie';
-                  const typeParam = result.media_type === 'tv' ? 'tv' : 'movie';
-                  const idRes = await fetch(`https://api.themoviedb.org/3/${typeParam}/${result.id}/external_ids?api_key=${process.env.TMDB_API_KEY}`);
-                  if (idRes.ok) {
-                     const idData = await idRes.json();
-                     if (idData.imdb_id) imdb_id = idData.imdb_id;
-                  }
-               }
-            }
+         const tmdbFallback = await searchByTitle(cleanTitle);
+         if (tmdbFallback) {
+             imdb_id = tmdbFallback.imdbId;
+             type = tmdbFallback.type;
          }
       }
     }
@@ -301,7 +282,7 @@ const importExternalSubtitle = async (req, res) => {
       if (extractedFiles.length === 0) throw new Error('No .srt or .vtt files found in ZIP');
       filesToProcess = extractedFiles;
     } else {
-      let fileName = downloadUrl.split('/').pop() || 'subtitle.srt';
+      let fileName = title ? title.replace(/[^a-z0-9._-]/gi, '_') : downloadUrl.split('/').pop() || 'subtitle';
       if (!fileName.toLowerCase().endsWith('.srt') && !fileName.toLowerCase().endsWith('.vtt')) fileName += '.srt';
       filesToProcess = [{ name: fileName, data: buffer }];
     }
@@ -379,5 +360,6 @@ module.exports = {
   fetchMetadata, 
   searchExternalSubtitles, 
   importExternalSubtitle,
-  inspectExternalLink
+  inspectExternalLink,
+  searchTmdbByTitle
 };

@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { login } = require('../controllers/authController');
 const { uploadSubtitle } = require('../controllers/uploadController');
-const { listSubtitles, deleteSubtitle, fetchMetadata, searchExternalSubtitles, importExternalSubtitle, inspectExternalLink } = require('../controllers/adminController');
+const { listSubtitles, deleteSubtitle, fetchMetadata, searchExternalSubtitles, importExternalSubtitle, inspectExternalLink, searchTmdbByTitle } = require('../controllers/adminController');
 const { authenticate } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
@@ -20,6 +20,7 @@ router.delete('/subtitles/:id', authenticate, deleteSubtitle);
 router.get('/search-external', authenticate, searchExternalSubtitles);
 router.post('/import-external', authenticate, importExternalSubtitle);
 router.get('/inspect-external', authenticate, inspectExternalLink);
+router.get('/tmdb/search', authenticate, searchTmdbByTitle);
 
 // Add logs endpoint
 router.get('/logs', authenticate, (req, res) => {
