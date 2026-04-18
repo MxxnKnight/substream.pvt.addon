@@ -451,16 +451,28 @@ export default function App() {
     if(window.confirm("Delete this subtitle?")) {
       try {
         const res = await apiFetch(`/api/admin/subtitles/${id}`, { method: 'DELETE' });
-        if (res.ok) setSubtitles(subtitles.filter(sub => sub.id !== id));
+        if (res.ok) {
+          setSubtitles(prev => prev.map(group => ({
+            ...group,
+            files: group.files.filter(f => f.id !== id)
+          })).filter(group => group.files.length > 0));
+        }
       } catch (err) { console.error(err); }
     }
   };
 
   const handleDeleteSeason = async (imdbId, season, subs) => {
-    if(window.confirm(`Delete all ${subs.length} subtitles for S${season}?`)) {
+    const msg = season ? `Delete all ${subs.length} subtitles for S${season}?` : `Delete all ${subs.length} subtitles?`;
+    if(window.confirm(msg)) {
       try {
         await Promise.all(subs.map(sub => apiFetch(`/api/admin/subtitles/${sub.id}`, { method: 'DELETE' })));
-        setSubtitles(prev => prev.filter(s => !subs.some(sub => sub.id === s.id)));
+        setSubtitles(prev => prev.map(group => {
+          if (group.imdbId !== imdbId) return group;
+          return {
+            ...group,
+            files: group.files.filter(f => !subs.some(s => s.id === f.id))
+          };
+        }).filter(group => group.files.length > 0));
       } catch (err) { console.error(err); }
     }
   };
@@ -744,7 +756,7 @@ export default function App() {
                     <p className="text-sm font-black uppercase tracking-widest">Library Empty</p>
                  </div>
                ) : (
-                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
                     {subtitles
                       .filter(s => {
                         const title = s?.title?.toLowerCase() || '';
@@ -756,38 +768,77 @@ export default function App() {
                         const first = sub?.files?.[0] || {};
                         const isSeries = sub.type === 'series';
                         return (
-                          <div key={idx} className={`p-6 rounded-[0.8rem] border-2 transition-all hover:scale-[1.02] ${theme === 'dark' ? 'bg-black border-neutral-800 hover:border-indigo-500/50' : 'bg-white border-neutral-100 hover:border-indigo-400'}`}>
-                             <div className="flex gap-5 mb-6">
-                                {first.poster_path ? <img src={first.poster_path} className="w-16 h-24 object-cover rounded-xl " alt="" /> : <div className="w-16 h-24 bg-black rounded-xl" />}
-                                <div className="min-w-0 flex-1">
-                                   <div className="flex gap-2 mb-2">
-                                      <span className={`text-[6px] font-black uppercase px-2 py-0.5 rounded-full ${isSeries ? 'bg-purple-600' : 'bg-indigo-600'} text-white shadow-sm`}>{first.type}</span>
-                                      {isSeries && first.season != null && <span className="text-[6px] font-black uppercase px-2 py-0.5 rounded-full bg-neutral-700 text-white shadow-sm">S{String(first.season).padStart(2,'0')}</span>}
-                                   </div>
-                                   <h3 className="font-black text-sm truncate leading-tight mb-1">{sub.title}</h3>
-                                   <p className="text-[10px] font-mono opacity-30 mb-3">{sub.imdbId}</p>
+                          <div key={idx} className={`group flex flex-col rounded-3xl border ${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800 hover:border-neutral-700' : 'bg-white border-neutral-200 hover:border-neutral-300'} overflow-hidden transition-colors`}>
+                            {/* Card Header/Info */}
+                            <div className="p-5 flex gap-5">
+                              <div className="shrink-0 relative">
+                                {first.poster_path ? (
+                                  <img src={first.poster_path} className="w-24 h-36 object-cover rounded-2xl shadow-2xl" alt="" />
+                                ) : (
+                                  <div className="w-24 h-36 bg-neutral-900 rounded-2xl flex items-center justify-center border border-neutral-800 text-neutral-700">
+                                    <Film className="w-10 h-10" />
+                                  </div>
+                                )}
+                                <div className="absolute -top-2 -left-2">
+                                  <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-lg ${isSeries ? 'bg-indigo-600' : 'bg-amber-500'} text-white shadow-xl`}>
+                                    {first.type}
+                                  </span>
                                 </div>
-                             </div>
-                             <div className="space-y-2 max-h-[140px] overflow-y-auto custom-scrollbar pr-1">
-                                {sub?.files?.map((file, fIdx) => (
-                                   <div key={fIdx} className={`p-2.5 rounded-xl text-[10px] border ${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800' : 'bg-neutral-50 border-neutral-100'}`}>
-                                      <p className="truncate opacity-80">{file.filename.split('-').slice(1).join('-') || file.filename}</p>
-                                      {isSeries && (
-                                        <p className="text-[8px] opacity-40 mt-1 uppercase font-bold">
-                                          Season {file.season} {file.episode ? `— Episode ${file.episode}` : ''}
-                                        </p>
-                                      )}
-                                   </div>
-                                ))}
-                             </div>
-                             <div className="mt-6 pt-6 border-t border-neutral-800/50 flex justify-between items-center text-[8px] font-black uppercase tracking-widest">
-                                <span className="text-emerald-500 flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Synced</span>
-                                <button className="opacity-30 hover:opacity-100 transition-all"><Share2 className="w-4 h-4" /></button>
-                             </div>
+                              </div>
+                              
+                              <div className="flex-1 min-w-0 flex flex-col">
+                                <div className="flex justify-between items-start gap-2">
+                                  <h3 className="font-black text-xl leading-tight truncate text-balance">{sub.title}</h3>
+                                  <button 
+                                    onClick={() => handleDeleteSeason(sub.imdbId, null, sub.files)}
+                                    className="p-2 -mt-1 -mr-1 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-500 transition-all text-neutral-600"
+                                    title="Delete All Subtitles"
+                                  >
+                                    <Trash2 className="w-5 h-5" />
+                                  </button>
+                                </div>
+                                <p className="text-xs font-mono opacity-40 mt-1 uppercase tracking-tighter">{sub.imdbId}</p>
+                                
+                                <div className="mt-auto pt-4 flex flex-wrap gap-2">
+                                  {isSeries && (
+                                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-neutral-800 text-white opacity-60">
+                                      {sub.files.length} EPISODES
+                                    </span>
+                                  )}
+                                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500">
+                                    {sub.files.length} FILES
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Subtitles List */}
+                            <div className={`mt-auto border-t ${theme === 'dark' ? 'border-neutral-800 bg-black/40' : 'bg-neutral-50/50 border-neutral-100'} p-3 space-y-2`}>
+                              {sub?.files?.map((file, fIdx) => (
+                                <div key={fIdx} className={`group/item flex items-center justify-between gap-3 p-3 rounded-xl border ${theme === 'dark' ? 'bg-[#0e0e0e] border-neutral-800' : 'bg-white border-neutral-200'} transition-all`}>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-[11px] font-bold truncate opacity-90 leading-none mb-1.5">
+                                      {file.filename.split('-').slice(1).join('-') || file.filename}
+                                    </p>
+                                    {isSeries && (
+                                      <p className="text-[9px] font-black opacity-40 uppercase tracking-widest">
+                                        EPISODE {file.episode} <span className="mx-1">•</span> S{file.season}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <button 
+                                    onClick={() => handleDelete(file.id)}
+                                    className="p-1.5 rounded-lg opacity-0 lg:group-hover/item:opacity-100 hover:bg-red-500/10 hover:text-red-500 transition-all text-neutral-500"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         );
                       })}
-                 </div>
+                  </div>
                )}
             </div>
           ) : currentView === 'logs' ? (
