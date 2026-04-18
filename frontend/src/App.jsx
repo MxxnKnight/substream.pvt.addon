@@ -542,13 +542,7 @@ export default function App() {
     setStagedFiles(prev => prev.map((f, i) => i === idx ? { ...f, tempName: val } : f));
   };
 
-  const updateTempName = (index, value) => {
-    const newFiles = [...stagedFiles];
-    newFiles[index].tempName = value;
-    setStagedFiles(newFiles);
-  };
 
-  const removeStagedFile = (idx) => setStagedFiles(stagedFiles.filter((_, i) => i !== idx));
 
   const handleDelete = async (id) => {
     if(window.confirm("Delete this subtitle?")) {
