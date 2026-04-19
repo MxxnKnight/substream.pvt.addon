@@ -1070,7 +1070,13 @@ export default function App() {
                             placeholder="Search Library Clusters..." 
                           />
                         </div>
-                        <button onClick={fetchSubtitles} disabled={isRefreshing} className={`p-4 rounded-2xl border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/10 shadow-sm'} hover:scale-105 transition-all ${isRefreshing ? 'animate-spin' : ''}`}><RefreshCw className="w-5 h-5" /></button>
+                        <button 
+                          onClick={fetchSubtitles} 
+                          disabled={isRefreshing} 
+                          className={`p-4 rounded-2xl border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/10 shadow-sm'} hover:scale-105 transition-all`}
+                        >
+                          <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        </button>
                     </div>
 
                     {subtitles.length === 0 ? (

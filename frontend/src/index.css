@@ -149,9 +149,7 @@
 }
 
 .media-card:hover {
-  border-color: rgba(var(--accent), 0.4);
-  transform: translateY(-4px);
-  box-shadow: 0 20px 40px -10px rgba(0,0,0,0.4);
+  border-color: rgba(var(--accent), 0.6);
 }
 
 .glass-container {
@@ -172,12 +170,15 @@
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid var(--login-glass-border);
   background: rgba(255,255,255,0.03);
+  color: var(--login-text);
+  opacity: 0.4;
 }
 .toggle-group button.active {
-  background: var(--login-text);
-  color: var(--login-bg);
-  border-color: var(--login-text);
-  font-weight: 700;
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.3);
+  opacity: 1;
+  font-weight: 900;
 }
 
 .dropzone {
