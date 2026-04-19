@@ -837,13 +837,13 @@ export default function App() {
                     {/* Content Type */}
                     <div className="space-y-4">
                         <label className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-1">Type</label>
-                        <div className="toggle-group flex gap-3">
+                        <div className="toggle-group flex gap-4">
                             {['movie', 'series'].map(t => (
                               <button 
                                 key={t}
                                 type="button"
                                 onClick={() => setUploadForm({...uploadForm, type: t})} 
-                                className={`flex-1 py-5.5 rounded-2xl text-[11px] md:text-sm font-black uppercase tracking-[0.2em] transition-all ${uploadForm.type === t ? 'active' : ''}`}
+                                className={`flex-1 py-7 rounded-2xl text-sm md:text-base font-black uppercase tracking-[0.2em] transition-all ${uploadForm.type === t ? 'active' : ''}`}
                               >
                                 {t}
                               </button>
@@ -854,13 +854,13 @@ export default function App() {
                     {/* Language Selection */}
                     <div className="space-y-4">
                         <label className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-1">Subtitle</label>
-                        <div className="toggle-group flex gap-3">
+                        <div className="toggle-group flex gap-4">
                             {[ {code: 'mal', label: 'Malayalam'}, {code: 'eng', label: 'English'} ].map(l => (
                               <button 
                                 key={l.code}
                                 type="button"
                                 onClick={() => setUploadForm({...uploadForm, language: l.code})} 
-                                className={`flex-1 py-5.5 rounded-2xl text-[11px] md:text-sm font-black uppercase tracking-[0.2em] transition-all ${uploadForm.language === l.code ? 'active' : ''}`}
+                                className={`flex-1 py-7 rounded-2xl text-sm md:text-base font-black uppercase tracking-[0.2em] transition-all ${uploadForm.language === l.code ? 'active' : ''}`}
                               >
                                 {l.label}
                               </button>
@@ -1005,7 +1005,7 @@ export default function App() {
                                    <div className="flex items-start justify-between gap-6">
                                       <div className="flex-1 min-w-0">
                                          <span className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-lg ${result.type === 'Series' ? 'bg-indigo-600' : 'bg-amber-500'} text-white inline-block mb-4 shadow-lg`}>{result.type || 'Media'}</span>
-                                         <h3 className="font-black text-3xl leading-[1.1] truncate mb-1 tracking-tighter">{result.title}</h3>
+                                         <h3 className="font-black text-2xl md:text-3xl leading-[1.1] mb-2 tracking-tighter text-balance">{result.title}</h3>
                                          <p className="text-[10px] font-mono opacity-20 uppercase tracking-[0.3em] font-bold">{result.imdbId || 'PENDING'}</p>
                                       </div>
                                       <div className="w-20 h-20 rounded-[1.5rem] bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
@@ -1049,12 +1049,12 @@ export default function App() {
           ) : currentView === 'list' ? (
                 <div className="animate-in fade-in duration-700 h-full flex flex-col gap-8">
                     <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
-                        <div className="toggle-group min-w-[200px] p-1.5 flex gap-1.5">
+                        <div className="toggle-group min-w-[240px] p-2 flex gap-2">
                             {['movie', 'series'].map(m => (
                               <button 
                                 key={m} 
                                 onClick={() => setMediaFilter(m)} 
-                                className={`flex-1 py-4.5 rounded-full text-[11px] md:text-xs font-black uppercase tracking-widest transition-all ${mediaFilter === m ? 'active' : ''}`}
+                                className={`flex-1 py-5.5 rounded-full text-xs md:text-sm font-black uppercase tracking-[0.15em] transition-all ${mediaFilter === m ? 'active' : ''}`}
                               >
                                 {m}
                               </button>
