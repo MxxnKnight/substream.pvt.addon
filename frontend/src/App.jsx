@@ -151,7 +151,6 @@ export default function App() {
   const scrollRef = useRef(null);
   const stagedScrollRef = useRef(null);
   const themeRef = useRef(null);
-  const loginContainerRef = useRef(null);
 
   // Metadata for current upload
   const [currentMetadata, setCurrentMetadata] = useState(null);
@@ -181,13 +180,6 @@ export default function App() {
     }
     return () => clearInterval(interval);
   }, [user, currentView]);
-
-  const handleLoginMouseMove = (e) => {
-    if (!loginContainerRef.current) return;
-    const x = (window.innerWidth / 2 - e.pageX) / 80;
-    const y = (window.innerHeight / 2 - e.pageY) / 80;
-    loginContainerRef.current.style.transform = `rotateY(${x}deg) rotateX(${y}deg)`;
-  };
 
   const fetchLogs = async () => {
     try {
@@ -642,7 +634,7 @@ export default function App() {
 
   if (!user) {
     return (
-      <div className={`login-page min-h-screen w-full flex items-center justify-center p-4 relative overflow-hidden font-sans ${theme === 'dark' ? 'dark' : ''}`} onMouseMove={handleLoginMouseMove}>
+      <div className={`login-page min-h-screen w-full flex items-center justify-center p-4 relative overflow-hidden font-sans ${theme === 'dark' ? 'dark' : ''}`}>
         {/* Background Orbs */}
         <div className="orb orb-1"></div>
         <div className="orb orb-2"></div>
@@ -651,7 +643,7 @@ export default function App() {
         <div className="orb orb-5"></div>
         <div className="orb orb-6"></div>
 
-        <div className="glass-container flex flex-col relative z-20" ref={loginContainerRef}>
+        <div className="glass-container flex flex-col relative z-20">
            {/* Navigation Header */}
            <header className="w-full p-6 lg:p-10 flex justify-between items-center z-50">
               <div className="flex items-center gap-4">
