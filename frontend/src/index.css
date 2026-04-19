@@ -170,15 +170,12 @@
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid var(--login-glass-border);
   background: rgba(255,255,255,0.03);
-  color: var(--login-text);
-  opacity: 0.4;
 }
 .toggle-group button.active {
-  background: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.3);
-  opacity: 1;
-  font-weight: 900;
+  background: var(--login-text);
+  color: var(--login-bg);
+  border-color: var(--login-text);
+  font-weight: 700;
 }
 
 .dropzone {

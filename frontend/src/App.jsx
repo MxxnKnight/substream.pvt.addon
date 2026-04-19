@@ -843,7 +843,7 @@ export default function App() {
                                 key={t}
                                 type="button"
                                 onClick={() => setUploadForm({...uploadForm, type: t})} 
-                                className={`flex-1 py-4.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${uploadForm.type === t ? 'active' : ''}`}
+                                className={`flex-1 py-5.5 rounded-2xl text-[11px] md:text-sm font-black uppercase tracking-[0.2em] transition-all ${uploadForm.type === t ? 'active' : ''}`}
                               >
                                 {t}
                               </button>
@@ -860,7 +860,7 @@ export default function App() {
                                 key={l.code}
                                 type="button"
                                 onClick={() => setUploadForm({...uploadForm, language: l.code})} 
-                                className={`flex-1 py-4.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${uploadForm.language === l.code ? 'active' : ''}`}
+                                className={`flex-1 py-5.5 rounded-2xl text-[11px] md:text-sm font-black uppercase tracking-[0.2em] transition-all ${uploadForm.language === l.code ? 'active' : ''}`}
                               >
                                 {l.label}
                               </button>
@@ -1049,12 +1049,12 @@ export default function App() {
           ) : currentView === 'list' ? (
                 <div className="animate-in fade-in duration-700 h-full flex flex-col gap-8">
                     <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
-                        <div className="toggle-group min-w-[200px] p-1 flex gap-1">
+                        <div className="toggle-group min-w-[200px] p-1.5 flex gap-1.5">
                             {['movie', 'series'].map(m => (
                               <button 
                                 key={m} 
                                 onClick={() => setMediaFilter(m)} 
-                                className={`flex-1 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${mediaFilter === m ? 'active' : ''}`}
+                                className={`flex-1 py-4.5 rounded-full text-[11px] md:text-xs font-black uppercase tracking-widest transition-all ${mediaFilter === m ? 'active' : ''}`}
                               >
                                 {m}
                               </button>
