@@ -44,3 +44,88 @@
 .transition-theme {
   transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
 }
+
+/* Login Page Specific Styles */
+:root {
+  --login-bg: #f0f4f8;
+  --login-glass-bg: rgba(255, 255, 255, 0.45);
+  --login-glass-border: rgba(0, 0, 0, 0.08);
+  --login-text: #0f172a;
+  --login-text-sec: #475569;
+  --login-input: rgba(0, 0, 0, 0.04);
+  --login-btn: #0f172a;
+  --login-btn-text: #ffffff;
+  --login-margin: 20px;
+}
+
+.dark {
+  --login-bg: #030303;
+  --login-glass-bg: rgba(255, 255, 255, 0.03);
+  --login-glass-border: rgba(255, 255, 255, 0.12);
+  --login-text: #ffffff;
+  --login-text-sec: rgba(255, 255, 255, 0.5);
+  --login-input: rgba(255, 255, 255, 0.05);
+  --login-btn: #ffffff;
+  --login-btn-text: #000000;
+}
+
+.login-page {
+  background-color: var(--login-bg);
+  color: var(--login-text);
+  transition: background-color 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  perspective: 1000px;
+}
+
+.glass-container {
+  width: calc(100vw - (var(--login-margin) * 2));
+  height: calc(100vh - (var(--login-margin) * 2));
+  background: var(--login-glass-bg);
+  backdrop-filter: blur(50px) saturate(200%);
+  -webkit-backdrop-filter: blur(50px) saturate(200%);
+  border: 1px solid var(--login-glass-border);
+  border-radius: 32px;
+  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.4);
+  transition: background 0.5s ease, border 0.5s ease, transform 0.1s ease-out;
+  transform-style: preserve-3d;
+}
+
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  z-index: 10;
+  will-change: transform;
+  pointer-events: none;
+  filter: saturate(1.5);
+}
+
+.orb-1 { width: 450px; height: 450px; background: radial-gradient(circle, #6366f1, #312e81); animation: roam1 40s linear infinite alternate; top: -10%; left: -10%; opacity: 0.8; }
+.orb-2 { width: 550px; height: 550px; background: radial-gradient(circle, #ec4899, #701a75); animation: roam2 60s linear infinite alternate; top: 40%; left: 80%; opacity: 0.6; }
+.orb-3 { width: 300px; height: 300px; background: radial-gradient(circle, #06b6d4, #083344); animation: roam3 35s linear infinite alternate; top: 80%; left: -5%; opacity: 0.7; }
+.orb-4 { width: 600px; height: 600px; background: radial-gradient(circle, #f59e0b, #9a3412); animation: roam4 55s linear infinite alternate; top: -20%; left: 60%; opacity: 0.5; }
+.orb-5 { width: 200px; height: 200px; background: radial-gradient(circle, #22c55e, #14532d); animation: roam1 50s linear infinite reverse; top: 50%; left: 10%; opacity: 0.8; }
+.orb-6 { width: 350px; height: 350px; background: radial-gradient(circle, #ef4444, #7f1d1d); animation: roam2 45s linear infinite reverse; top: 90%; left: 90%; opacity: 0.6; }
+
+@keyframes roam1 {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50% { transform: translate3d(60vw, 40vh, 0) rotate(180deg); }
+  100% { transform: translate3d(110vw, -10vh, 0) rotate(360deg); }
+}
+@keyframes roam2 {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-90vw, -30vh, 0) scale(1.2); }
+  100% { transform: translate3d(-40vw, 50vh, 0) scale(1); }
+}
+@keyframes roam3 {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(100vw, -100vh, 0); }
+}
+@keyframes roam4 {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50% { transform: translate3d(-100vw, 100vh, 0) rotate(-180deg); }
+  100% { transform: translate3d(-20vw, 20vh, 0) rotate(-360deg); }
+}
+
+@media (max-width: 768px) {
+  .orb { opacity: 0.4; }
+  .orb-1, .orb-2, .orb-4 { width: 250px; height: 250px; }
+}

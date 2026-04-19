@@ -151,6 +151,7 @@ export default function App() {
   const scrollRef = useRef(null);
   const stagedScrollRef = useRef(null);
   const themeRef = useRef(null);
+  const loginContainerRef = useRef(null);
 
   // Metadata for current upload
   const [currentMetadata, setCurrentMetadata] = useState(null);
@@ -180,6 +181,13 @@ export default function App() {
     }
     return () => clearInterval(interval);
   }, [user, currentView]);
+
+  const handleLoginMouseMove = (e) => {
+    if (!loginContainerRef.current) return;
+    const x = (window.innerWidth / 2 - e.pageX) / 80;
+    const y = (window.innerHeight / 2 - e.pageY) / 80;
+    loginContainerRef.current.style.transform = `rotateY(${x}deg) rotateX(${y}deg)`;
+  };
 
   const fetchLogs = async () => {
     try {
@@ -634,21 +642,83 @@ export default function App() {
 
   if (!user) {
     return (
-      <div className={`min-h-screen ${theme === 'dark' ? 'bg-black text-neutral-100' : 'bg-neutral-100 text-neutral-900'} flex items-center justify-center p-4 font-sans transition-theme`}>
-        <div className={`max-w-md w-full ${theme === 'dark' ? 'bg-black border-neutral-800' : 'bg-white border-neutral-200'} rounded-[1rem]  overflow-hidden border p-8 lg:p-12 transition-theme`}>
-            <div className="text-center mb-10">
-              <div className={`${a.main} w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6  ${a.shadow}`}>
-                <Film className="w-10 h-10 text-white" />
+      <div className={`login-page min-h-screen w-full flex items-center justify-center p-4 relative overflow-hidden font-sans ${theme === 'dark' ? 'dark' : ''}`} onMouseMove={handleLoginMouseMove}>
+        {/* Background Orbs */}
+        <div className="orb orb-1"></div>
+        <div className="orb orb-2"></div>
+        <div className="orb orb-3"></div>
+        <div className="orb orb-4"></div>
+        <div className="orb orb-5"></div>
+        <div className="orb orb-6"></div>
+
+        <div className="glass-container flex flex-col relative z-20" ref={loginContainerRef}>
+           {/* Navigation Header */}
+           <header className="w-full p-6 lg:p-10 flex justify-between items-center z-50">
+              <div className="flex items-center gap-4">
+                 <img src="/logo.png" className="w-10 h-10 rounded-2xl shadow-2xl" alt="SubStream" />
+                 <span className="font-black tracking-tighter text-2xl lg:text-3xl">SUBSTREAM</span>
               </div>
-              <h2 className={`text-4xl font-black tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-neutral-900'}`}>SubStream</h2>
-              <p className="mt-3 text-sm font-bold opacity-50 uppercase tracking-widest">Administrator Portal</p>
-            </div>
-            <form onSubmit={handleLogin} className="space-y-6">
-              <div className="relative group"><User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 opacity-20" /><input type="text" value={loginForm.username} onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })} className={`w-full ${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800' : 'bg-neutral-50 border-neutral-200'} border rounded-2xl py-4 pl-12 pr-4 outline-none focus:ring-4 ${a.ring}/10 transition-all`} placeholder="username" /></div>
-              <div className="relative group"><Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 opacity-20" /><input type="password" value={loginForm.password} onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })} className={`w-full ${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800' : 'bg-neutral-50 border-neutral-200'} border rounded-2xl py-4 pl-12 pr-4 outline-none focus:ring-4 ${a.ring}/10 transition-all`} placeholder="password" /></div>
-              {loginError && <div className="text-red-500 text-xs font-bold text-center bg-red-500/10 py-3 rounded-xl">{loginError}</div>}
-              <button type="submit" disabled={loginLoading} className={`w-full ${a.main} ${a.hover} text-white font-black py-4 rounded-2xl transition-all  ${a.shadow}`}>Sign In</button>
-            </form>
+
+              {/* Theme Toggle Button */}
+              <button 
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all border ${theme === 'dark' ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-black/5 border-black/10 hover:bg-black/10'}`}
+              >
+                  {theme === 'dark' ? <Sun className="w-5 h-5 text-white" /> : <Moon className="w-5 h-5 text-black" />}
+              </button>
+           </header>
+
+           {/* Login Card */}
+           <main className="flex-1 flex justify-center items-center">
+              <div className="w-full max-w-[420px] px-8 lg:px-12">
+                  <div className="text-center mb-10 lg:mb-14">
+                      <h1 className="text-4xl lg:text-5xl font-black tracking-tight mb-4">Sign In</h1>
+                      <p className="opacity-50 font-bold text-[10px] lg:text-xs uppercase tracking-widest leading-relaxed">
+                        Secure Access Portal <br/>
+                        Core Kernel v4.2.0
+                      </p>
+                  </div>
+                  
+                  <form onSubmit={handleLogin} className="space-y-6 lg:space-y-8">
+                      <div className="space-y-2">
+                          <label className="text-[10px] uppercase tracking-[0.25em] font-black ml-1 opacity-40">Username</label>
+                          <input 
+                            type="text" 
+                            value={loginForm.username}
+                            onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
+                            placeholder="ADMIN IDENTITY" 
+                            className={`w-full p-4 lg:p-5 rounded-2xl border outline-none transition-all ${theme === 'dark' ? 'bg-white/5 border-white/10 focus:border-white/40 text-white' : 'bg-black/5 border-black/5 focus:border-black/20 text-black'}`}
+                            required 
+                          />
+                      </div>
+                      <div className="space-y-2">
+                          <label className="text-[10px] uppercase tracking-[0.25em] font-black ml-1 opacity-40">Password</label>
+                          <input 
+                            type="password" 
+                            value={loginForm.password}
+                            onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                            placeholder="••••••••" 
+                            className={`w-full p-4 lg:p-5 rounded-2xl border outline-none transition-all ${theme === 'dark' ? 'bg-white/5 border-white/10 focus:border-white/40 text-white' : 'bg-black/5 border-black/5 focus:border-black/20 text-black'}`}
+                            required 
+                          />
+                      </div>
+                      
+                      {loginError && (
+                        <div className="text-red-500 text-[10px] font-black uppercase tracking-widest text-center bg-red-500/10 py-4 rounded-2xl animate-in fade-in zoom-in duration-300">
+                          {loginError}
+                        </div>
+                      )}
+
+                      <button 
+                        type="submit" 
+                        disabled={loginLoading}
+                        className={`w-full p-5 lg:p-6 font-black rounded-2xl transition-all shadow-2xl tracking-widest uppercase text-[11px] lg:text-xs ${loginLoading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-[0.98]'} ${theme === 'dark' ? 'bg-white text-black' : 'bg-black text-white'}`}
+                      >
+                         {loginLoading ? 'Authenticating...' : 'Access SubStream'}
+                      </button>
+                  </form>
+              </div>
+           </main>
         </div>
       </div>
     );

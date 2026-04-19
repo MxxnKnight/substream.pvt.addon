@@ -57,6 +57,9 @@ app.use('/', addonRoutes);
 // Admin Routes (Upload, Login)
 app.use('/api/admin', adminRoutes);
 
+// Static Assets
+app.use(express.static(path.join(__dirname, '../public')));
+
 // Static Frontend
 const frontendPath = path.join(__dirname, '../public/admin');
 app.use(express.static(frontendPath));

@@ -3,7 +3,7 @@ const getManifest = () => ({
   version: "1.0.6",
   name: "SubStream Private",
   description: "Private subtitle addon for Movies and Series",
-  logo: "https://vsnzobsidmzzvghmzsqz.supabase.co/storage/v1/object/public/subtitles/logo.png",
+  logo: "/logo.png",
   resources: [
     {
       name: "subtitles",
