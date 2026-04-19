@@ -969,60 +969,6 @@ export default function App() {
                         {isUploading ? 'Uploading Sequence...' : uploadSuccess ? 'Successfully Committed' : 'Commit Upload'}
                     </button>
                 </div>
-         </div>
-                  {currentMetadata && <div className={`flex gap-6 p-4 rounded-[0.8rem] border-2 animate-in slide-in-from-left-4 ${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800' : 'bg-neutral-50 border-neutral-100'}`}>{currentMetadata.poster_path ? <img src={currentMetadata.poster_path} alt="Poster" className="w-16 h-24 object-cover rounded-xl" /> : <div className="w-16 h-24 bg-black rounded-xl" />}<div className="flex flex-col justify-center min-w-0"><h4 className="font-black text-lg truncate">{currentMetadata.title}</h4><p className="text-[10px] opacity-40 line-clamp-2">{currentMetadata.overview}</p></div></div>}
-                  <div onDragOver={(e)=>e.preventDefault()} onDrop={handleDrop} className={`min-h-[160px] border-4 border-dashed rounded-[1rem] flex flex-col items-center justify-center p-8 transition-all cursor-pointer ${theme === 'dark' ? 'border-neutral-800 bg-[#0a0a0a]/20 hover:border-indigo-500/50' : 'border-neutral-100 bg-neutral-50 hover:border-indigo-400'}`} onClick={()=>fileInputRef.current.click()}>
-                    <input ref={fileInputRef} type="file" multiple hidden onChange={handleFileSelection} />
-                    <input ref={folderInputRef} type="file" webkitdirectory="true" hidden onChange={handleFileSelection} />
-                    <div className="flex gap-4 mb-4">
-                       <div className="p-4 rounded-3xl bg-indigo-500/10"><Archive className="w-8 h-8 text-indigo-500" /></div>
-                       <div className="p-4 rounded-3xl bg-emerald-500/10" onClick={(e) => { e.stopPropagation(); folderInputRef.current.click(); }}><FolderInput className="w-8 h-8 text-emerald-500" /></div>
-                    </div>
-                    <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Drop packs, folders or click to select</p>
-                  </div>
-                  {stagedFiles.length > 0 && (
-                    <div className={`rounded-2xl border divide-y overflow-hidden ${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800 divide-neutral-800' : 'bg-neutral-50 border-neutral-100 divide-neutral-100'}`}>
-                      {stagedFiles.map((f, i) => (
-                        <div key={i} className="flex items-center justify-between p-3.5 hover:bg-white/5 transition-colors gap-4">
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <div className="p-2 rounded-lg bg-black"><FileText className="w-3 h-3 opacity-40" /></div>
-                            {f.isEditing ? (
-                              <input 
-                                autoFocus
-                                value={f.tempName} 
-                                onChange={(e) => handleNameChange(i, e.target.value)}
-                                className={`flex-1 bg-transparent border-b border-indigo-500 outline-none text-xs font-bold py-1`}
-                                onKeyDown={(e) => { if(e.key === 'Enter') saveEdit(i); if(e.key === 'Escape') cancelEdit(i); }}
-                              />
-                            ) : (
-                              <div className="flex flex-col min-w-0">
-                                <span className="text-xs font-bold truncate opacity-80">{f.name}</span>
-                                {f.isFromZip && <span className="text-[8px] opacity-30 uppercase font-black tracking-tighter">From {f.originalZip}</span>}
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            {f.isEditing ? (
-                              <>
-                                <button type="button" onClick={() => saveEdit(i)} className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-all"><Check className="w-4 h-4" /></button>
-                                <button type="button" onClick={() => cancelEdit(i)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-all"><X className="w-4 h-4" /></button>
-                              </>
-                            ) : (
-                              <>
-                                <button type="button" onClick={() => startEditing(i)} className="p-2 opacity-30 hover:opacity-100 hover:text-indigo-500 transition-all"><Edit2 className="w-4 h-4" /></button>
-                                <button type="button" onClick={() => removeStagedFile(i)} className="p-2 opacity-30 hover:opacity-100 hover:text-red-500 transition-all"><X className="w-4 h-4" /></button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <button type="button" onClick={handleUploadSubmit} disabled={!uploadForm.imdbId || stagedFiles.length === 0 || isUploading} className={`w-full py-5 rounded-2xl font-black text-white transition-all ${!uploadForm.imdbId || stagedFiles.length === 0 || isUploading ? 'opacity-20 cursor-not-allowed' : `${a.main} ${a.hover} active:scale-95`}`}>{isUploading ? 'Synchronizing Cluster...' : `Commit ${stagedFiles.length} Subtitles`}</button>
-                  {uploadSuccess && <div className="p-4 rounded-xl bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase text-center border border-emerald-500/20">Protocol Complete. Cluster Updated.</div>}
-                </form>
-              </div>
-            </div>
           ) : currentView === 'search' ? (
                 <div className="max-w-4xl mx-auto w-full flex flex-col gap-10 animate-in fade-in duration-700">
                      <div className="media-card p-10 lg:p-14 rounded-[3rem]">
