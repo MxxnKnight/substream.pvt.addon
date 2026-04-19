@@ -932,7 +932,7 @@ export default function App() {
                                                   setStagedFiles(newFiles);
                                                 }}
                                                 onKeyDown={(e) => {
-                                                  if (e.key === 'Enter') saveFileName(idx);
+                                                  if (e.key === 'Enter') saveEdit(idx);
                                                   if (e.key === 'Escape') cancelEdit(idx);
                                                 }}
                                               />
@@ -945,12 +945,12 @@ export default function App() {
                                     <div className="flex items-center gap-2">
                                       {item.isEditing ? (
                                         <>
-                                          <button onClick={() => saveFileName(idx)} className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg"><Check className="w-4 h-4" /></button>
+                                          <button onClick={() => saveEdit(idx)} className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg"><Check className="w-4 h-4" /></button>
                                           <button onClick={() => cancelEdit(idx)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg"><X className="w-4 h-4" /></button>
                                         </>
                                       ) : (
                                         <>
-                                          <button onClick={() => startEdit(idx)} className="p-2 lg:opacity-0 group-hover:opacity-100 transition-all hover:bg-white/5 rounded-lg"><Edit2 className="w-4 h-4" /></button>
+                                          <button onClick={() => startEditing(idx)} className="p-2 lg:opacity-0 group-hover:opacity-100 transition-all hover:bg-white/5 rounded-lg"><Edit2 className="w-4 h-4" /></button>
                                           <button onClick={() => removeStagedFile(idx)} className="p-2 text-red-500/40 hover:text-red-500 transition-all hover:bg-red-500/10 rounded-lg"><Trash2 className="w-4 h-4" /></button>
                                         </>
                                       )}
@@ -962,7 +962,7 @@ export default function App() {
                     )}
 
                     <button 
-                      onClick={handleMainUpload}
+                      onClick={handleUploadSubmit}
                       disabled={isUploading || stagedFiles.length === 0}
                       className={`w-full py-6 bg-[var(--login-btn)] text-[var(--login-btn-text)] rounded-2xl md:rounded-3xl font-black text-xl lg:text-2xl hover:scale-[1.01] active:scale-95 transition-all shadow-2xl uppercase tracking-tighter ${isUploading ? 'opacity-50' : ''}`}
                     >
