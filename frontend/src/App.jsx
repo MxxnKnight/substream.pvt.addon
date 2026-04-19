@@ -895,13 +895,13 @@ export default function App() {
                             e.currentTarget.classList.remove('dragover'); 
                             processFiles(e.dataTransfer.items); 
                           }}
-                          className="dropzone rounded-[32px] p-12 lg:p-20 text-center flex flex-col items-center justify-center cursor-pointer"
+                          className="dropzone rounded-[32px] p-12 lg:p-20 text-center flex flex-col items-center justify-center cursor-pointer mb-10"
                         >
-                            <div className="w-20 h-20 bg-white/5 rounded-3xl flex items-center justify-center mb-6">
-                                <Upload className="w-10 h-10 opacity-30" />
+                            <div className="w-28 h-28 bg-white/5 rounded-[2rem] flex items-center justify-center mb-8">
+                                <Upload className="w-14 h-14 opacity-30" />
                             </div>
-                            <h3 className="text-2xl font-black mb-2 uppercase tracking-tighter">Process Files or ZIP</h3>
-                            <p className="text-xs opacity-40 font-bold uppercase tracking-widest">Automatic extraction and listing enabled</p>
+                            <h3 className="text-3xl font-black mb-2 uppercase tracking-tighter">Process Files or ZIP</h3>
+                            <p className="text-sm opacity-40 font-bold uppercase tracking-widest leading-relaxed">Automatic extraction and listing enabled</p>
                             <input type="file" ref={fileInputRef} className="hidden" multiple onChange={handleFileSelection} />
                         </div>
                     </div>
