@@ -35,6 +35,7 @@ export default function App() {
   const [subtitles, setSubtitles] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isNavOpen, setIsNavOpen] = useState(false); // Mobile nav state
+  const [isNavExpanded, setIsNavExpanded] = useState(false); // For Nexus header expansion
 
   // Theme State
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
@@ -717,137 +718,258 @@ export default function App() {
   }
 
   return (
-    <div className={`min-h-screen ${theme === 'dark' ? 'bg-black text-neutral-100' : 'bg-white text-neutral-900'} font-sans flex flex-col lg:flex-row h-screen overflow-hidden transition-theme`}>
+    <div className={`login-page min-h-screen w-full relative overflow-hidden font-sans ${theme === 'dark' ? 'dark' : ''}`}>
+      {/* Background Orbs */}
+      <div className="orb orb-1"></div>
+      <div className="orb orb-2"></div>
+      <div className="orb orb-3"></div>
+      <div className="orb orb-4"></div>
+      <div className="orb orb-5"></div>
+      <div className="orb orb-6"></div>
 
-      {/* Sidebar */}
-      <aside className={`hidden lg:flex lg:relative lg:z-0 lg:w-72 ${theme === 'dark' ? 'bg-[#0a0a0a]' : 'bg-neutral-50'} border-r ${theme === 'dark' ? 'border-neutral-800' : 'border-neutral-200'}`}>
-        <div className="flex flex-col h-full w-full pt-20 lg:pt-0">
-          <div className="p-8 flex items-center gap-4"><div className={`${a.main} p-2.5 rounded-2xl`}><Film className="w-5 h-5 text-white" /></div><h1 className="font-black text-xl tracking-tighter">SubStream</h1></div>
-          <div className="p-6">
-            <button onClick={copyManifestUrl} className={`w-full flex items-center justify-center gap-2 px-4 py-3 ${a.main} text-white rounded-xl text-[10px] font-black uppercase tracking-widest  ${a.shadow}`}>Copy Addon Link</button>
-            <nav className="mt-8 space-y-1">
-              {[ 
-                { id: 'upload', label: 'Upload Feed', icon: Upload }, 
-                { id: 'search', label: 'Search & Import', icon: Globe },
-                { id: 'list', label: 'Manage Library', icon: Archive }, 
-                { id: 'logs', label: 'Live Traffic', icon: Shield } 
-              ].map((item) => (
-                <button key={item.id} onClick={() => { setCurrentView(item.id); if(item.id === 'list') fetchSubtitles(); setIsNavOpen(false); }} className={`w-full flex items-center gap-4 px-6 py-3.5 rounded-2xl transition-all ${currentView === item.id ? `${theme === 'dark' ? 'bg-neutral-800 text-white' : 'bg-white  text-neutral-900'} border ${theme === 'dark' ? 'border-neutral-700' : 'border-neutral-200'}` : 'opacity-40 hover:opacity-100'}`}>
-                  <item.icon className={`w-4 h-4 ${currentView === item.id ? a.text : ''}`} /><span className="font-bold text-xs">{item.label}</span>
-                </button>
-              ))}
-            </nav>
-            <div className="mt-10 pt-10 border-t border-neutral-500/10 space-y-6">
-                <div className="px-2"><ThemeDropdown /></div>
-            </div>
+      {/* Floating Header */}
+      <header className={`floating-header transition-theme ${isNavExpanded ? 'header-expanded' : ''}`}>
+          <div className="header-top">
+              <div className="flex items-center gap-3">
+                  <img src="/logo.png" className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl shadow-xl" alt="" />
+                  <span className="font-black tracking-tighter text-lg md:text-2xl uppercase">SubStream</span>
+              </div>
+
+              <nav className="flex items-center gap-3 md:gap-6">
+                  {/* Desktop Links */}
+                  <div className="hidden lg:flex items-center gap-6 mr-4 border-r border-white/10 pr-6">
+                      {[
+                        { id: 'upload', label: 'Feed', icon: Upload },
+                        { id: 'search', label: 'Search', icon: Globe },
+                        { id: 'list', label: 'Library', icon: Archive },
+                        { id: 'logs', label: 'Logs', icon: Shield }
+                      ].map(link => (
+                        <button 
+                          key={link.id}
+                          onClick={() => { setCurrentView(link.id); if(link.id === 'list') fetchSubtitles(); }}
+                          className={`text-[10px] font-black uppercase tracking-widest transition-all ${currentView === link.id ? 'opacity-100' : 'opacity-40 hover:opacity-100'}`}
+                        >
+                          {link.label}
+                        </button>
+                      ))}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={copyManifestUrl}
+                      className="hidden md:flex w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 items-center justify-center text-emerald-500 hover:scale-105 transition-all"
+                      title="Copy Addon Link"
+                    >
+                      <Share2 className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                      className={`w-10 h-10 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/10'}`}
+                    >
+                        {theme === 'dark' ? <Sun className="w-5 h-5 text-white" /> : <Moon className="w-5 h-5 text-black" />}
+                    </button>
+                  </div>
+
+                  {/* Mobile Toggle */}
+                  <button 
+                    onClick={() => {
+                        const newExpanded = !isNavExpanded;
+                        setIsNavExpanded(newExpanded);
+                        document.documentElement.style.setProperty('--header-h', newExpanded ? '380px' : '70px');
+                    }}
+                    className="lg:hidden w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center"
+                  >
+                      <Menu className={`w-5 h-5 transition-transform ${isNavExpanded ? 'rotate-90' : ''}`} />
+                  </button>
+              </nav>
           </div>
-          <div className="mt-auto p-6 flex flex-col gap-3"><button onClick={handleLogout} className="flex items-center justify-center gap-2 opacity-30 hover:opacity-100 transition-all text-[10px] uppercase font-black tracking-widest py-4"><LogOut className="w-4 h-4" /> Sign Out</button></div>
-        </div>
-      </aside>
+
+          {/* Mobile Drawer */}
+          <div className="mobile-nav-content lg:hidden pt-4 border-t border-white/10">
+              <nav className="space-y-4 px-2">
+                  {[
+                    { id: 'upload', label: 'Upload Feed', icon: Upload },
+                    { id: 'search', label: 'Search & Import', icon: Globe },
+                    { id: 'list', label: 'Media Library', icon: Archive },
+                    { id: 'logs', label: 'System Logs', icon: Shield }
+                  ].map(link => (
+                    <button 
+                      key={link.id}
+                      onClick={() => { 
+                        setCurrentView(link.id); 
+                        if(link.id === 'list') fetchSubtitles(); 
+                        setIsNavExpanded(false);
+                        document.documentElement.style.setProperty('--header-h', '70px');
+                      }}
+                      className={`w-full flex items-center gap-4 py-3 px-4 rounded-xl transition-all ${currentView === link.id ? 'bg-white/10' : 'opacity-40'}`}
+                    >
+                      <link.icon className="w-4 h-4" />
+                      <span className="text-xs font-black uppercase tracking-widest">{link.label}</span>
+                    </button>
+                  ))}
+                  <div className="pt-4 space-y-4">
+                    <button onClick={copyManifestUrl} className="w-full py-4 bg-emerald-500/10 text-emerald-500 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 border border-emerald-500/10">
+                       <Share2 className="w-4 h-4" /> Copy Addon Link
+                    </button>
+                   <button onClick={handleLogout} className="w-full py-4 bg-red-500/10 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 border border-red-500/10">
+                       <LogOut className="w-4 h-4" /> Sign Out
+                    </button>
+                  </div>
+              </nav>
+          </div>
+      </header>
 
       {/* Main Content */}
       
       
-      <main className={`flex-1 flex flex-col relative ${currentView === 'logs' ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar'}`}>
-        <div className={`max-w-full mx-auto w-full flex flex-col flex-1 ${currentView === 'logs' ? 'p-0 h-full overflow-hidden' : 'p-4 lg:p-6 pb-20 gap-4'}`}>
-          
-          {/* Mobile Header */}
-          <header className={`lg:hidden flex flex-col sticky top-0 z-50 p-2`}> 
-             <div className={`flex flex-col rounded-[2rem] border transition-all ${theme === 'dark' ? 'bg-black/90 border-neutral-800' : 'bg-white/95 border-neutral-200'} backdrop-blur-xl shadow-lg`}>
-                <div className="flex items-center justify-between p-4 px-6">
-                   <div className="flex items-center gap-3">
-                      <div className={`${a.main} p-2 rounded-xl`}>
-                         <Film className="w-4 h-4 text-white" />
-                      </div>
-                      <span className="font-black tracking-tighter">SubStream</span>
-                   </div>
-                   <div className="flex items-center gap-2">
-                      <ThemeDropdown isMinimal={true} direction="down" align="right" />
-                      <button onClick={() => setIsNavOpen(!isNavOpen)} className="p-2 opacity-50 hover:opacity-100 transition-all">
-                         {isNavOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-                      </button>
-                   </div>
-                </div>
-                
-                {currentView === 'list' && !isNavOpen && (
-                   <div className="px-6 pb-5 space-y-3">
-                      <div className={`flex p-1 rounded-full ${theme === 'dark' ? 'bg-neutral-900/50' : 'bg-neutral-100'} border ${theme === 'dark' ? 'border-neutral-800' : 'border-neutral-200'}`}>
-                         {['movie', 'series'].map(m => (
-                            <button key={m} onClick={() => setMediaFilter(m)} className={`flex-1 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${mediaFilter === m ? `${a.main} text-white` : 'opacity-40'}`}>{m}</button>
-                         ))}
-                      </div>
-                      <div className="relative">
-                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 opacity-30" />
-                         <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className={`w-full pl-8 pr-4 py-2 rounded-xl text-[10px] outline-none border transition-all ${theme === 'dark' ? 'bg-black border-neutral-800' : 'bg-neutral-50 border-neutral-200'}`} placeholder="Search IMDB or Files..." />
-                      </div>
-                   </div>
-                )}
-
-                {isNavOpen && (
-                   <div className={`lg:hidden border-t ${theme === 'dark' ? 'border-neutral-800' : 'border-neutral-100'} animate-in slide-in-from-top duration-300`}>
-                      <nav className="p-4 space-y-1">
-                         {[ 
-                           { id: 'upload', label: 'Upload Feed', icon: Upload }, 
-                           { id: 'search', label: 'Search & Import', icon: Globe },
-                           { id: 'list', label: 'Manage Library', icon: Archive }, 
-                           { id: 'logs', label: 'Live Traffic', icon: Shield } 
-                         ].map((item) => (
-                           <button key={item.id} onClick={() => { setCurrentView(item.id); if(item.id === 'list') fetchSubtitles(); setIsNavOpen(false); }} className={`w-full flex items-center gap-4 px-6 py-3 rounded-xl ${currentView === item.id ? (theme === 'dark' ? 'bg-neutral-800 text-white' : 'bg-neutral-100/50 text-neutral-900') : 'opacity-40'}`}>
-                             <item.icon className={`w-4 h-4 ${currentView === item.id ? a.text : ''}`} /><span className="font-bold text-xs">{item.label}</span>
-                           </button>
-                         ))}
-                         <div className={`pt-4 mt-4 border-t ${theme === 'dark' ? 'border-neutral-800' : 'border-neutral-200'} flex items-center justify-center pb-2`}>
-                           <button onClick={handleLogout} className="flex items-center gap-2 opacity-40 text-[10px] uppercase font-black"><LogOut className="w-4 h-4" /> Sign Out</button>
-                         </div>
-                      </nav>
-                   </div>
-                )}
-             </div>
-          </header>
-
-          {/* Desktop Header */}
-          <header className={`hidden lg:flex sticky top-0 z-50 px-4 pt-4 mb-2`}> 
-             <div className={`flex-1 flex items-center justify-between py-4 px-8 border rounded-full transition-all ${theme === 'dark' ? 'bg-black/90 border-neutral-800' : 'bg-white/95 border-neutral-200'} backdrop-blur-xl shadow-lg`}>
-                <div className="flex items-center gap-4">
-                   <h2 className="text-lg font-black tracking-tight">{currentView === 'upload' ? 'Upload Feed' : currentView === 'list' ? 'SubView Library' : currentView === 'search' ? 'Search & Import' : 'Live Traffic'}</h2>
-                   {currentView === 'list' && (
-                     <div className={`flex p-1 rounded-full ${theme === 'dark' ? 'bg-neutral-900' : 'bg-neutral-100'} border ${theme === 'dark' ? 'border-neutral-800' : 'border-neutral-200'}`}>
-                       {['movie', 'series'].map(m => (
-                         <button key={m} onClick={() => setMediaFilter(m)} className={`px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${mediaFilter === m ? `${a.main} text-white` : 'opacity-40 hover:opacity-100'}`}>{m}</button>
-                       ))}
-                     </div>
-                   )}
-                </div>
-                 <div className="flex items-center gap-3">
-                   <ThemeDropdown isMinimal={false} direction="down" align="right" />
-                 </div>
-                   {currentView === 'list' && (
-                      <div className="relative">
-                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 opacity-30" />
-                         <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className={`pl-8 pr-4 py-1.5 rounded-lg text-[10px] outline-none border transition-all ${theme === 'dark' ? 'bg-black border-neutral-800 focus:border-indigo-500' : 'bg-neutral-50 border-neutral-200 focus:border-indigo-400'}`} placeholder="Search Library..." />
-                      </div>
-                   )}
-                   {currentView === 'list' && <button onClick={fetchSubtitles} disabled={isRefreshing} className={`p-2 rounded-lg opacity-40 hover:opacity-100 transition-all ${isRefreshing ? 'animate-spin' : ''}`}><RefreshCw className="w-3.5 h-3.5" /></button>}
-                </div>
-           </header>
+      {/* Main Content Area */}
+      <main className="main-frame overflow-hidden transition-theme">
+        <div className={`flex-1 flex flex-col min-w-0 bg-transparent relative h-full overflow-y-auto custom-scrollbar`}>
+          <div className={`max-w-full mx-auto w-full flex flex-col flex-1 ${currentView === 'logs' ? 'p-0' : 'p-4 lg:p-10 pb-24 gap-6'}`}>
 
           {/* PAGE CONTENT BLOCKS */}
           {currentView === 'upload' ? (
-            <div className="max-w-full mx-auto w-full animate-in fade-in duration-700">
-              <div className={`rounded-[1rem] border p-6 lg:p-10 ${theme === 'dark' ? 'bg-black border-neutral-800' : 'bg-white border-neutral-100'}`}>
-                <form className="space-y-8">
-                  <div className="flex gap-4">
-                    {['movie', 'series'].map(t => (
-                      <button key={t} type="button" onClick={() => setUploadForm({...uploadForm, type: t})} className={`flex-1 p-6 rounded-[0.8rem] border-2 transition-all flex flex-col items-center gap-3 ${uploadForm.type === t ? `${a.main} border-transparent text-white ${a.shadow}` : `${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800' : 'bg-neutral-50 border-neutral-100'}`}`}>
-                         {t === 'movie' ? <Film className="w-5 h-5" /> : <Tv className="w-5 h-5" />}
-                         <span className="text-[10px] font-black uppercase tracking-widest">{t}</span>
-                      </button>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-3"><label className="text-[10px] font-black uppercase opacity-40 px-2">Subtitle Language</label><div className="flex gap-2">{[ {code: 'eng', label: 'English'}, {code: 'mal', label: 'Malayalam'} ].map(l => <button key={l.code} type="button" onClick={() => setUploadForm({...uploadForm, language: l.code})} className={`flex-1 py-3 rounded-xl border-2 text-[10px] font-black uppercase transition-all ${uploadForm.language === l.code ? `${a.main} border-transparent text-white` : `${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800' : 'bg-neutral-100 border-transparent'}`}`}>{l.label}</button>)}</div></div>
-                    <div className="space-y-3"><label className="text-[10px] font-black uppercase opacity-40 px-2">IMDB Identity</label><div className="relative"><input type="text" value={uploadForm.imdbId} onChange={handleImdbChange} placeholder="tt1234567" className={`w-full py-3.5 px-4 rounded-xl border-2 outline-none font-mono text-xs ${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800' : 'bg-neutral-50 border-transparent focus:bg-white'}`} />{isMetadataLoading && <RefreshCw className={`absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 ${a.text} animate-spin`} />}</div></div>
-                  </div>
+            <div className="max-w-4xl mx-auto w-full animate-in fade-in duration-700">
+                <h1 className="text-3xl md:text-5xl font-black tracking-tight mb-3">Media Center</h1>
+                <p className="opacity-40 font-bold mb-10 md:mb-14 uppercase text-[10px] md:text-xs tracking-widest">Configure your upload sequence and metadata.</p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                    {/* Content Type */}
+                    <div className="space-y-4">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-1">Type</label>
+                        <div className="toggle-group flex gap-3">
+                            {['movie', 'series'].map(t => (
+                              <button 
+                                key={t}
+                                type="button"
+                                onClick={() => setUploadForm({...uploadForm, type: t})} 
+                                className={`flex-1 py-4.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${uploadForm.type === t ? 'active' : ''}`}
+                              >
+                                {t}
+                              </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Language Selection */}
+                    <div className="space-y-4">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-1">Subtitle</label>
+                        <div className="toggle-group flex gap-3">
+                            {[ {code: 'mal', label: 'Malayalam'}, {code: 'eng', label: 'English'} ].map(l => (
+                              <button 
+                                key={l.code}
+                                type="button"
+                                onClick={() => setUploadForm({...uploadForm, language: l.code})} 
+                                className={`flex-1 py-4.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${uploadForm.language === l.code ? 'active' : ''}`}
+                              >
+                                {l.label}
+                              </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+                     {/* IMDb ID */}
+                    <div className="space-y-4 mb-10">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-1">IMDb Identification</label>
+                        <div className="relative">
+                          <input 
+                            type="text" 
+                            value={uploadForm.imdbId}
+                            onChange={handleImdbChange}
+                            placeholder="Paste IMDb URL or ID (tt...)" 
+                            className={`imdb-input w-full p-5 lg:p-6 rounded-2xl text-lg md:text-xl font-mono tracking-tight outline-none focus:border-white/20 transition-all ${theme === 'dark' ? 'text-white' : 'text-black'}`}
+                          />
+                          {isMetadataLoading && <RefreshCw className="absolute right-6 top-1/2 -translate-y-1/2 w-5 h-5 opacity-40 animate-spin" />}
+                        </div>
+                    </div>
+
+                    {/* DROPZONE */}
+                    <div className="space-y-4 mb-10">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-1">Asset Dropzone</label>
+                        <div 
+                          onClick={() => fileInputRef.current?.click()}
+                          onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('dragover'); }}
+                          onDragLeave={(e) => e.currentTarget.classList.remove('dragover')}
+                          onDrop={(e) => { 
+                            e.preventDefault(); 
+                            e.currentTarget.classList.remove('dragover'); 
+                            processFiles(e.dataTransfer.items); 
+                          }}
+                          className="dropzone rounded-[32px] p-12 lg:p-20 text-center flex flex-col items-center justify-center cursor-pointer"
+                        >
+                            <div className="w-20 h-20 bg-white/5 rounded-3xl flex items-center justify-center mb-6">
+                                <Upload className="w-10 h-10 opacity-30" />
+                            </div>
+                            <h3 className="text-2xl font-black mb-2 uppercase tracking-tighter">Process Files or ZIP</h3>
+                            <p className="text-xs opacity-40 font-bold uppercase tracking-widest">Automatic extraction and listing enabled</p>
+                            <input type="file" ref={fileInputRef} className="hidden" multiple onChange={handleFileSelection} />
+                        </div>
+                    </div>
+
+                    {/* File List */}
+                    {stagedFiles.length > 0 && (
+                      <div className="space-y-5 mb-10 animate-in slide-in-from-bottom duration-500">
+                          <div className="flex justify-between items-center ml-1">
+                              <label className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">Extracted Sequence ({stagedFiles.length})</label>
+                              <button onClick={() => setStagedFiles([])} className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500 hover:opacity-100 opacity-60">Clear All</button>
+                          </div>
+                          <div className="space-y-3">
+                             {stagedFiles.map((item, idx) => (
+                                <div key={idx} className="file-item p-4 lg:p-5 flex justify-between items-center group transition-all hover:bg-white/10">
+                                    <div className="flex items-center gap-4 min-w-0">
+                                        <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center shrink-0">
+                                          <FileText className="w-5 h-5 opacity-30" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            {item.isEditing ? (
+                                              <input 
+                                                autoFocus
+                                                className="bg-white/5 border border-white/10 rounded px-2 py-0.5 text-xs text-white outline-none w-full"
+                                                value={item.tempName}
+                                                onChange={(e) => {
+                                                  const newFiles = [...stagedFiles];
+                                                  newFiles[idx].tempName = e.target.value;
+                                                  setStagedFiles(newFiles);
+                                                }}
+                                                onKeyDown={(e) => {
+                                                  if (e.key === 'Enter') saveFileName(idx);
+                                                  if (e.key === 'Escape') cancelEdit(idx);
+                                                }}
+                                              />
+                                            ) : (
+                                              <div className="text-xs lg:text-sm font-bold truncate max-w-[150px] md:max-w-md">{item.name}</div>
+                                            )}
+                                            <div className="text-[9px] opacity-30 uppercase font-black mt-1">{(item.size / (1024 * 1024)).toFixed(2)} MB {item.isFromZip ? '• ZIP Source' : ''}</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      {item.isEditing ? (
+                                        <>
+                                          <button onClick={() => saveFileName(idx)} className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg"><Check className="w-4 h-4" /></button>
+                                          <button onClick={() => cancelEdit(idx)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg"><X className="w-4 h-4" /></button>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <button onClick={() => startEdit(idx)} className="p-2 lg:opacity-0 group-hover:opacity-100 transition-all hover:bg-white/5 rounded-lg"><Edit2 className="w-4 h-4" /></button>
+                                          <button onClick={() => removeStagedFile(idx)} className="p-2 text-red-500/40 hover:text-red-500 transition-all hover:bg-red-500/10 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                                        </>
+                                      )}
+                                    </div>
+                                </div>
+                             ))}
+                          </div>
+                      </div>
+                    )}
+
+                    <button 
+                      onClick={handleMainUpload}
+                      disabled={isUploading || stagedFiles.length === 0}
+                      className={`w-full py-6 bg-[var(--login-btn)] text-[var(--login-btn-text)] rounded-2xl md:rounded-3xl font-black text-xl lg:text-2xl hover:scale-[1.01] active:scale-95 transition-all shadow-2xl uppercase tracking-tighter ${isUploading ? 'opacity-50' : ''}`}
+                    >
+                        {isUploading ? 'Uploading Sequence...' : uploadSuccess ? 'Successfully Committed' : 'Commit Upload'}
+                    </button>
+                </div>
+         </div>
                   {currentMetadata && <div className={`flex gap-6 p-4 rounded-[0.8rem] border-2 animate-in slide-in-from-left-4 ${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800' : 'bg-neutral-50 border-neutral-100'}`}>{currentMetadata.poster_path ? <img src={currentMetadata.poster_path} alt="Poster" className="w-16 h-24 object-cover rounded-xl" /> : <div className="w-16 h-24 bg-black rounded-xl" />}<div className="flex flex-col justify-center min-w-0"><h4 className="font-black text-lg truncate">{currentMetadata.title}</h4><p className="text-[10px] opacity-40 line-clamp-2">{currentMetadata.overview}</p></div></div>}
                   <div onDragOver={(e)=>e.preventDefault()} onDrop={handleDrop} className={`min-h-[160px] border-4 border-dashed rounded-[1rem] flex flex-col items-center justify-center p-8 transition-all cursor-pointer ${theme === 'dark' ? 'border-neutral-800 bg-[#0a0a0a]/20 hover:border-indigo-500/50' : 'border-neutral-100 bg-neutral-50 hover:border-indigo-400'}`} onClick={()=>fileInputRef.current.click()}>
                     <input ref={fileInputRef} type="file" multiple hidden onChange={handleFileSelection} />
@@ -902,203 +1024,222 @@ export default function App() {
               </div>
             </div>
           ) : currentView === 'search' ? (
-            <div className="max-w-full mx-auto w-full animate-in fade-in duration-700 space-y-6">
-               <div className={`rounded-[1rem] border p-6 lg:p-10 ${theme === 'dark' ? 'bg-black border-neutral-800' : 'bg-white border-neutral-100'}`}>
-                  <form onSubmit={searchExternal} className="flex gap-4">
-                     <div className="relative flex-1">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 opacity-20" />
-                        <input type="text" value={externalSearchQuery} onChange={(e) => setExternalSearchQuery(e.target.value)} placeholder="Search Malayalam Subtitles by Name..." className={`w-full py-4 pl-12 pr-4 rounded-2xl border-2 outline-none font-bold ${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800' : 'bg-neutral-50 border-transparent focus:bg-white'}`} />
-                     </div>
-                     <button type="submit" disabled={isSearchingExternal} className={`px-8 rounded-2xl font-black text-white ${a.main} ${a.hover} transition-all active:scale-95 disabled:opacity-50`}>
-                        {isSearchingExternal ? <RefreshCw className="w-5 h-5 animate-spin" /> : 'Search'}
-                     </button>
-                  </form>
-                  {externalResults.length > 0 && (
-                    <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                       {externalResults.map((result, idx) => {
-                          const status = importStatus[result.link] || 'idle';
-                          return (
-                            <div key={idx} className={`p-6 rounded-[0.8rem] border-2 flex flex-col gap-4 group transition-all hover:scale-[1.02] ${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800 hover:border-indigo-500/50' : 'bg-neutral-50 border-neutral-100 hover:border-indigo-400'}`}>
-                               <div className="flex gap-4 items-start">
-                                  {result.thumbnail ? <img src={result.thumbnail} className="w-16 h-20 object-cover rounded-xl" alt="" /> : <div className="w-16 h-20 bg-black rounded-xl flex items-center justify-center"><Film className="w-6 h-6 opacity-20" /></div>}
-                                  <div className="flex-1 min-w-0">
-                                     <span className="text-[8px] font-black uppercase opacity-40 px-2 py-0.5 rounded-full bg-neutral-800 text-white mb-2 inline-block">{result.source}</span>
-                                     <h3 className="font-black text-sm truncate">{result.title}</h3>
-                                     <div className="flex flex-wrap gap-2 mt-2">
-                                        <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[8px] font-black uppercase ${theme === 'dark' ? 'bg-neutral-900 border border-neutral-800' : 'bg-neutral-100 text-neutral-600'}`}>
-                                           <Globe className="w-2.5 h-2.5 opacity-40" />
-                                           {result.type || 'Detecting...'}
-                                        </div>
-                                     </div>
-                                  </div>
-                               </div>
-                               <div className="space-y-3 pt-2">
-                                  <div className="flex gap-2">
-                                     <input 
-                                       type="text" 
-                                       value={result.imdbId || ''} 
-                                       onChange={(e) => {
-                                         const newRes = [...externalResults];
-                                         newRes[idx].imdbId = e.target.value;
-                                         setExternalResults(newRes);
-                                       }}
-                                       placeholder="IMDb ID..."
-                                       className={`flex-1 px-3 py-2 rounded-lg text-[10px] font-mono outline-none border ${theme === 'dark' ? 'bg-black border-neutral-800' : 'bg-white border-neutral-200'}`}
-                                     />
-                                     <button 
-                                       onClick={() => inspectLink(result)}
-                                       className={`p-2 rounded-lg border ${theme === 'dark' ? 'border-neutral-800' : 'border-neutral-200'} ${status === 'inspecting' ? 'animate-spin' : ''}`}
-                                     >
-                                        <RefreshCw className="w-3.5 h-3.5 opacity-40" />
-                                     </button>
-                                     <button 
-                                       onClick={() => importExternal(result, result.imdbId, result.type || 'movie', result.season, result.episode)}
-                                       disabled={status !== 'idle' && status !== 'error'}
-                                       className={`flex-1 py-2 rounded-lg font-black text-[10px] text-white transition-all ${status === 'success' ? 'bg-emerald-500' : status === 'error' ? 'bg-red-500' : `${a.main} hover:opacity-90`}`}
-                                     >
-                                        {status === 'importing' ? 'Importing...' : status === 'success' ? 'Imported' : status === 'error' ? 'Failed' : 'Import'}
-                                     </button>
-                                  </div>
-                               </div>
-                            </div>
-                          );
-                       })}
-                    </div>
-                  )}
-               </div>
-            </div>
-          ) : currentView === 'list' ? (
-            <div className="max-w-full mx-auto w-full animate-in fade-in duration-700">
-               {subtitles.length === 0 ? (
-                 <div className="mt-40 text-center opacity-30">
-                    <Archive className="w-16 h-16 mx-auto mb-6" />
-                    <p className="text-sm font-black uppercase tracking-widest">Library Empty</p>
-                 </div>
-               ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
-                    {subtitles
-                      .filter(s => {
-                        const title = s?.title?.toLowerCase() || '';
-                        const imdbId = s?.imdbId || '';
-                        const query = searchQuery?.toLowerCase() || '';
-                        return s?.type === mediaFilter && (title.includes(query) || imdbId.includes(query));
-                      })
-                      .map((sub, idx) => {
-                        const first = sub?.files?.[0] || {};
-                        const isSeries = sub.type === 'series';
-                        return (
-                          <div key={idx} className={`group flex flex-col rounded-3xl border ${theme === 'dark' ? 'bg-[#0a0a0a] border-neutral-800 hover:border-neutral-700' : 'bg-white border-neutral-300 hover:border-neutral-400'} overflow-hidden transition-colors shadow-sm`}>
-                            {/* Card Header/Info */}
-                            <div className="p-5 flex gap-5">
-                              <div className="shrink-0 relative">
-                                {first.poster_path ? (
-                                  <img src={first.poster_path} className="w-24 h-36 object-cover rounded-2xl shadow-2xl" alt="" />
-                                ) : (
-                                  <div className="w-24 h-36 bg-neutral-900 rounded-2xl flex items-center justify-center border border-neutral-800 text-neutral-700">
-                                    <Film className="w-10 h-10" />
-                                  </div>
-                                )}
-                                <div className="absolute -top-2 -left-2 flex flex-col gap-1">
-                                  <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-lg ${isSeries ? 'bg-indigo-600' : 'bg-amber-500'} text-white shadow-xl`}>
-                                    {first.type}
-                                  </span>
-                                  {isSeries && (
-                                    <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-lg bg-white text-black shadow-xl border border-neutral-200">
-                                      S{String(first.season).padStart(2, '0')}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              
-                              <div className="flex-1 min-w-0 flex flex-col">
-                                <div className="flex justify-between items-start gap-2">
-                                  <h3 className="font-black text-xl leading-tight truncate text-balance">
-                                    {sub.title} {sub.season ? `Season ${sub.season}` : ''}
-                                  </h3>
-                                  <button 
-                                    onClick={() => handleDeleteSeason(sub.imdbId, null, sub.files)}
-                                    className="p-2 -mt-1 -mr-1 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-500 transition-all text-neutral-600"
-                                    title="Delete All Subtitles"
-                                  >
-                                    <Trash2 className="w-5 h-5" />
-                                  </button>
-                                </div>
-                                <p className="text-xs font-mono opacity-40 mt-1 uppercase tracking-tighter">{sub.imdbId}</p>
-                                
-                                <div className="mt-auto pt-4 flex flex-wrap gap-2">
-                                  {isSeries && (
-                                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-neutral-800 text-white opacity-60">
-                                      {sub.files.length} EPISODES
-                                    </span>
-                                  )}
-                                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500">
-                                    {sub.files.length} FILES
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Subtitles List */}
-                            <div className={`mt-auto border-t ${theme === 'dark' ? 'border-neutral-800 bg-black/40' : 'bg-neutral-100 border-neutral-200'} p-3 space-y-2`}>
-                              {sub?.files?.map((file, fIdx) => (
-                                <div key={fIdx} className={`group/item flex items-center justify-between gap-3 p-3 rounded-xl border ${theme === 'dark' ? 'bg-[#0e0e0e] border-neutral-800' : 'bg-white border-neutral-300'} transition-all`}>
-                                  <div className="min-w-0 flex-1">
-                                    <p className="text-[11px] font-bold truncate opacity-90 leading-none mb-1.5">
-                                      {file.filename.split('-').slice(1).join('-') || file.filename}
-                                    </p>
-                                    {isSeries && (
-                                      <p className="text-[9px] font-black opacity-40 uppercase tracking-widest">
-                                        EPISODE {file.episode} <span className="mx-1">•</span> S{file.season}
-                                      </p>
-                                    )}
-                                  </div>
-                                  <button 
-                                    onClick={() => handleDelete(file.id)}
-                                    className="p-1.5 rounded-lg opacity-100 lg:opacity-0 lg:group-hover/item:opacity-100 hover:bg-red-500/10 hover:text-red-500 transition-all text-neutral-500"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-               )}
-            </div>
-          ) : currentView === 'logs' ? (
-            <div className="flex-1 w-full animate-in fade-in duration-700 flex flex-col h-full">
-               <div className={`flex-1 flex flex-col rounded-none lg:rounded-[1rem] border-x-0 lg:border-x border-y shadow-2xl h-full flex flex-col ${theme === 'dark' ? 'bg-[#0a0a0f] border-neutral-800' : 'bg-black border-neutral-800'}`}>
-                  <div className="flex items-center gap-2 px-6 py-4 border-b border-neutral-800 bg-black/50">
-                     <div className="flex gap-2">
-                        <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
-                        <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
-                        <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
-                     </div>
-                     <span className="text-[10px] font-mono opacity-40 ml-4 font-black tracking-widest uppercase">System Flux Monitor.sh — {logs.length} events</span>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-4 lg:p-10 pb-20 font-mono text-[11px] lg:text-[13px] leading-relaxed custom-scrollbar bg-black/20 selection:bg-emerald-500/30 w-full overflow-x-hidden">
-                     {logs.length > 0 ? (
-                       <div className="space-y-3">
-                         {logs.map((log, i) => (
-                           <div key={i} className="flex gap-6 group">
-                              <span className="text-emerald-500/40 shrink-0 select-none">[{log.ts}]</span>
-                              <span className="text-emerald-400 break-all">
-                                 <span className="opacity-30 mr-3">➜</span>
-                                 {log.message}
-                              </span>
+                <div className="max-w-4xl mx-auto w-full flex flex-col gap-10 animate-in fade-in duration-700">
+                     <div className="media-card p-10 lg:p-14 rounded-[3rem]">
+                        <h2 className="text-4xl md:text-5xl font-black tracking-tighter mb-2 uppercase leading-none">Global Importer</h2>
+                        <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-30 mb-10">Scan high-availability media clusters.</p>
+                        <div className="flex flex-col md:flex-row gap-5">
+                           <div className="relative flex-1">
+                              <Globe className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 opacity-20" />
+                              <input 
+                                type="text" 
+                                value={externalSearchQuery} 
+                                onChange={(e) => setExternalSearchQuery(e.target.value)} 
+                                onKeyDown={(e) => e.key === 'Enter' && searchExternal()} 
+                                placeholder="Search External Clusters..." 
+                                className={`w-full py-6 pl-16 pr-8 rounded-[1.5rem] outline-none border transition-all text-xl font-bold tracking-tight ${theme === 'dark' ? 'bg-white/5 border-white/10 focus:border-white/20 text-white' : 'bg-black/5 border-black/10 focus:border-black/20 text-black'}`} 
+                              />
                            </div>
-                         ))}
-                       </div>
-                     ) : (
-                       <div className="h-full flex items-center justify-center opacity-10">
-                          <Shield className="w-20 h-20" />
-                       </div>
+                           <button 
+                             onClick={searchExternal} 
+                             disabled={isSearchingExternal} 
+                             className="px-14 py-6 md:py-0 rounded-[1.5rem] bg-indigo-600 text-white font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-2xl disabled:opacity-50"
+                           >
+                             {isSearchingExternal ? <RefreshCw className="w-7 h-7 animate-spin mx-auto" /> : 'Scan Cluster'}
+                           </button>
+                        </div>
+                     </div>
+
+                     {externalResults.length > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in slide-in-from-bottom duration-500">
+                           {externalResults.map((result, idx) => {
+                              const status = importStatus[result.link] || 'idle';
+                              return (
+                                <div key={idx} className="media-card p-8 rounded-[3rem] flex flex-col gap-8 group">
+                                   <div className="flex items-start justify-between gap-6">
+                                      <div className="flex-1 min-w-0">
+                                         <span className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-lg ${result.type === 'Series' ? 'bg-indigo-600' : 'bg-amber-500'} text-white inline-block mb-4 shadow-lg`}>{result.type || 'Media'}</span>
+                                         <h3 className="font-black text-3xl leading-[1.1] truncate mb-1 tracking-tighter">{result.title}</h3>
+                                         <p className="text-[10px] font-mono opacity-20 uppercase tracking-[0.3em] font-bold">{result.imdbId || 'PENDING'}</p>
+                                      </div>
+                                      <div className="w-20 h-20 rounded-[1.5rem] bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                                         {result.thumbnail ? <img src={result.thumbnail} className="w-full h-full object-cover rounded-[1.5rem]" alt="" /> : <Film className="w-8 h-8 opacity-20" />}
+                                      </div>
+                                   </div>
+                                   <div className="space-y-4">
+                                      <div className="flex gap-3">
+                                         <input 
+                                           type="text" 
+                                           value={result.imdbId || ''} 
+                                           onChange={(e) => {
+                                             const newRes = [...externalResults];
+                                             newRes[idx].imdbId = e.target.value;
+                                             setExternalResults(newRes);
+                                           }}
+                                           placeholder="IMDb ID..."
+                                           className={`flex-1 px-5 py-4 rounded-xl text-xs font-mono outline-none border transition-all ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/10'}`}
+                                         />
+                                         <button 
+                                           onClick={() => inspectLink(result)}
+                                           className={`p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all ${status === 'inspecting' ? 'animate-spin' : ''}`}
+                                         >
+                                            <RefreshCw className="w-4 h-4 opacity-40" />
+                                         </button>
+                                      </div>
+                                      <button 
+                                        onClick={() => importExternal(result, result.imdbId, result.type || 'movie', result.season, result.episode)}
+                                        disabled={status !== 'idle' && status !== 'error'}
+                                        className={`w-full py-6 rounded-2xl font-black uppercase text-xs tracking-[0.2em] transition-all flex items-center justify-center gap-4 ${status === 'success' ? 'bg-emerald-500 text-white' : status === 'error' ? 'bg-red-500 text-white' : 'bg-indigo-600 text-white hover:scale-[1.02] shadow-xl'}`}
+                                      >
+                                         {status === 'importing' ? <RefreshCw className="w-5 h-5 animate-spin" /> : status === 'success' ? 'Synchronized' : 'Pull Metadata'}
+                                      </button>
+                                   </div>
+                                </div>
+                              );
+                           })}
+                        </div>
                      )}
-                  </div>
-               </div>
-            </div>
+                </div>
+          ) : currentView === 'list' ? (
+                <div className="animate-in fade-in duration-700 h-full flex flex-col gap-8">
+                    <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
+                        <div className="toggle-group min-w-[200px] p-1 flex gap-1">
+                            {['movie', 'series'].map(m => (
+                              <button 
+                                key={m} 
+                                onClick={() => setMediaFilter(m)} 
+                                className={`flex-1 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${mediaFilter === m ? 'active' : ''}`}
+                              >
+                                {m}
+                              </button>
+                            ))}
+                        </div>
+                        <div className="relative flex-1 md:max-w-md w-full">
+                          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 opacity-30" />
+                          <input 
+                            type="text" 
+                            value={searchQuery} 
+                            onChange={(e) => setSearchQuery(e.target.value)} 
+                            className={`w-full pl-14 pr-6 py-4 rounded-2xl text-[12px] font-bold outline-none border transition-all ${theme === 'dark' ? 'bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-white/20' : 'bg-black/5 border-black/10 text-black focus:border-black/20'}`} 
+                            placeholder="Search Library Clusters..." 
+                          />
+                        </div>
+                        <button onClick={fetchSubtitles} disabled={isRefreshing} className={`p-4 rounded-2xl border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/10 shadow-sm'} hover:scale-105 transition-all ${isRefreshing ? 'animate-spin' : ''}`}><RefreshCw className="w-5 h-5" /></button>
+                    </div>
+
+                    {subtitles.length === 0 ? (
+                      <div className="flex-1 flex flex-col items-center justify-center opacity-10 mt-20">
+                          <Archive className="w-32 h-32 mb-8" />
+                          <p className="text-2xl font-black uppercase tracking-[0.5em]">No Data Clusters</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-8">
+                          {subtitles
+                            .filter(s => {
+                              const title = s?.title?.toLowerCase() || '';
+                              const imdbId = s?.imdbId || '';
+                              const query = searchQuery?.toLowerCase() || '';
+                              return s?.type === mediaFilter && (title.includes(query) || imdbId.includes(query));
+                            })
+                            .map((sub, idx) => {
+                              const first = sub?.files?.[0] || {};
+                              const isSeries = sub.type === 'series';
+                              return (
+                                <div key={idx} className="media-card rounded-[3rem] p-8 flex flex-col gap-8 group">
+                                  <div className="flex gap-6">
+                                    <div className="shrink-0 relative">
+                                      {first.poster_path ? (
+                                        <img src={first.poster_path} className="w-28 h-40 object-cover rounded-[1.5rem] shadow-2xl" alt="" />
+                                      ) : (
+                                        <div className="w-28 h-40 bg-white/5 rounded-[1.5rem] flex items-center justify-center border border-white/10 text-white/20">
+                                          <Film className="w-12 h-12" />
+                                        </div>
+                                      )}
+                                      <div className="absolute -top-2 -left-2 flex flex-col gap-2">
+                                        <span className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-lg ${isSeries ? 'bg-indigo-600' : 'bg-amber-500'} text-white shadow-xl`}>
+                                          {sub.type}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="flex-1 min-w-0 flex flex-col">
+                                      <div className="flex justify-between items-start gap-4">
+                                        <h3 className="font-black text-2xl leading-[1.1] truncate text-balance tracking-tighter">
+                                          {sub.title}
+                                        </h3>
+                                        <button 
+                                          onClick={() => handleDeleteSeason(sub.imdbId, null, sub.files)}
+                                          className="p-3 bg-red-500/10 text-red-500 rounded-2xl hover:scale-110 transition-all opacity-0 group-hover:opacity-100"
+                                        >
+                                          <Trash2 className="w-5 h-5" />
+                                        </button>
+                                      </div>
+                                      <p className="text-[10px] font-mono opacity-20 mt-1 uppercase tracking-[0.2em] font-bold">{sub.imdbId}</p>
+                                      
+                                      <div className="mt-auto flex flex-wrap gap-2">
+                                        <span className="text-[9px] font-black uppercase px-3 py-1.5 rounded-xl bg-white/5 text-white/40 border border-white/5">
+                                          {sub.files.length} ASSETS
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="space-y-3">
+                                    {sub?.files?.map((file, fIdx) => (
+                                      <div key={fIdx} className="file-item p-4 flex justify-between items-center group/item transition-all hover:bg-white/5">
+                                        <div className="min-w-0 flex-1">
+                                          <p className="text-[11px] font-bold truncate opacity-80 mb-1">
+                                            {file.filename.split('-').slice(1).join('-') || file.filename}
+                                          </p>
+                                          <p className="text-[9px] font-black opacity-30 uppercase tracking-widest">
+                                            {(file.size/1024/1024).toFixed(1)} MB {isSeries && `• EP ${file.episode} S${file.season}`}
+                                          </p>
+                                        </div>
+                                        <button onClick={() => handleDelete(file.id)} className="p-2 opacity-0 group-hover/item:opacity-100 text-red-500 translate-x-4 group-hover/item:translate-x-0 transition-all">
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                      </div>
+                    )}
+                </div>
+          ) : currentView === 'logs' ? (
+                <div className="flex-1 w-full animate-in fade-in duration-700 flex flex-col h-full overflow-hidden">
+                    <div className="flex-1 flex flex-col rounded-[2.5rem] bg-black/40 border border-white/5 shadow-2xl overflow-hidden h-full">
+                        <div className="flex items-center gap-2 px-8 py-6 border-b border-white/5 bg-white/5">
+                            <div className="flex gap-2">
+                                <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
+                                <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
+                                <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
+                            </div>
+                            <span className="text-[10px] font-mono opacity-40 ml-6 font-black tracking-[0.3em] uppercase">System Flux Monitor — {logs.length} events</span>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-8 lg:p-12 font-mono text-xs lg:text-sm leading-relaxed custom-scrollbar selection:bg-emerald-500/30 w-full">
+                            {logs.length > 0 ? (
+                                <div className="space-y-4">
+                                    {logs.map((log, i) => (
+                                        <div key={i} className="flex gap-8 group">
+                                            <span className="text-emerald-500/40 shrink-0 select-none font-bold">[{log.ts}]</span>
+                                            <span className="text-emerald-400/90 break-all leading-relaxed">
+                                                <span className="opacity-20 mr-4 font-black">➜</span>
+                                                {log.message}
+                                            </span>
+                                        </div>
+                                    ))}
+                                    <div id="logs-end"></div>
+                                </div>
+                            ) : (
+                                <div className="h-full flex items-center justify-center opacity-10">
+                                    <Shield className="w-24 h-24" />
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
           ) : null}
         </div>
 </main>

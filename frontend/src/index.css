@@ -45,9 +45,9 @@
   transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* Login Page Specific Styles */
+/* Design Tokens & Nexus Layout */
 :root {
-  --login-bg: #f0f4f8;
+  --login-bg: #f1f5f9;
   --login-glass-bg: rgba(255, 255, 255, 0.45);
   --login-glass-border: rgba(0, 0, 0, 0.08);
   --login-text: #0f172a;
@@ -56,6 +56,8 @@
   --login-btn: #0f172a;
   --login-btn-text: #ffffff;
   --login-margin: 20px;
+  --blur: 45px;
+  --header-h: 70px;
 }
 
 .dark {
@@ -76,6 +78,68 @@
   perspective: 1000px;
 }
 
+/* Expanding Floating Glass Header */
+.floating-header {
+  position: fixed;
+  top: var(--login-margin);
+  left: var(--login-margin);
+  right: var(--login-margin);
+  height: var(--header-h);
+  background: var(--login-glass-bg);
+  backdrop-filter: blur(var(--blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(180%);
+  border: 1px solid var(--login-glass-border);
+  border-radius: 20px;
+  z-index: 100;
+  padding: 0 24px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1), background 0.5s ease;
+  overflow: hidden;
+}
+
+.header-top {
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mobile-nav-content {
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+  padding-bottom: 20px;
+  pointer-events: none;
+}
+
+.header-expanded .mobile-nav-content {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: all;
+  transition-delay: 0.1s;
+}
+
+/* Responsive Frame Placement */
+.main-frame {
+  position: absolute;
+  top: calc(var(--header-h) + var(--login-margin) + 20px); 
+  bottom: var(--login-margin);
+  left: var(--login-margin);
+  right: var(--login-margin);
+  background: var(--login-glass-bg);
+  backdrop-filter: blur(var(--blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(180%);
+  border: 1px solid var(--login-glass-border);
+  border-radius: 32px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  scrollbar-width: none;
+  transition: top 0.4s cubic-bezier(0.4, 0, 0.2, 1), background 0.5s ease;
+}
+.main-frame::-webkit-scrollbar { display: none; }
+
 .glass-container {
   width: calc(100vw - (var(--login-margin) * 2));
   height: calc(100vh - (var(--login-margin) * 2));
@@ -84,11 +148,47 @@
   -webkit-backdrop-filter: blur(50px) saturate(200%);
   border: 1px solid var(--login-glass-border);
   border-radius: 32px;
-  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 30px 60px -12px rgba(0,0,0,0.4);
   transition: background 0.5s ease, border 0.5s ease, transform 0.1s ease-out;
   transform-style: preserve-3d;
 }
 
+/* UI Elements */
+.toggle-group button {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid var(--login-glass-border);
+  background: rgba(255,255,255,0.03);
+}
+.toggle-group button.active {
+  background: var(--login-text);
+  color: var(--login-bg);
+  border-color: var(--login-text);
+  font-weight: 700;
+}
+
+.dropzone {
+  border: 2px dashed var(--login-glass-border);
+  transition: all 0.3s;
+  background: rgba(255,255,255,0.01);
+}
+.dropzone.dragover {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.imdb-input {
+  background: rgba(0,0,0,0.15);
+  border: 1px solid var(--login-glass-border);
+  transition: border-color 0.3s;
+}
+
+.file-item {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--login-glass-border);
+  border-radius: 12px;
+}
+
+/* Animations */
 .orb {
   position: absolute;
   border-radius: 50%;
@@ -96,14 +196,15 @@
   will-change: transform;
   pointer-events: none;
   filter: saturate(1.5);
+  opacity: 0.6;
 }
 
-.orb-1 { width: 450px; height: 450px; background: radial-gradient(circle, #6366f1, #312e81); animation: roam1 40s linear infinite alternate; top: -10%; left: -10%; opacity: 0.8; }
-.orb-2 { width: 550px; height: 550px; background: radial-gradient(circle, #ec4899, #701a75); animation: roam2 60s linear infinite alternate; top: 40%; left: 80%; opacity: 0.6; }
-.orb-3 { width: 300px; height: 300px; background: radial-gradient(circle, #06b6d4, #083344); animation: roam3 35s linear infinite alternate; top: 80%; left: -5%; opacity: 0.7; }
-.orb-4 { width: 600px; height: 600px; background: radial-gradient(circle, #f59e0b, #9a3412); animation: roam4 55s linear infinite alternate; top: -20%; left: 60%; opacity: 0.5; }
-.orb-5 { width: 200px; height: 200px; background: radial-gradient(circle, #22c55e, #14532d); animation: roam1 50s linear infinite reverse; top: 50%; left: 10%; opacity: 0.8; }
-.orb-6 { width: 350px; height: 350px; background: radial-gradient(circle, #ef4444, #7f1d1d); animation: roam2 45s linear infinite reverse; top: 90%; left: 90%; opacity: 0.6; }
+.orb-1 { width: 450px; height: 450px; background: radial-gradient(circle, #6366f1, #312e81); animation: roam1 40s linear infinite alternate; top: -10%; left: -10%; }
+.orb-2 { width: 550px; height: 550px; background: radial-gradient(circle, #ec4899, #701a75); animation: roam2 60s linear infinite alternate; top: 40%; left: 80%; }
+.orb-3 { width: 300px; height: 300px; background: radial-gradient(circle, #06b6d4, #083344); animation: roam3 35s linear infinite alternate; top: 80%; left: -5%; }
+.orb-4 { width: 600px; height: 600px; background: radial-gradient(circle, #f59e0b, #9a3412); animation: roam4 55s linear infinite alternate; top: -20%; left: 60%; }
+.orb-5 { width: 200px; height: 200px; background: radial-gradient(circle, #22c55e, #14532d); animation: roam1 50s linear infinite reverse; top: 50%; left: 10%; }
+.orb-6 { width: 350px; height: 350px; background: radial-gradient(circle, #ef4444, #7f1d1d); animation: roam2 45s linear infinite reverse; top: 90%; left: 90%; }
 
 @keyframes roam1 {
   0% { transform: translate3d(0, 0, 0) rotate(0deg); }
@@ -126,6 +227,10 @@
 }
 
 @media (max-width: 768px) {
-  .orb { opacity: 0.4; }
+  :root { --login-margin: 12px; }
+  .header-top { height: 60px; }
+  .floating-header { border-radius: 18px; padding: 0 16px; }
+  .main-frame { border-radius: 24px; }
+  .orb { opacity: 0.3; }
   .orb-1, .orb-2, .orb-4 { width: 250px; height: 250px; }
 }
