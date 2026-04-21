@@ -64,12 +64,11 @@ const searchMovieMirror = async (query) => {
     const results = [];
     const q = query.toLowerCase().trim();
 
-    // The grid items contain h3 for titles
-    $('h3').each((i, el) => {
-      const title = $(el).text().trim();
-      const parent = $(el).parent();
-      const link = parent.find('a.sub-btn').attr('href') || parent.attr('href');
-      const thumbnail = parent.find('img').attr('src');
+    // The current structure uses .colle-col for grid items
+    $('.colle-col').each((i, el) => {
+      const title = $(el).find('.prod-blk11 h3').text().trim();
+      const link = $(el).find('.prod-blk11 a.sub-btn').attr('href') || $(el).find('.prod-blk a').attr('href');
+      const thumbnail = $(el).find('.prod-blk img').attr('src');
       
       if (title.toLowerCase().includes(q)) {
         results.push({
@@ -139,10 +138,14 @@ const extractAllSrtsFromBuffer = (buffer) => {
         return validExtensions.some(ext => name.endsWith(ext));
       })
       .map(entry => {
-        // preserve original filename from ZIP path
+        // preserve original filename from ZIP path, cleaning up excessive underscores
         const pathParts = entry.entryName.replace(/\\/g, '/').split('/');
+        let rawName = pathParts.pop();
+        // Normalize: replace multiple underscores with a single one, trim edges
+        rawName = rawName.replace(/_+/g, '_').replace(/^_|_$/g, '');
+        
         return {
-          name: pathParts.pop(),
+          name: rawName,
           data: entry.getData()
         };
       });
@@ -172,25 +175,29 @@ const detectSeasonEpisode = (filename) => {
   let episode = null;
   
   // Handlers for specific formats
-  if (name.match(/(\d+)x(\d+)/i)) {
-    const match = name.match(/(\d+)x(\d+)/i);
+  if (name.match(/(\d+)\s*x\s*(\d+)/i)) {
+    const match = name.match(/(\d+)\s*x\s*(\d+)/i);
     season = parseInt(match[1], 10);
     episode = parseInt(match[2], 10);
   } else if (eMatch) {
     const match = eMatch;
-    // eMatch could be any of the above OR patterns. 
-    // The specific capture group we want is the first one that matched.
     episode = parseInt(match[1], 10);
   } else {
     // Fallback: Detect single numbers like "02.srt" or "1-01.srt"
-    const genericMatch = name.match(/(\d+)\s*(?:-|_)\s*(\d+)/); // 1-01
+    const genericMatch = name.match(/(?:^|\D)(\d+)\s*(?:-|_)\s*(\d+)(?:\D|$)/); // 1-01
     if (genericMatch) {
       if (!season) season = parseInt(genericMatch[1], 10);
       episode = parseInt(genericMatch[2], 10);
     } else {
-      const numMatch = name.match(/(\d+)/);
+      // Find the isolated number closest to the end of the filename (before extension)
+      const numMatch = name.match(/(?:^|\D)(\d+)(?:\.\w+)?$/);
       if (numMatch) episode = parseInt(numMatch[1], 10);
     }
+  }
+
+  // Fallback if no season detect but episode is found, default to S1
+  if (episode !== null && season === null) {
+      season = 1;
   }
   
   return { season, episode };
@@ -245,8 +252,17 @@ const getDirectDownloadLink = async (pageUrl, source) => {
       downloadLink = $('a[href$=".zip"]').attr('href') || 
                      $('a[href$=".srt"]').attr('href') ||
                      $('.elementor-button-link[href*="download"]').attr('href') ||
+                     $('a:contains("download")').attr('href') ||
                      $('a:contains("Download")').attr('href');
     } else if (source === 'MSone') {
+      // MSone buttons often link to /releases/ which handles the redirect
+      const releasesLink = $('a[href*="/releases/"]').attr('href');
+      if (releasesLink) {
+         // Follow the redirect
+         const redirectResponse = await fetch(releasesLink, { headers, redirect: 'follow' });
+         return redirectResponse.url; // Returns the final destination (usually Drive or direct Zip)
+      }
+      
       downloadLink = $('a:contains("പരിഭാഷ")').attr('href') || 
                      $('a[href*="download"]').attr('href') ||
                      $('a.elementor-button').attr('href');

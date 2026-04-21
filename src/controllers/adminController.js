@@ -239,11 +239,51 @@ const inspectExternalLink = async (req, res) => {
        }
     }
 
-    const downloadUrl = await scraper.getDirectDownloadLink(link, source);
+    let downloadUrl = await scraper.getDirectDownloadLink(link, source);
     if (!downloadUrl) throw new Error('Download link extraction failed');
 
-    const response = await fetch(downloadUrl);
+    let response = await fetch(downloadUrl);
     if (!response.ok) throw new Error('Upstream download failed');
+
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('text/html')) {
+        // We hit a redirect page (common on Movie Mirror), try to scrape it for the ACTUAL zip
+        const html = await response.text();
+        const $ = require('cheerio').load(html);
+        const deeperLink = $('a[href$=".zip"]').attr('href') || $('a:contains("Download")').attr('href') || $('a[href*="drive.google"]').attr('href');
+        
+        if (deeperLink) {
+             let finalLink = deeperLink.startsWith('http') ? deeperLink : new URL(deeperLink, downloadUrl).href;
+             
+             // Convert Google Drive view links to direct download links
+             if (finalLink.includes('drive.google.com/file/d/')) {
+                 const match = finalLink.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                 if (match) {
+                     finalLink = `https://drive.google.com/uc?export=download&id=${match[1]}`;
+                 }
+             }
+
+             console.log(`[Inspect] Followed HTML redirect to deeper link: ${finalLink}`);
+             response = await fetch(finalLink);
+             
+             // One last check if the new link is a Google Drive link that redirected us back to an HTML page
+             // (Some large Google Drive files show a virus scan warning HTML page)
+             const newContentType = response.headers.get('content-type') || '';
+             if (newContentType.includes('text/html') && finalLink.includes('drive.google')) {
+                 const warningHtml = await response.text();
+                 const warningMatch = warningHtml.match(/uc\?export=download&amp;confirm=[^"']+/);
+                 if (warningMatch) {
+                     const warningLink = `https://drive.google.com/${warningMatch[0].replace(/&amp;/g, '&')}`;
+                     console.log(`[Inspect] Bypassing Google Drive virus warning...`);
+                     response = await fetch(warningLink);
+                 }
+             }
+
+             if (!response.ok) throw new Error('Deeper upstream download failed');
+        } else {
+             throw new Error('Hit an authorization or captcha page instead of a download link.');
+        }
+    }
 
     let buffer = await response.arrayBuffer();
     buffer = Buffer.from(buffer);
@@ -255,6 +295,7 @@ const inspectExternalLink = async (req, res) => {
       files = scraper.extractAllSrtsFromBuffer(buffer);
     } else {
       let fileName = title ? title.replace(/[^a-z0-9._-]/gi, '_') : downloadUrl.split('/').pop() || 'subtitle';
+      fileName = fileName.replace(/_+/g, '_').replace(/^_|_$/g, '');
       if (!fileName.toLowerCase().endsWith('.srt') && !fileName.toLowerCase().endsWith('.vtt')) fileName += '.srt';
       files = [{ name: fileName, data: buffer }];
     }
