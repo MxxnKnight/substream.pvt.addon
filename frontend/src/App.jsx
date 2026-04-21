@@ -783,7 +783,7 @@ export default function App() {
                       className="hidden md:flex w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 items-center justify-center text-emerald-500 hover:scale-105 transition-all"
                       title="Copy Addon Link"
                     >
-                      <Share2 className="w-4 h-4" />
+                      <Copy className="w-4 h-4" />
                     </button>
                     <button 
                       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}

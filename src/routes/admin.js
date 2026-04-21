@@ -19,7 +19,7 @@ router.delete('/subtitles/:id', authenticate, deleteSubtitle);
 // External Search & Import
 router.get('/search-external', authenticate, searchExternalSubtitles);
 router.post('/import-external', authenticate, importExternalSubtitle);
-router.get('/inspect-external', authenticate, inspectExternalLink);
+router.get('/inspect-link', authenticate, inspectExternalLink);
 router.get('/tmdb/search', authenticate, searchTmdbByTitle);
 
 // Add logs endpoint
