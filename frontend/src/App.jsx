@@ -25,7 +25,7 @@ import {
   Moon,
   Menu,
   Palette,
-  ExternalLink, Share2
+  ExternalLink, Share2, Copy
 } from 'lucide-react';
 
 export default function App() {
@@ -141,6 +141,8 @@ export default function App() {
 
   // Refresh state
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [expandedResult, setExpandedResult] = useState(null); 
+  const [reviewData, setReviewData] = useState(null); 
 
   // Logs state
   const [logs, setLogs] = useState([]);
@@ -294,56 +296,83 @@ export default function App() {
     }
   };
 
-  const inspectLink = async (result) => {
+  // MODIFIED: Session-based Inspect
+  const inspectLink = async (result, index) => {
     const importId = result.link;
     setImportStatus(prev => ({ ...prev, [importId]: 'inspecting' }));
+    setExpandedResult(index); // Mark this card as the active one
+    
     try {
-      const res = await apiFetch(`/api/admin/inspect-external?link=${encodeURIComponent(result.link)}&title=${encodeURIComponent(result.title)}`);
-      if (res.ok) {
-        const data = await res.json();
-        // Update the result in the list with detected metadata
-        setExternalResults(prev => prev.map(r => 
-          r.link === result.link ? { ...r, imdbId: data.imdbId, type: data.type } : r
-        ));
-        setImportStatus(prev => ({ ...prev, [importId]: 'idle' }));
-        return data;
-      }
+      const res = await apiFetch(`/api/admin/inspect-link?link=${encodeURIComponent(result.link)}&title=${encodeURIComponent(result.title)}&source=${encodeURIComponent(result.source)}`);
+      const metadata = await res.json();
+      
+      if (!res.ok) throw new Error(metadata.error || 'Failed to inspect');
+
+      // Update the result in the list with metadata
+      setExternalResults(prev => prev.map((r, i) => 
+        i === index ? { ...r, ...metadata, imdbId: metadata.imdbId, type: metadata.type } : r
+      ));
+
+      // Prepare Review Data
+      setReviewData({
+        sessionId: metadata.sessionId,
+        imdbId: metadata.imdbId,
+        type: metadata.type,
+        poster: metadata.poster,
+        files: metadata.files.map(f => ({
+          originalName: f.name,
+          newName: f.name,
+          season: f.season,
+          episode: f.episode
+        }))
+      });
+
+      setImportStatus(prev => ({ ...prev, [importId]: 'idle' }));
     } catch (err) {
       console.error("Link inspection failed", err);
+      setImportStatus(prev => ({ ...prev, [importId]: 'error' }));
+      setExpandedResult(null);
+      alert(err.message);
     }
-    setImportStatus(prev => ({ ...prev, [importId]: 'error' }));
-    return null;
   };
 
-  const importExternal = async (result, imdbId, type, season, episode) => {
-    const importId = result.link;
+  // NEW: Finalize session-based import
+  const handleFinalizeImport = async () => {
+    if (!reviewData || !reviewData.imdbId) {
+      alert("IMDb ID is required before importing.");
+      return;
+    }
+
+    const importId = externalResults[expandedResult]?.link;
     setImportStatus(prev => ({ ...prev, [importId]: 'importing' }));
+    
     try {
       const res = await apiFetch('/api/admin/import-external', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          link: result.link,
-          title: result.title,
-          source: result.source,
-          imdb_id: imdbId,
-          type,
-          season,
-          episode
+          sessionId: reviewData.sessionId,
+          imdb_id: reviewData.imdbId,
+          type: reviewData.type,
+          files: reviewData.files
         })
       });
-      const data = await res.json();
-      if (res.ok) {
-        setImportStatus(prev => ({ ...prev, [importId]: 'success' }));
-        fetchSubtitles();
-        // Alert how many were imported
-        alert(data.message);
-      } else {
-        setImportStatus(prev => ({ ...prev, [importId]: 'error' }));
-        alert(data.error);
-      }
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Import failed');
+
+      addLog(`Synchronized ${reviewData.files.length} asset(s) for ${reviewData.imdbId}`, 'success');
+      
+      // Cleanup UI
+      setImportStatus(prev => ({ ...prev, [importId]: 'success' }));
+      setExpandedResult(null);
+      setReviewData(null);
+      
+      // Refresh library
+      fetchSubtitles();
     } catch (err) {
       setImportStatus(prev => ({ ...prev, [importId]: 'error' }));
+      alert(err.message);
     }
   };
 
@@ -640,9 +669,6 @@ export default function App() {
         <div className="orb orb-1"></div>
         <div className="orb orb-2"></div>
         <div className="orb orb-3"></div>
-        <div className="orb orb-4"></div>
-        <div className="orb orb-5"></div>
-        <div className="orb orb-6"></div>
 
         <div className="glass-container flex flex-col relative z-20">
            {/* Navigation Header */}
@@ -719,13 +745,10 @@ export default function App() {
 
   return (
     <div className={`login-page min-h-screen w-full relative overflow-hidden font-sans ${theme === 'dark' ? 'dark' : ''}`}>
-      {/* Background Orbs */}
+      {/* Optimized Background Orbs - Reduced to 3 for performance */}
       <div className="orb orb-1"></div>
       <div className="orb orb-2"></div>
       <div className="orb orb-3"></div>
-      <div className="orb orb-4"></div>
-      <div className="orb orb-5"></div>
-      <div className="orb orb-6"></div>
 
       {/* Floating Header */}
       <header className={`floating-header transition-theme ${isNavExpanded ? 'header-expanded' : ''}`}>
@@ -808,8 +831,8 @@ export default function App() {
                     </button>
                   ))}
                   <div className="pt-4 space-y-4">
-                    <button onClick={copyManifestUrl} className="w-full py-4 bg-emerald-500/10 text-emerald-500 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 border border-emerald-500/10">
-                       <Share2 className="w-4 h-4" /> Copy Addon Link
+                    <button onClick={copyManifestUrl} className="w-full py-5 bg-emerald-500/10 text-emerald-500 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 border border-emerald-500/10">
+                       <Copy className="w-4 h-4" /> Copy Addon Link
                     </button>
                    <button onClick={handleLogout} className="w-full py-4 bg-red-500/10 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 border border-red-500/10">
                        <LogOut className="w-4 h-4" /> Sign Out
@@ -998,85 +1021,207 @@ export default function App() {
 
                      {externalResults.length > 0 && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in slide-in-from-bottom duration-500">
-                           {externalResults.map((result, idx) => {
-                              const status = importStatus[result.link] || 'idle';
-                              return (
-                                <div key={idx} className="media-card p-8 rounded-[3rem] flex flex-col gap-8 group">
-                                   <div className="flex items-start justify-between gap-6">
-                                      <div className="flex-1 min-w-0">
-                                         <span className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-lg ${result.type === 'Series' ? 'bg-indigo-600' : 'bg-amber-500'} text-white inline-block mb-4 shadow-lg`}>{result.type || 'Media'}</span>
-                                         <h3 className="font-black text-2xl md:text-3xl leading-[1.1] mb-2 tracking-tighter text-balance">{result.title}</h3>
-                                         <p className="text-[10px] font-mono opacity-20 uppercase tracking-[0.3em] font-bold">{result.imdbId || 'PENDING'}</p>
+                            {externalResults.map((result, idx) => {
+                               const status = importStatus[result.link] || 'idle';
+                               const isExpanded = expandedResult === idx;
+                               const isMatched = !!result.imdbId;
+                               
+                               return (
+                                 <div key={idx} className={`media-card rounded-[3rem] overflow-hidden transition-all duration-500 ${isExpanded ? 'ring-2 ring-emerald-500/50 scale-[1.01]' : 'group'}`}>
+                                    <div className="p-8 flex flex-col md:flex-row gap-8">
+                                      {/* Poster / Source Info */}
+                                      <div className="w-full md:w-36 h-52 md:h-52 rounded-[2rem] bg-white/5 border border-white/10 overflow-hidden relative group shrink-0 shadow-2xl">
+                                        {result.poster ? (
+                                          <img src={result.poster.startsWith('http') ? result.poster : `https://image.tmdb.org/t/p/w200${result.poster}`} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt="" />
+                                        ) : result.thumbnail ? (
+                                           <img src={result.thumbnail} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt="" />
+                                        ) : (
+                                          <div className="w-full h-full flex flex-col items-center justify-center gap-3 opacity-20">
+                                            <Globe className="w-10 h-10" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest">{result.source}</span>
+                                          </div>
+                                        )}
+                                        <div className="absolute top-4 left-4 py-1 px-3 bg-black/60 backdrop-blur-md rounded-full border border-white/10">
+                                           <span className="text-[8px] font-black uppercase tracking-widest text-emerald-400">{result.source}</span>
+                                        </div>
                                       </div>
-                                      <div className="w-20 h-20 rounded-[1.5rem] bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-                                         {result.thumbnail ? <img src={result.thumbnail} className="w-full h-full object-cover rounded-[1.5rem]" alt="" /> : <Film className="w-8 h-8 opacity-20" />}
+
+                                      {/* Metadata & Actions */}
+                                      <div className="flex-1 flex flex-col justify-between py-2">
+                                        <div>
+                                          <div className="flex flex-wrap items-center gap-3 mb-4">
+                                            <span className={`py-1 px-3 rounded-lg text-[8px] font-black uppercase tracking-widest ${result.type?.toLowerCase() === 'series' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                                              {result.type || 'Detecting...'}
+                                            </span>
+                                            {isMatched && (
+                                              <span className="py-1 px-3 bg-emerald-500/10 text-emerald-500 rounded-lg text-[8px] font-black uppercase tracking-widest flex items-center gap-2">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                Smart Matched
+                                              </span>
+                                            )}
+                                          </div>
+                                          
+                                          <h3 className="text-xl md:text-3xl font-black tracking-tighter mb-2 leading-tight">
+                                            {result.tmdbTitle || result.title}
+                                          </h3>
+                                          <div className="flex items-center gap-4">
+                                            <input 
+                                              type="text"
+                                              value={result.imdbId || ''}
+                                              onChange={(e) => {
+                                                const newRes = [...externalResults];
+                                                newRes[idx].imdbId = e.target.value;
+                                                setExternalResults(newRes);
+                                              }}
+                                              placeholder="IMDb ID (tt...)"
+                                              className={`bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-[10px] font-mono outline-none focus:border-emerald-500/50 transition-all ${isMatched ? 'text-emerald-500' : 'text-white/40'}`}
+                                            />
+                                          </div>
+                                        </div>
+
+                                        <div className="flex flex-wrap gap-4 mt-6">
+                                          {!isExpanded ? (
+                                            <>
+                                              <button 
+                                                onClick={() => inspectLink(result, idx)}
+                                                disabled={status === 'inspecting' || status === 'importing'}
+                                                className={`flex-1 md:flex-none py-5 px-10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl flex items-center justify-center gap-3 ${status === 'success' ? 'bg-emerald-500 text-white' : 'bg-white text-black'}`}
+                                              >
+                                                {status === 'inspecting' ? (<RefreshCw className="w-4 h-4 animate-spin" />) : status === 'success' ? (<Check className="w-4 h-4" />) : (<Search className="w-4 h-4" />)}
+                                                {status === 'success' ? 'Synchronized' : isMatched ? 'Inspect & Scrutinize' : 'Pull Metadata'}
+                                              </button>
+                                              <a href={result.link} target="_blank" rel="noreferrer" className="py-5 px-8 rounded-2xl border border-white/10 text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all flex items-center justify-center gap-3">
+                                                <ExternalLink className="w-4 h-4" /> Visit Source
+                                              </a>
+                                            </>
+                                          ) : (
+                                            <button 
+                                              onClick={() => { setExpandedResult(null); setReviewData(null); }}
+                                              className="py-5 px-8 rounded-2xl border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500/5 transition-all flex items-center justify-center gap-3"
+                                            >
+                                              Cancel Review
+                                            </button>
+                                          )}
+                                        </div>
                                       </div>
-                                   </div>
-                                   <div className="space-y-4">
-                                      <div className="flex gap-3">
-                                         <input 
-                                           type="text" 
-                                           value={result.imdbId || ''} 
-                                           onChange={(e) => {
-                                             const newRes = [...externalResults];
-                                             newRes[idx].imdbId = e.target.value;
-                                             setExternalResults(newRes);
-                                           }}
-                                           placeholder="IMDb ID..."
-                                           className={`flex-1 px-5 py-4 rounded-xl text-xs font-mono outline-none border transition-all ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/10'}`}
-                                         />
-                                         <button 
-                                           onClick={() => inspectLink(result)}
-                                           className={`p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all ${status === 'inspecting' ? 'animate-spin' : ''}`}
-                                         >
-                                            <RefreshCw className="w-4 h-4 opacity-40" />
-                                         </button>
+                                    </div>
+
+                                    {/* EXPANDED REVIEW PANEL */}
+                                    {isExpanded && reviewData && (
+                                      <div className="border-t border-white/5 bg-black/20 p-6 md:p-10 animate-in slide-in-from-top-4 duration-500">
+                                        <div className="max-w-3xl">
+                                          <div className="flex items-center gap-4 mb-8">
+                                            <div className="p-3 bg-emerald-500/10 rounded-xl font-black text-emerald-500 text-xs">
+                                              SESSION_ACTIVE
+                                            </div>
+                                            <div>
+                                              <h4 className="text-sm font-black uppercase tracking-widest">Interactive Scrutiny</h4>
+                                              <p className="text-[10px] opacity-40 font-bold">Review and rename extracted assets before final sync.</p>
+                                            </div>
+                                          </div>
+
+                                          <div className="space-y-4 mb-10">
+                                            {reviewData.files.map((file, fIdx) => (
+                                              <div key={fIdx} className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col md:flex-row gap-6 items-center">
+                                                <div className="flex-1 w-full space-y-2">
+                                                  <label className="text-[8px] font-black uppercase tracking-widest opacity-30 ml-1">Asset Label in Library</label>
+                                                  <input 
+                                                    type="text"
+                                                    value={file.newName}
+                                                    onChange={(e) => {
+                                                      const newFiles = [...reviewData.files];
+                                                      newFiles[fIdx].newName = e.target.value;
+                                                      setReviewData({...reviewData, files: newFiles});
+                                                    }}
+                                                    className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-5 text-sm font-bold focus:ring-1 ring-emerald-500/50 outline-none transition-all"
+                                                    placeholder="Subtitle Name"
+                                                  />
+                                                </div>
+                                                
+                                                {reviewData.type === 'series' && (
+                                                  <div className="flex gap-4">
+                                                    <div className="w-20 space-y-2">
+                                                      <label className="text-[8px] font-black uppercase tracking-widest opacity-30 ml-1 text-center block">S</label>
+                                                      <input 
+                                                        type="number"
+                                                        value={file.season || ''}
+                                                        onChange={(e) => {
+                                                          const newFiles = [...reviewData.files];
+                                                          newFiles[fIdx].season = e.target.value;
+                                                          setReviewData({...reviewData, files: newFiles});
+                                                        }}
+                                                        className="w-full bg-white/5 border border-white/10 rounded-xl py-4 text-center text-sm font-black outline-none"
+                                                      />
+                                                    </div>
+                                                    <div className="w-20 space-y-2">
+                                                      <label className="text-[8px] font-black uppercase tracking-widest opacity-30 ml-1 text-center block">E</label>
+                                                      <input 
+                                                        type="number"
+                                                        value={file.episode || ''}
+                                                        onChange={(e) => {
+                                                          const newFiles = [...reviewData.files];
+                                                          newFiles[fIdx].episode = e.target.value;
+                                                          setReviewData({...reviewData, files: newFiles});
+                                                        }}
+                                                        className="w-full bg-white/5 border border-white/10 rounded-xl py-4 text-center text-sm font-black outline-none"
+                                                      />
+                                                    </div>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            ))}
+                                          </div>
+
+                                          <button 
+                                            onClick={handleFinalizeImport}
+                                            disabled={status === 'importing'}
+                                            className="w-full py-6 bg-emerald-500 text-white rounded-2xl text-xs font-black uppercase tracking-[0.2em] hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-4 shadow-xl shadow-emerald-500/20"
+                                          >
+                                            {status === 'importing' ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Archive className="w-5 h-5" />}
+                                            Commit Clusters & Synchronize
+                                          </button>
+                                        </div>
                                       </div>
-                                      <button 
-                                        onClick={() => importExternal(result, result.imdbId, result.type || 'movie', result.season, result.episode)}
-                                        disabled={status !== 'idle' && status !== 'error'}
-                                        className={`w-full py-6 rounded-2xl font-black uppercase text-xs tracking-[0.2em] transition-all flex items-center justify-center gap-4 ${status === 'success' ? 'bg-emerald-500 text-white' : status === 'error' ? 'bg-red-500 text-white' : 'bg-indigo-600 text-white hover:scale-[1.02] shadow-xl'}`}
-                                      >
-                                         {status === 'importing' ? <RefreshCw className="w-5 h-5 animate-spin" /> : status === 'success' ? 'Synchronized' : 'Pull Metadata'}
-                                      </button>
-                                   </div>
-                                </div>
-                              );
-                           })}
+                                    )}
+                                 </div>
+                               );
+                            })}
                         </div>
                      )}
                 </div>
           ) : currentView === 'list' ? (
                 <div className="animate-in fade-in duration-700 h-full flex flex-col gap-8">
                     <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
-                        <div className="toggle-group min-w-[240px] p-2 flex gap-2">
+                        <div className="toggle-group min-w-[300px] p-2 flex gap-2">
                             {['movie', 'series'].map(m => (
                               <button 
                                 key={m} 
                                 onClick={() => setMediaFilter(m)} 
-                                className={`flex-1 py-5.5 rounded-full text-xs md:text-sm font-black uppercase tracking-[0.15em] transition-all ${mediaFilter === m ? 'active' : ''}`}
+                                className={`flex-1 py-7 rounded-full text-[10px] md:text-sm font-black uppercase tracking-[0.15em] transition-all ${mediaFilter === m ? 'active' : ''}`}
                               >
                                 {m}
                               </button>
                             ))}
                         </div>
-                        <div className="relative flex-1 md:max-w-md w-full">
-                          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 opacity-30" />
-                          <input 
-                            type="text" 
-                            value={searchQuery} 
-                            onChange={(e) => setSearchQuery(e.target.value)} 
-                            className={`w-full pl-14 pr-6 py-4 rounded-2xl text-[12px] font-bold outline-none border transition-all ${theme === 'dark' ? 'bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-white/20' : 'bg-black/5 border-black/10 text-black focus:border-black/20'}`} 
-                            placeholder="Search Library Clusters..." 
-                          />
+                        <div className="flex items-center gap-4 w-full md:max-w-md">
+                          <div className="relative flex-1">
+                            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 opacity-30" />
+                            <input 
+                              type="text" 
+                              value={searchQuery} 
+                              onChange={(e) => setSearchQuery(e.target.value)} 
+                              className={`w-full pl-14 pr-6 py-4 rounded-2xl text-[12px] font-bold outline-none border transition-all ${theme === 'dark' ? 'bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-white/20' : 'bg-black/5 border-black/10 text-black focus:border-black/20'}`} 
+                              placeholder="Search Library Clusters..." 
+                            />
+                          </div>
+                          <button 
+                            onClick={fetchSubtitles} 
+                            disabled={isRefreshing} 
+                            className={`p-4 rounded-2xl border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/10 shadow-sm'} hover:scale-105 transition-all`}
+                          >
+                            <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                          </button>
                         </div>
-                        <button 
-                          onClick={fetchSubtitles} 
-                          disabled={isRefreshing} 
-                          className={`p-4 rounded-2xl border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/10 shadow-sm'} hover:scale-105 transition-all`}
-                        >
-                          <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
-                        </button>
                     </div>
 
                     {subtitles.length === 0 ? (

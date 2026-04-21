@@ -5,6 +5,21 @@ const fetch = require('node-fetch');
 // Simple cache for TMDB results to avoid hitting rate limits or slow responses
 const metadataCache = new Map();
 
+// Session cache for external ZIP imports (Review & Edit workflow)
+// Stores: sessionId -> { buffer, files: [{name, data}], expires }
+const importSessions = new Map();
+
+// Cleanup expired sessions every minute
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, session] of importSessions.entries()) {
+    if (now > session.expires) {
+      console.log(`[Import Session] Expired and cleared: ${id}`);
+      importSessions.delete(id);
+    }
+  }
+}, 60000);
+
 // Retry helper for transient Supabase network errors (ECONNRESET / fetch failed from localhost)
 const retrySupabase = async (fn, maxRetries = 3, delayMs = 600) => {
   let lastErr;
@@ -165,8 +180,23 @@ const searchExternalSubtitles = async (req, res) => {
     ]);
 
     const allResults = [...results1, ...results2, ...results3];
-    console.log(`[External Search] Found ${allResults.length} results total`);
-    res.json(allResults);
+    
+    // Proactive TMDB Matching for Top Results
+    const enrichedResults = await Promise.all(allResults.map(async (res) => {
+        try {
+            // Clean title for matching
+            let clean = res.title.replace(/–|മലയാളം|പരിഭാഷ|Malayalam Subtitle|Malayalam/gi, '').trim();
+            clean = clean.replace(/\s*\([^)]*\)\s*/g, ' ').trim();
+            const tmdb = await searchByTitle(clean);
+            if (tmdb) {
+                return { ...res, imdb_id: tmdb.imdbId, type: tmdb.type, poster: tmdb.poster_path, tmdbTitle: tmdb.title };
+            }
+        } catch (e) { /* ignore */ }
+        return res;
+    }));
+
+    console.log(`[External Search] Found ${enrichedResults.length} total results`);
+    res.json(enrichedResults);
   } catch (err) {
     console.error('[External Search] Error:', err);
     res.status(500).json({ error: 'Failed to search external sites' });
@@ -184,173 +214,167 @@ const searchTmdbByTitle = async (req, res) => {
 
 
 const inspectExternalLink = async (req, res) => {
-  const { link, title } = req.query;
-  if (!link) return res.status(400).json({ error: 'Link is required' });
+  const { link, title, source } = req.query;
+  if (!link || !source) return res.status(400).json({ error: 'Link and source are required' });
+  
   try {
     const metadata = await scraper.getMetadataFromPage(link);
     
-    // VERIFY WITH TMDB if we found an ID
     if (metadata.imdbId) {
       const tmdb = await getMetadata(metadata.imdbId);
       if (tmdb && tmdb.type) {
         metadata.type = tmdb.type;
-        metadata.tmdbTitle = tmdb.title; // Extra info for UI
+        metadata.tmdbTitle = tmdb.title;
+        metadata.poster = tmdb.poster_path;
       }
-    } else if (title && typeof title === 'string') {
-       // Fallback: If no IMDb found on page, search TMDB by title
-       // Clean title from common MalayalamSubtitles.in additions (like "- Malayalam", "(2023)", etc)
-       let cleanTitle = title.replace(/–|मलयालम|മലയാളം|പരിഭാഷ|Malayalam Subtitle|Malayalam/gi, '').trim();
-       cleanTitle = cleanTitle.replace(/\s*\([^)]*\)\s*/g, ' ').trim(); // Remove year in parenthesis
-       cleanTitle = cleanTitle.replace(/[^\w\s-]/gi, '').trim(); 
-       
-       console.log(`[Inspect] Searching TMDB by title fallback: ${cleanTitle}`);
+    } else if (title) {
+       let cleanTitle = title.replace(/–|മലയാളം|പരിഭാഷ|Malayalam Subtitle|Malayalam/gi, '').trim();
+       cleanTitle = cleanTitle.replace(/\s*\([^)]*\)\s*/g, ' ').trim();
        const tmdbFallback = await searchByTitle(cleanTitle);
        if (tmdbFallback) {
          metadata.imdbId = tmdbFallback.imdbId;
          metadata.type = tmdbFallback.type;
          metadata.tmdbTitle = tmdbFallback.title;
+         metadata.poster = tmdbFallback.poster_path;
        }
     }
-    
-    res.json(metadata);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to inspect link' });
-  }
-};
 
-const importExternalSubtitle = async (req, res) => {
-  let { link, title, source, imdb_id, type, season, episode } = req.body;
-
-  if (!link || !source) {
-    return res.status(400).json({ error: 'Missing required fields (link, source)' });
-  }
-
-  console.log(`[Import] Attempting to import from ${source}: ${link}`);
-
-  try {
-    // 1. Auto-detect metadata if missing
-    if (!imdb_id || !type) {
-      console.log('[Import] Missing metadata, detecting from page...');
-      const detected = await scraper.getMetadataFromPage(link);
-      if (!imdb_id) imdb_id = detected.imdbId;
-      if (!type) type = detected.type;
-      
-      if (!imdb_id && title && typeof title === 'string') {
-         let cleanTitle = title.replace(/–|मलयालम|മലയാളം|പരിഭാഷ|Malayalam Subtitle|Malayalam/gi, '').trim();
-         cleanTitle = cleanTitle.replace(/\s*\([^)]*\)\s*/g, ' ').trim();
-         cleanTitle = cleanTitle.replace(/[^\w\s-]/gi, '').trim();
-         console.log(`[Import] Searching TMDB by title fallback: ${cleanTitle}`);
-         
-         const tmdbFallback = await searchByTitle(cleanTitle);
-         if (tmdbFallback) {
-             imdb_id = tmdbFallback.imdbId;
-             type = tmdbFallback.type;
-         }
-      }
-    }
-
-    if (!imdb_id) {
-      throw new Error('IMDb ID could not be detected. Please enter it manually.');
-    }
-
-    // 2. Double check type with TMDB for 100% accuracy
-    const tmdbData = await getMetadata(imdb_id);
-    if (tmdbData && tmdbData.type) {
-      type = tmdbData.type;
-    }
-
-    // 3. Get the direct download link
     const downloadUrl = await scraper.getDirectDownloadLink(link, source);
-    if (!downloadUrl) throw new Error(`Could not find a download link on the page: ${link}`);
+    if (!downloadUrl) throw new Error('Download link extraction failed');
 
-    // 4. Download the file
     const response = await fetch(downloadUrl);
-    if (!response.ok) throw new Error(`Failed to download subtitle from upstream: ${response.statusText}`);
+    if (!response.ok) throw new Error('Upstream download failed');
 
     let buffer = await response.arrayBuffer();
     buffer = Buffer.from(buffer);
 
-    // Bullet-proof ZIP detection: first 4 bytes of ZIP are 50 4B 03 04 ("PK\x03\x04")
-    const isZip = buffer.length > 4 && buffer[0] === 0x50 && buffer[1] === 0x4b && buffer[2] === 0x03 && buffer[3] === 0x04;
-    
-    // List to hold files to upload
-    let filesToProcess = [];
+    const isZip = buffer.length > 4 && buffer[0] === 0x50 && buffer[1] === 0x4b;
+    let files = [];
 
     if (isZip) {
-      console.log('[Import] ZIP detected, extracting all files...');
-      const extractedFiles = scraper.extractAllSrtsFromBuffer(buffer);
-      if (extractedFiles.length === 0) throw new Error('No .srt or .vtt files found in ZIP');
-      filesToProcess = extractedFiles;
+      files = scraper.extractAllSrtsFromBuffer(buffer);
     } else {
       let fileName = title ? title.replace(/[^a-z0-9._-]/gi, '_') : downloadUrl.split('/').pop() || 'subtitle';
       if (!fileName.toLowerCase().endsWith('.srt') && !fileName.toLowerCase().endsWith('.vtt')) fileName += '.srt';
-      filesToProcess = [{ name: fileName, data: buffer }];
+      files = [{ name: fileName, data: buffer }];
     }
 
+    const sessionId = uuidv4();
+    importSessions.set(sessionId, {
+      files: files,
+      expires: Date.now() + 10 * 60 * 1000
+    });
+
+    res.json({
+      ...metadata,
+      sessionId,
+      files: files.map(f => {
+        const detection = scraper.detectSeasonEpisode(f.name);
+        return {
+          name: f.name,
+          season: detection.season,
+          episode: detection.episode
+        };
+      })
+    });
+
+  } catch (err) {
+    console.error('[Inspect] Error:', err);
+    res.status(500).json({ error: err.message || 'Failed to inspect link' });
+  }
+};
+
+const importExternalSubtitle = async (req, res) => {
+  const { sessionId, imdb_id, type, files: userFiles } = req.body;
+
+  if (!sessionId || !imdb_id || !userFiles) {
+    return res.status(400).json({ error: 'Missing required session or metadata' });
+  }
+
+  const session = importSessions.get(sessionId);
+  if (!session) return res.status(404).json({ error: 'Session expired or not found' });
+
+  console.log(`[Import] Processing session ${sessionId} for ${imdb_id} (${type})`);
+
+  try {
     const results = [];
 
-    // 5. Process each file
-    for (const file of filesToProcess) {
-      let fSeason = season;
-      let fEpisode = episode;
+    for (const uFile of userFiles) {
+      // Find original data from session
+      const original = session.files.find(f => f.name === uFile.originalName);
+      if (!original) continue;
 
-      // Auto-detect S/E if it's a series and we don't have manual info
-      if (type === 'series') {
-        const detectedFromFilename = scraper.detectSeasonEpisode(file.name);
-        const detectedFromTitle = title ? scraper.detectSeasonEpisode(title) : { season: null, episode: null };
-        
-        if (!fSeason) fSeason = detectedFromFilename.season || detectedFromTitle.season;
-        if (!fEpisode) fEpisode = detectedFromFilename.episode || detectedFromTitle.episode;
+      const finalName = uFile.newName || uFile.originalName;
+      const season = uFile.season;
+      const episode = uFile.episode;
+
+      // DUPLICATE LOGIC: Series (Overwrite + Delete)
+      if (type === 'series' && season && episode) {
+        const { data: existing } = await supabase
+          .from('subtitles')
+          .select('*')
+          .eq('imdb_id', imdb_id)
+          .eq('season', season)
+          .eq('episode', episode);
+
+        if (existing && existing.length > 0) {
+          for (const old of existing) {
+            console.log(`[Import] Overwriting existing S${season}E${episode}. Deleting old file...`);
+            // 1. Delete from storage if link follows our pattern
+            try {
+              const urlParts = old.file_path.split('/');
+              const storagePath = decodeURIComponent(urlParts.slice(urlParts.indexOf('public') + 2).join('/'));
+              await supabase.storage.from('subtitles').remove([storagePath]);
+            } catch (e) { console.error('[Import] Storage cleanup failed:', e); }
+
+            // 2. Delete from DB
+            await supabase.from('subtitles').delete().eq('id', old.id);
+          }
+        }
       }
 
-      // Upload to Supabase Storage
-      const storagePath = `${imdb_id}/${uuidv4()}_${file.name}`;
-      const mimeType = file.name.toLowerCase().endsWith('.vtt') ? 'text/vtt' : 'text/plain';
+      // UPLOAD NEW FILE
+      // preserve original sequence exactly in filename
+      const storagePath = `${imdb_id}/${uuidv4()}_${finalName}`;
+      const mimeType = finalName.toLowerCase().endsWith('.vtt') ? 'text/vtt' : 'text/plain';
+
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('subtitles')
-        .upload(storagePath, file.data, {
-          contentType: mimeType,
-          upsert: false
-        });
+        .upload(storagePath, original.data, { contentType: mimeType, upsert: false });
 
       if (uploadError) {
-        console.error(`[Import] Upload failed for ${file.name}:`, uploadError);
+        console.error(`[Import] Upload failed for ${finalName}:`, uploadError);
         continue;
       }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('subtitles')
-        .getPublicUrl(storagePath);
+      const { data: { publicUrl } } = supabase.storage.from('subtitles').getPublicUrl(storagePath);
 
-      // Save to DB
+      // SAVE TO DB
       const { data: dbRecord, error: dbError } = await supabase
         .from('subtitles')
         .insert([{
           imdb_id,
           type,
-          season: type === 'series' ? (parseInt(fSeason, 10) || null) : null,
-          episode: type === 'series' ? (parseInt(fEpisode, 10) || null) : null,
+          season: type === 'series' ? (parseInt(season, 10) || null) : null,
+          episode: type === 'series' ? (parseInt(episode, 10) || null) : null,
           language: 'Malayalam',
           file_path: publicUrl
         }])
         .select()
         .single();
 
-      if (dbError) {
-        console.error(`[Import] DB insert failed for ${file.name}:`, dbError);
-      } else {
-        results.push(dbRecord);
-      }
+      if (dbError) console.error(`[Import] DB insert failed for ${finalName}:`, dbError);
+      else results.push(dbRecord);
     }
 
-    if (results.length === 0) throw new Error('Failed to import any subtitles from the file(s)');
+    // Cleanup session
+    importSessions.delete(sessionId);
 
-    console.log(`[Import] Successfully imported ${results.length} files for ${imdb_id}`);
     res.json({ message: `Successfully imported ${results.length} subtitle(s)`, data: results });
 
   } catch (err) {
     console.error('[Import] Error:', err);
-    res.status(500).json({ error: err.message || 'Failed to import subtitle' });
+    res.status(500).json({ error: err.message || 'Failed to import' });
   }
 };
 

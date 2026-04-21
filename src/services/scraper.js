@@ -129,12 +129,23 @@ const extractAllSrtsFromBuffer = (buffer) => {
     const zip = new AdmZip(buffer);
     const zipEntries = zip.getEntries();
     
+    // Support .srt, .vtt and handle case-insensitivity (.SRT)
+    const validExtensions = ['.srt', '.vtt'];
+    
     const srts = zipEntries
-      .filter(entry => !entry.isDirectory && (entry.entryName.toLowerCase().endsWith('.srt') || entry.entryName.toLowerCase().endsWith('.vtt')))
-      .map(entry => ({
-        name: entry.entryName.split('/').pop(),
-        data: entry.getData()
-      }));
+      .filter(entry => {
+        if (entry.isDirectory) return false;
+        const name = entry.entryName.toLowerCase();
+        return validExtensions.some(ext => name.endsWith(ext));
+      })
+      .map(entry => {
+        // preserve original filename from ZIP path
+        const pathParts = entry.entryName.replace(/\\/g, '/').split('/');
+        return {
+          name: pathParts.pop(),
+          data: entry.getData()
+        };
+      });
     
     return srts;
   } catch (err) {
@@ -147,24 +158,39 @@ const extractAllSrtsFromBuffer = (buffer) => {
  * Detects season and episode from a filename
  */
 const detectSeasonEpisode = (filename) => {
-  const name = filename.toLowerCase();
-  // Patterns: S01E02, 1x02, S1-E2, Episode 02
-  const sMatch = name.match(/s(\d+)/i);
-  const eMatch = name.match(/e(\d+)/i) || name.match(/(\d+)x(\d+)/i);
+  const name = filename.toLowerCase().replace(/_/g, ' ');
+  
+  // Patterns: S01E02, 1x02, S1-E2, Episode 02, Chapter 1, Night 1, Part 1
+  const sMatch = name.match(/s(?:eason)?\s*(\d+)/i);
+  const eMatch = name.match(/e(?:pisode)?\s*(\d+)/i) || 
+                 name.match(/chapter\s*(\d+)/i) || 
+                 name.match(/night\s*(\d+)/i) || 
+                 name.match(/part\s*(\d+)/i) ||
+                 name.match(/(\d+)x(\d+)/i);
   
   let season = sMatch ? parseInt(sMatch[1], 10) : null;
   let episode = null;
   
+  // Handlers for specific formats
   if (name.match(/(\d+)x(\d+)/i)) {
     const match = name.match(/(\d+)x(\d+)/i);
     season = parseInt(match[1], 10);
     episode = parseInt(match[2], 10);
   } else if (eMatch) {
-    episode = parseInt(eMatch[1], 10);
+    const match = eMatch;
+    // eMatch could be any of the above OR patterns. 
+    // The specific capture group we want is the first one that matched.
+    episode = parseInt(match[1], 10);
   } else {
-    // Try to find a single number like "02.srt"
-    const numMatch = name.match(/(\d+)/);
-    if (numMatch) episode = parseInt(numMatch[1], 10);
+    // Fallback: Detect single numbers like "02.srt" or "1-01.srt"
+    const genericMatch = name.match(/(\d+)\s*(?:-|_)\s*(\d+)/); // 1-01
+    if (genericMatch) {
+      if (!season) season = parseInt(genericMatch[1], 10);
+      episode = parseInt(genericMatch[2], 10);
+    } else {
+      const numMatch = name.match(/(\d+)/);
+      if (numMatch) episode = parseInt(numMatch[1], 10);
+    }
   }
   
   return { season, episode };
