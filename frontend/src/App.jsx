@@ -1209,7 +1209,7 @@ export default function App() {
                      )}
                 </div>
           ) : currentView === 'list' ? (
-                <div className="animate-in fade-in duration-700 h-full flex flex-col gap-8">
+                <div className="animate-in fade-in duration-700 flex flex-col gap-8">
                     <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
                         <div className="toggle-group min-w-[300px] p-2 flex gap-2">
                             {['movie', 'series'].map(m => (
@@ -1339,8 +1339,8 @@ export default function App() {
                     )}
                 </div>
           ) : currentView === 'logs' ? (
-                <div className="flex-1 w-full animate-in fade-in duration-700 flex flex-col h-full overflow-hidden">
-                    <div className="flex-1 flex flex-col rounded-[2.5rem] bg-black/40 border border-white/5 shadow-2xl overflow-hidden h-full">
+                <div className="flex-1 w-full animate-in fade-in duration-700 flex flex-col min-h-[600px]">
+                    <div className="flex-1 flex flex-col rounded-[2.5rem] bg-black/40 border border-white/5 shadow-2xl">
                         <div className="flex items-center gap-2 px-8 py-6 border-b border-white/5 bg-white/5">
                             <div className="flex gap-2">
                                 <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
