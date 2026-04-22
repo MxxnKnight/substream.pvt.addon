@@ -25,7 +25,7 @@ import {
   Moon,
   Menu,
   Palette,
-  ExternalLink, Share2, Copy
+  ExternalLink, Share2, Copy, ChevronDown
 } from 'lucide-react';
 
 export default function App() {
@@ -693,7 +693,7 @@ export default function App() {
            {/* Navigation Header */}
            <header className="w-full p-6 lg:p-10 flex justify-between items-center z-50">
               <div className="flex items-center gap-4">
-                 <img src="/logo.svg" className="w-10 h-10 rounded-2xl shadow-2xl" alt="SubStream" />
+                 <img src="/logo.svg" className="w-10 h-10 rounded-full" alt="SubStream" />
                  <span className="font-black tracking-tighter text-2xl lg:text-3xl">SUBSTREAM</span>
               </div>
 
@@ -773,7 +773,7 @@ export default function App() {
       <header className={`floating-header transition-theme ${isNavExpanded ? 'header-expanded' : ''}`}>
           <div className="header-top">
               <div className="flex items-center gap-3">
-                  <img src="/logo.svg" className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl shadow-xl" alt="" />
+                  <img src="/logo.svg" className="w-8 h-8 md:w-10 md:h-10 rounded-full" alt="" />
                   <span className="font-black tracking-tighter text-lg md:text-2xl uppercase">SubStream</span>
               </div>
 
