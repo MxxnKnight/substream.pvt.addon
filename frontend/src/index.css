@@ -74,7 +74,7 @@
 .login-page {
   background-color: var(--login-bg);
   color: var(--login-text);
-  transition: background-color 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color 0.3s ease;
   perspective: 1000px;
 }
 
@@ -86,14 +86,13 @@
   right: var(--login-margin);
   height: var(--header-h);
   background: var(--login-glass-bg);
-  backdrop-filter: blur(var(--blur)) saturate(180%);
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(180%);
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
   border: 1px solid var(--login-glass-border);
   border-radius: 20px;
   z-index: 100;
   padding: 0 24px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-  transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1), background 0.5s ease;
+  transition: height 0.2s ease, background 0.2s ease;
   overflow: hidden;
 }
 
@@ -106,17 +105,14 @@
 
 .mobile-nav-content {
   opacity: 0;
-  transform: translateY(-10px);
-  transition: all 0.3s ease;
+  transition: opacity 0.2s ease;
   padding-bottom: 20px;
   pointer-events: none;
 }
 
 .header-expanded .mobile-nav-content {
   opacity: 1;
-  transform: translateY(0);
   pointer-events: all;
-  transition-delay: 0.1s;
 }
 
 /* Responsive Frame Placement */
@@ -127,8 +123,8 @@
   left: var(--login-margin);
   right: var(--login-margin);
   background: var(--login-glass-bg);
-  backdrop-filter: blur(var(--blur)) saturate(180%);
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(180%);
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
   border: 1px solid var(--login-glass-border);
   border-radius: 32px;
   z-index: 20;
@@ -139,31 +135,25 @@
 
 .media-card {
   background: var(--login-glass-bg);
-  backdrop-filter: blur(var(--blur)) saturate(180%);
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(180%);
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
   border: 1px solid var(--login-glass-border);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.media-card:hover {
-  border-color: rgba(var(--accent), 0.6);
 }
 
 .glass-container {
   width: calc(100vw - (var(--login-margin) * 2));
   height: calc(100vh - (var(--login-margin) * 2));
   background: var(--login-glass-bg);
-  backdrop-filter: blur(20px) saturate(200%);
-  -webkit-backdrop-filter: blur(20px) saturate(200%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--login-glass-border);
   border-radius: 32px;
-  box-shadow: 0 30px 60px -12px rgba(0,0,0,0.4);
-  transition: background 0.5s ease, border 0.5s ease;
+  transition: background 0.3s ease, border 0.3s ease;
 }
 
 /* UI Elements */
 .toggle-group button {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
   border: 1px solid var(--login-glass-border);
   background: rgba(255,255,255,0.03);
 }
@@ -176,7 +166,7 @@
 
 .dropzone {
   border: 2px dashed var(--login-glass-border);
-  transition: all 0.3s;
+  transition: border-color 0.2s;
   background: rgba(255,255,255,0.01);
 }
 .dropzone.dragover {
@@ -187,7 +177,7 @@
 .imdb-input {
   background: rgba(0,0,0,0.15);
   border: 1px solid var(--login-glass-border);
-  transition: border-color 0.3s;
+  transition: border-color 0.2s;
 }
 
 .file-item {
@@ -196,21 +186,11 @@
   border-radius: 12px;
 }
 
-/* Animations */
+/* Animations - Simplified */
 .orb {
   position: absolute;
   border-radius: 50%;
   z-index: 10;
-  will-change: transform;
-  pointer-events: none;
-  filter: saturate(1.5);
-  opacity: 0.6;
-}
-
-.orb-1 { width: 450px; height: 450px; background: radial-gradient(circle, #6366f1, #312e81); animation: roam1 60s linear infinite alternate; top: -10%; left: -10%; }
-.orb-2 { width: 550px; height: 550px; background: radial-gradient(circle, #ec4899, #701a75); animation: roam2 80s linear infinite alternate; top: 40%; left: 80%; }
-.orb-3 { width: 300px; height: 300px; background: radial-gradient(circle, #06b6d4, #083344); animation: roam3 45s linear infinite alternate; top: 80%; left: -5%; }
-
 @keyframes roam1 {
   0% { transform: translate3d(0, 0, 0) rotate(0deg); }
   50% { transform: translate3d(60vw, 40vh, 0) rotate(180deg); }

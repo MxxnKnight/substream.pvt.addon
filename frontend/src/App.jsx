@@ -1045,7 +1045,7 @@ export default function App() {
                                const isMatched = !!result.imdbId;
                                
                                return (
-                                 <div key={idx} className={`media-card rounded-[3rem] overflow-hidden transition-all duration-500 ${isExpanded ? 'ring-2 ring-emerald-500/50 scale-[1.01]' : 'group'}`}>
+                                 <div key={idx} className={`media-card rounded-[3rem] overflow-hidden ${isExpanded ? 'ring-2 ring-emerald-500/50' : 'group'}`}>
                                     <div className="p-8 flex flex-col md:flex-row gap-8">
                                       {/* Poster / Source Info */}
                                       <div className="w-full md:w-36 h-52 md:h-52 rounded-[2rem] bg-white/5 border border-white/10 overflow-hidden relative group shrink-0 shadow-2xl">
@@ -1126,7 +1126,7 @@ export default function App() {
 
                                     {/* EXPANDED REVIEW PANEL */}
                                     {isExpanded && reviewData && (
-                                      <div className="border-t border-white/5 bg-black/20 p-6 md:p-10 animate-in slide-in-from-top-4 duration-500">
+                                      <div className="border-t border-white/5 bg-black/20 p-6 md:p-10">
                                         <div className="max-w-3xl">
                                           <div className="flex items-center gap-4 mb-8">
                                             <div className="p-3 bg-emerald-500/10 rounded-xl font-black text-emerald-500 text-xs">
