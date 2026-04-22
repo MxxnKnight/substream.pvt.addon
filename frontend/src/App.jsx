@@ -143,6 +143,7 @@ export default function App() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [expandedResult, setExpandedResult] = useState(null); 
   const [reviewData, setReviewData] = useState(null); 
+  const [expandedLibraryGroups, setExpandedLibraryGroups] = useState({});
 
   // Logs state
   const [logs, setLogs] = useState([]);
@@ -1260,63 +1261,78 @@ export default function App() {
                               const first = sub?.files?.[0] || {};
                               const isSeries = sub.type === 'series';
                               return (
-                                <div key={idx} className="media-card rounded-[3rem] p-8 flex flex-col gap-8 group">
-                                  <div className="flex gap-6">
-                                    <div className="shrink-0 relative">
-                                      {first.poster_path ? (
-                                        <img src={first.poster_path} className="w-28 h-40 object-cover rounded-[1.5rem] shadow-2xl" alt="" />
-                                      ) : (
-                                        <div className="w-28 h-40 bg-white/5 rounded-[1.5rem] flex items-center justify-center border border-white/10 text-white/20">
-                                          <Film className="w-12 h-12" />
-                                        </div>
-                                      )}
-                                      <div className="absolute -top-2 -left-2 flex flex-col gap-2">
-                                        <span className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-lg ${isSeries ? 'bg-indigo-600' : 'bg-amber-500'} text-white shadow-xl`}>
-                                          {sub.type}
-                                        </span>
-                                      </div>
-                                    </div>
-                                    
-                                    <div className="flex-1 min-w-0 flex flex-col">
-                                      <div className="flex justify-between items-start gap-4">
-                                        <h3 className="font-black text-2xl leading-[1.1] truncate text-balance tracking-tighter">
-                                          {sub.title}
-                                        </h3>
-                                        <button 
-                                          onClick={() => handleDeleteSeason(sub.imdbId, null, sub.files)}
-                                          className="p-3 bg-red-500/10 text-red-500 rounded-2xl hover:scale-110 transition-all opacity-0 group-hover:opacity-100"
-                                        >
-                                          <Trash2 className="w-5 h-5" />
-                                        </button>
-                                      </div>
-                                      <p className="text-[10px] font-mono opacity-20 mt-1 uppercase tracking-[0.2em] font-bold">{sub.imdbId}</p>
-                                      
-                                      <div className="mt-auto flex flex-wrap gap-2">
-                                        <span className="text-[9px] font-black uppercase px-3 py-1.5 rounded-xl bg-white/5 text-white/40 border border-white/5">
-                                          {sub.files.length} ASSETS
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </div>
+                                 <div key={idx} className="media-card rounded-[3rem] p-8 flex flex-col gap-8 group">
+                                   <div className="flex gap-6 cursor-pointer" onClick={() => isSeries && setExpandedLibraryGroups(prev => ({...prev, [sub.groupKey]: !prev[sub.groupKey]}))}>
+                                     <div className="shrink-0 relative">
+                                       {first.poster_path ? (
+                                         <img src={first.poster_path} className="w-28 h-40 object-cover rounded-[1.5rem] shadow-2xl" alt="" />
+                                       ) : (
+                                         <div className="w-28 h-40 bg-white/5 rounded-[1.5rem] flex items-center justify-center border border-white/10 text-white/20">
+                                           <Film className="w-12 h-12" />
+                                         </div>
+                                       )}
+                                       <div className="absolute -top-2 -left-2 flex flex-col gap-2">
+                                         <span className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-lg ${isSeries ? 'bg-indigo-600' : 'bg-amber-500'} text-white shadow-xl`}>
+                                           {sub.type}
+                                         </span>
+                                       </div>
+                                     </div>
+                                     
+                                     <div className="flex-1 min-w-0 flex flex-col">
+                                       <div className="flex justify-between items-start gap-4">
+                                         <h3 className="font-black text-2xl leading-[1.1] truncate text-balance tracking-tighter">
+                                           {sub.title}
+                                         </h3>
+                                         <button 
+                                           onClick={(e) => { e.stopPropagation(); handleDeleteSeason(sub.imdbId, null, sub.files); }}
+                                           className="p-3 bg-red-500/10 text-red-500 rounded-2xl hover:scale-110 transition-all opacity-0 group-hover:opacity-100"
+                                         >
+                                           <Trash2 className="w-5 h-5" />
+                                         </button>
+                                       </div>
+                                       {isSeries && (
+                                         <div className="flex items-center gap-2 mt-2">
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400 bg-indigo-400/10 px-2 py-0.5 rounded-md">
+                                              Season {sub.season || 1}
+                                            </span>
+                                         </div>
+                                       )}
+                                       <p className="text-[10px] font-mono opacity-20 mt-2 uppercase tracking-[0.2em] font-bold">{sub.imdbId}</p>
+                                       
+                                       <div className="mt-auto flex flex-wrap items-center gap-4">
+                                         <span className="text-[9px] font-black uppercase px-3 py-1.5 rounded-xl bg-white/5 text-white/40 border border-white/5">
+                                           {sub.files.length} ASSETS
+                                         </span>
+                                         {isSeries && (
+                                           <div className={`transition-transform duration-300 ${expandedLibraryGroups[sub.groupKey] ? 'rotate-180' : ''}`}>
+                                             <ChevronDown className="w-4 h-4 opacity-30" />
+                                           </div>
+                                         )}
+                                       </div>
+                                     </div>
+                                   </div>
 
-                                  <div className="space-y-3">
-                                    {sub?.files?.map((file, fIdx) => (
-                                      <div key={fIdx} className="file-item p-4 flex justify-between items-center group/item transition-all hover:bg-white/5">
-                                        <div className="min-w-0 flex-1">
-                                          <p className="text-[11px] font-bold truncate opacity-80 mb-1">
-                                            {file.filename.split('-').slice(1).join('-') || file.filename}
-                                          </p>
-                                          <p className="text-[9px] font-black opacity-30 uppercase tracking-widest">
-                                            {file.size ? `${(file.size/1024/1024).toFixed(1)} MB` : 'Asset Ready'} {isSeries && `• EP ${file.episode} S${file.season}`}
-                                          </p>
-                                        </div>
-                                        <button onClick={() => handleDelete(file.id)} className="p-2 opacity-0 group-hover/item:opacity-100 text-red-500 translate-x-4 group-hover/item:translate-x-0 transition-all">
-                                          <Trash2 className="w-4 h-4" />
-                                        </button>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
+                                   {/* File List - Always show for movies, toggle for series */}
+                                   {(!isSeries || expandedLibraryGroups[sub.groupKey]) && (
+                                     <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                                       {sub?.files?.map((file, fIdx) => (
+                                         <div key={fIdx} className="file-item p-4 flex justify-between items-center group/item transition-all hover:bg-white/5">
+                                           <div className="min-w-0 flex-1">
+                                             <p className="text-[11px] font-bold truncate opacity-80 mb-1">
+                                               {file.filename.split('-').slice(1).join('-') || file.filename}
+                                             </p>
+                                             <p className="text-[9px] font-black opacity-30 uppercase tracking-widest">
+                                               {file.size ? `${(file.size/1024/1024).toFixed(1)} MB` : 'Asset Ready'} {isSeries && `• EP ${file.episode} S${file.season}`}
+                                             </p>
+                                           </div>
+                                           <button onClick={() => handleDelete(file.id)} className="p-2 opacity-0 group-hover/item:opacity-100 text-red-500 translate-x-4 group-hover/item:translate-x-0 transition-all">
+                                             <Trash2 className="w-4 h-4" />
+                                           </button>
+                                         </div>
+                                       ))}
+                                     </div>
+                                   )}
+                                 </div>
                               );
                             })}
                       </div>
