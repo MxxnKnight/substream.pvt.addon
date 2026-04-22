@@ -218,14 +218,17 @@ const inspectExternalLink = async (req, res) => {
   if (!link || !source) return res.status(400).json({ error: 'Link and source are required' });
   
   try {
+    // Use the improved metadata scraper (Second Hop)
     const metadata = await scraper.getMetadataFromPage(link);
     
+    // Enrich with TMDB if possible
     if (metadata.imdbId) {
       const tmdb = await getMetadata(metadata.imdbId);
       if (tmdb && tmdb.type) {
         metadata.type = tmdb.type;
         metadata.tmdbTitle = tmdb.title;
-        metadata.poster = tmdb.poster_path;
+        // Don't overwrite the specifically scraped poster if TMDB doesn't have a better one
+        if (!metadata.poster) metadata.poster = tmdb.poster_path;
       }
     } else if (title) {
        let cleanTitle = title.replace(/–|മലയാളം|പരിഭാഷ|Malayalam Subtitle|Malayalam/gi, '').trim();
@@ -235,7 +238,7 @@ const inspectExternalLink = async (req, res) => {
          metadata.imdbId = tmdbFallback.imdbId;
          metadata.type = tmdbFallback.type;
          metadata.tmdbTitle = tmdbFallback.title;
-         metadata.poster = tmdbFallback.poster_path;
+         if (!metadata.poster) metadata.poster = tmdbFallback.poster_path;
        }
     }
 

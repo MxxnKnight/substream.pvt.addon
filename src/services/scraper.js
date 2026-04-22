@@ -31,13 +31,17 @@ const searchMalayalamSubtitlesIn = async (query) => {
 
     $('div.card').each((i, el) => {
       const title = $(el).find('h5').text().trim();
-      const link = $(el).find('a.download-button').attr('href') || $(el).find('a').attr('href');
+      // The release page link is usually the first <a> (often wrapping the title)
+      const pageLink = $(el).find('a').attr('href');
+      // The download handler link is specifically the a.download-button
+      const downloadLink = $(el).find('a.download-button').attr('href');
       
       if (title.toLowerCase().includes(q)) {
         results.push({
           title,
-          link,
-          thumbnail: null,
+          link: pageLink,
+          downloadLink,
+          thumbnail: null, // Team GOAT cards lack thumbnails in search mode
           source: 'MalayalamSubtitles.in'
         });
       }
@@ -64,13 +68,13 @@ const searchMovieMirror = async (query) => {
     const results = [];
     const q = query.toLowerCase().trim();
 
-    // The current structure uses .colle-col for grid items
-    $('.colle-col').each((i, el) => {
-      const title = $(el).find('.prod-blk11 h3').text().trim();
-      const link = $(el).find('.prod-blk11 a.sub-btn').attr('href') || $(el).find('.prod-blk a').attr('href');
-      const thumbnail = $(el).find('.prod-blk img').attr('src');
+    // Movie Mirror updated structure uses h2 a for links
+    $('article').each((i, el) => {
+      const title = $(el).find('h2 a').text().trim() || $(el).find('.prod-blk11 h3').text().trim();
+      const link = $(el).find('h2 a').attr('href') || $(el).find('.prod-blk11 a.sub-btn').attr('href');
+      const thumbnail = $(el).find('.post-thumbnail img').attr('src') || $(el).find('.prod-blk img').attr('src');
       
-      if (title.toLowerCase().includes(q)) {
+      if (title && title.toLowerCase().includes(q)) {
         results.push({
           title,
           link,
@@ -244,10 +248,10 @@ const getDirectDownloadLink = async (pageUrl, source) => {
     let downloadLink = null;
 
     if (source === 'MalayalamSubtitles.in') {
-      downloadLink = $('a[href$=".zip"]').attr('href') || 
+      downloadLink = $('a.download-button').attr('href') || 
+                     $('a[href$=".zip"]').attr('href') || 
                      $('a[href$=".srt"]').attr('href') ||
-                     $('.elementor-button-link[href*="download"]').attr('href') ||
-                     $('a:contains("Download")').attr('href');
+                     $('.elementor-button-link[href*="download"]').attr('href');
     } else if (source === 'MovieMirrorSubtitles') {
       downloadLink = $('a[href$=".zip"]').attr('href') || 
                      $('a[href$=".srt"]').attr('href') ||
@@ -260,10 +264,23 @@ const getDirectDownloadLink = async (pageUrl, source) => {
       if (releasesLink) {
          // Follow the redirect
          const redirectResponse = await fetch(releasesLink, { headers, redirect: 'follow' });
-         return redirectResponse.url; // Returns the final destination (usually Drive or direct Zip)
+         const redirectUrl = redirectResponse.url;
+         
+         // If the redirector lands on an HTML page instead of a file, we need a second hop
+         const contentType = redirectResponse.headers.get('content-type') || '';
+         if (contentType.includes('text/html')) {
+             const innerHtml = await redirectResponse.text();
+             const $inner = cheerio.load(innerHtml);
+             const deeperLink = $inner('a[href$=".zip"]').attr('href') || 
+                                $inner('a[href*="drive.google"]').attr('href') ||
+                                $inner('a:contains("Download")').attr('href');
+             if (deeperLink) return deeperLink.startsWith('http') ? deeperLink : new URL(deeperLink, redirectUrl).href;
+         }
+         return redirectUrl;
       }
       
       downloadLink = $('a:contains("പരിഭാഷ")').attr('href') || 
+                     $('a[href*="subtitle"]').attr('href') ||
                      $('a[href*="download"]').attr('href') ||
                      $('a.elementor-button').attr('href');
     }
@@ -292,52 +309,48 @@ const getMetadataFromPage = async (pageUrl) => {
     const $ = cheerio.load(html);
     
     let imdbId = null;
+    let poster = null;
+    let type = 'movie';
 
-    // 1. Look for ID in specifically likely containers (Info sections, lists)
-    const prioritySelectors = [
-      '.elementor-widget-container', 
-      '.movie-info', 
-      '.series-info',
+    // 1. Look for specific ID markers first
+    const specificIdSelectors = [
+      'a#imdb-button',
+      'a.imdb-badge',
       'a[href*="imdb.com/title/tt"]'
     ];
 
-    for (const sel of prioritySelectors) {
-      if (imdbId) break;
-      $(sel).each((i, el) => {
-        const text = $(el).text() + ($(el).attr('href') || '');
-        const match = text.match(/tt\d{7,}/);
-        if (match) {
-          imdbId = match[0];
-          return false;
-        }
-      });
+    for (const sel of specificIdSelectors) {
+      const match = $(sel).attr('href')?.match(/tt\d{7,}/);
+      if (match) {
+        imdbId = match[0];
+        break;
+      }
     }
 
-    // 2. Global search fallback
+    // 2. Global search fallback for IMDb ID
     if (!imdbId) {
       const globalMatch = html.match(/tt\d{7,}/);
       if (globalMatch) imdbId = globalMatch[0];
     }
-    
-    // 3. Type detection - look for specific markers
-    const bodyText = $('body').text().toLowerCase();
-    const headText = $('title').text().toLowerCase();
-    const combinedText = bodyText + ' ' + headText;
-    
-    let type = 'movie';
-    // More precise series markers
-    const seriesMarkers = [
-       'tv series', 'tv-series', 'web series', 'web-series', 
-       'season 0', 'season 1', 'season 2', 'season 3', 'episode',
-       'പരമ്പര', 'സീസൺ'
-    ];
-    
-    if (seriesMarkers.some(m => combinedText.includes(m))) {
+
+    // 3. Type detection - look for MSone's explicit type button or markers
+    const explicitType = $('#release-type-button').text().toLowerCase();
+    if (explicitType.includes('series') || explicitType.includes('പരമ്പര')) {
       type = 'series';
+    } else {
+      const combinedText = $('body').text().toLowerCase() + ' ' + $('title').text().toLowerCase();
+      const seriesMarkers = ['tv series', 'tv-series', 'web series', 'web-series', 'season 0', 'season 1', 'season 2', 'episode', 'പരമ്പര', 'സീസൺ'];
+      if (seriesMarkers.some(m => combinedText.includes(m))) type = 'series';
     }
 
-    console.log(`[Scraper] Metadata detected - ID: ${imdbId}, Type: ${type}`);
-    return { imdbId, type };
+    // 4. Poster extraction (Second Hop logic)
+    poster = $('meta[property="og:image"]').attr('content') || 
+             $('.post-thumbnail img').attr('src') || 
+             $('.attachment-large').attr('src') ||
+             $('article img').first().attr('src');
+
+    console.log(`[Scraper] Metadata detected - ID: ${imdbId}, Type: ${type}, Poster: ${poster ? 'Yes' : 'No'}`);
+    return { imdbId, type, poster };
   } catch (err) {
     console.error('[Scraper] Error getting metadata from page:', err);
     return { imdbId: null, type: 'movie' };
