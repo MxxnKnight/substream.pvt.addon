@@ -78,6 +78,18 @@
   perspective: 1000px;
 }
 
+.login-page::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--header-h) + var(--login-margin) + 20px);
+  background: linear-gradient(to bottom, var(--login-bg) 40%, transparent 100%);
+  z-index: 80;
+  pointer-events: none;
+}
+
 /* Expanding Floating Glass Header */
 .floating-header {
   position: fixed;
@@ -117,11 +129,11 @@
 
 /* Responsive Frame Placement */
 .main-frame {
-  position: absolute;
-  top: calc(var(--header-h) + var(--login-margin) + 20px); 
-  bottom: var(--login-margin);
-  left: var(--login-margin);
-  right: var(--login-margin);
+  position: relative;
+  margin-top: calc(var(--header-h) + (var(--login-margin) * 2));
+  margin-bottom: var(--login-margin);
+  margin-left: var(--login-margin);
+  margin-right: var(--login-margin);
   background: var(--login-glass-bg);
   backdrop-filter: blur(var(--blur));
   -webkit-backdrop-filter: blur(var(--blur));
@@ -131,7 +143,6 @@
   display: flex;
   flex-direction: column;
 }
-.main-frame::-webkit-scrollbar { display: none; }
 
 .media-card {
   background: var(--login-glass-bg);

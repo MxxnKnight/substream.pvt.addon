@@ -763,7 +763,7 @@ export default function App() {
   }
 
   return (
-    <div className={`login-page min-h-screen w-full relative overflow-hidden font-sans ${theme === 'dark' ? 'dark' : ''}`}>
+    <div className={`login-page min-h-screen w-full relative font-sans ${theme === 'dark' ? 'dark' : ''}`}>
       {/* Optimized Background Orbs - Reduced to 3 for performance */}
       <div className="orb orb-1"></div>
       <div className="orb orb-2"></div>
@@ -865,8 +865,8 @@ export default function App() {
       
       
       {/* Main Content Area */}
-      <main className="main-frame overflow-hidden transition-theme">
-        <div className={`flex-1 flex flex-col min-w-0 bg-transparent relative h-full overflow-y-auto custom-scrollbar`}>
+      <main className="main-frame transition-theme">
+        <div className={`flex-1 flex flex-col min-w-0 bg-transparent relative`}>
           <div className={`max-w-full mx-auto w-full flex flex-col flex-1 ${currentView === 'logs' ? 'p-0' : 'p-4 lg:p-10 pb-24 gap-6'}`}>
 
           {/* PAGE CONTENT BLOCKS */}
