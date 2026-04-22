@@ -169,8 +169,26 @@ export default function App() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      setUser({ username: 'Admin' });
-      fetchSubtitles();
+      // Verify token with a simple request
+      fetch('/api/admin/subtitles', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(res => {
+        if (res.ok) {
+          setUser({ username: 'Admin' });
+          return res.json();
+        } else if (res.status === 401 || res.status === 403) {
+          handleLogout();
+        }
+      })
+      .then(data => {
+        if (data) {
+          // Process initial subtitles if needed, but fetchSubtitles already does it if set
+          // For simplicity, we just trigger fetchSubtitles here if valid
+          fetchSubtitles();
+        }
+      })
+      .catch(() => handleLogout());
     }
   }, []);
 
@@ -1289,7 +1307,7 @@ export default function App() {
                                             {file.filename.split('-').slice(1).join('-') || file.filename}
                                           </p>
                                           <p className="text-[9px] font-black opacity-30 uppercase tracking-widest">
-                                            {(file.size/1024/1024).toFixed(1)} MB {isSeries && `• EP ${file.episode} S${file.season}`}
+                                            {file.size ? `${(file.size/1024/1024).toFixed(1)} MB` : 'Asset Ready'} {isSeries && `• EP ${file.episode} S${file.season}`}
                                           </p>
                                         </div>
                                         <button onClick={() => handleDelete(file.id)} className="p-2 opacity-0 group-hover/item:opacity-100 text-red-500 translate-x-4 group-hover/item:translate-x-0 transition-all">

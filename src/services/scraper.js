@@ -8,7 +8,20 @@ const fetch = require('node-fetch');
 
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.37 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.37';
 
-const headers = { 'User-Agent': USER_AGENT };
+const headers = { 
+  'User-Agent': USER_AGENT,
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'Cache-Control': 'max-age=0',
+  'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+  'Sec-Ch-Ua-Mobile': '?0',
+  'Sec-Ch-Ua-Platform': '"Windows"',
+  'Sec-Fetch-Dest': 'document',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'none',
+  'Sec-Fetch-User': '?1',
+  'Upgrade-Insecure-Requests': '1'
+};
 
 /**
  * Normalizes movie name for search
@@ -22,7 +35,7 @@ const searchMalayalamSubtitlesIn = async (query) => {
   try {
     // For Team GOAT, we'll fetch their search-and-download page and filter
     const url = `https://malayalamsubtitles.in/search-and-download/`;
-    const response = await fetch(url, { headers });
+    const response = await fetch(url, { headers: { ...headers, 'Referer': 'https://malayalamsubtitles.in/' } });
     const html = await response.text();
     const $ = cheerio.load(html);
     
@@ -61,7 +74,7 @@ const searchMovieMirror = async (query) => {
   try {
     // For MovieMirror, fetch their main subtitles page
     const url = `https://moviemirrorsubtitles.com/subtitles/`;
-    const response = await fetch(url, { headers });
+    const response = await fetch(url, { headers: { ...headers, 'Referer': 'https://moviemirrorsubtitles.com/' } });
     const html = await response.text();
     const $ = cheerio.load(html);
     
@@ -97,7 +110,7 @@ const searchMovieMirror = async (query) => {
 const searchMSone = async (query) => {
   try {
     const searchUrl = `https://malayalamsubtitles.org/?s=${normalize(query)}`;
-    const response = await fetch(searchUrl, { headers });
+    const response = await fetch(searchUrl, { headers: { ...headers, 'Referer': 'https://malayalamsubtitles.org/' } });
     const html = await response.text();
     const $ = cheerio.load(html);
     
@@ -263,17 +276,31 @@ const getDirectDownloadLink = async (pageUrl, source) => {
       const releasesLink = $('a[href*="/releases/"]').attr('href');
       if (releasesLink) {
          // Follow the redirect
-         const redirectResponse = await fetch(releasesLink, { headers, redirect: 'follow' });
+         const redirectResponse = await fetch(releasesLink, { 
+           headers: { ...headers, 'Referer': pageUrl }, 
+           redirect: 'follow' 
+         });
          const redirectUrl = redirectResponse.url;
          
          // If the redirector lands on an HTML page instead of a file, we need a second hop
          const contentType = redirectResponse.headers.get('content-type') || '';
+         let innerHtml = await redirectResponse.text();
+         
+         // Check for Meta Refresh redirect (common on MSone)
+         const metaRefresh = innerHtml.match(/<meta http-equiv="refresh" content="\d+;url='?([^"'>]+)'?/i);
+         if (metaRefresh) {
+             const refreshUrl = metaRefresh[1].startsWith('http') ? metaRefresh[1] : new URL(metaRefresh[1], redirectUrl).href;
+             console.log(`[Scraper] Following meta-refresh redirect: ${refreshUrl}`);
+             const refreshedRes = await fetch(refreshUrl, { headers: { ...headers, 'Referer': redirectUrl } });
+             innerHtml = await refreshedRes.text();
+         }
+
          if (contentType.includes('text/html')) {
-             const innerHtml = await redirectResponse.text();
              const $inner = cheerio.load(innerHtml);
              const deeperLink = $inner('a[href$=".zip"]').attr('href') || 
                                 $inner('a[href*="drive.google"]').attr('href') ||
-                                $inner('a:contains("Download")').attr('href');
+                                $inner('a:contains("Download")').attr('href') ||
+                                $inner('a:contains("പരിഭാഷ")').attr('href');
              if (deeperLink) return deeperLink.startsWith('http') ? deeperLink : new URL(deeperLink, redirectUrl).href;
          }
          return redirectUrl;
@@ -285,9 +312,15 @@ const getDirectDownloadLink = async (pageUrl, source) => {
                      $('a.elementor-button').attr('href');
     }
 
-    if (downloadLink && !downloadLink.startsWith('http')) {
-      const url = new URL(pageUrl);
-      downloadLink = `${url.protocol}//${url.host}${downloadLink}`;
+    if (downloadLink && downloadLink.startsWith('//')) {
+      downloadLink = 'https:' + downloadLink;
+    } else if (downloadLink && !downloadLink.startsWith('http')) {
+      try {
+        const url = new URL(pageUrl);
+        downloadLink = `${url.protocol}//${url.host}${downloadLink.startsWith('/') ? '' : '/'}${downloadLink}`;
+      } catch (e) {
+        console.error(`[Scraper] Failed to construct absolute URL from ${downloadLink} and ${pageUrl}`);
+      }
     }
 
     return downloadLink;

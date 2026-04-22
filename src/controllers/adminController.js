@@ -284,6 +284,7 @@ const inspectExternalLink = async (req, res) => {
 
              if (!response.ok) throw new Error('Deeper upstream download failed');
         } else {
+             console.error(`[Inspect] No deeper link found in HTML response. HTML head: ${html.substring(0, 500)}`);
              throw new Error('Hit an authorization or captcha page instead of a download link.');
         }
     }
