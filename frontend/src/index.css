@@ -6,26 +6,17 @@
   --accent: 79 70 229; /* indigo-600 defaults */
 }
 
-html {
-  scroll-behavior: smooth;
+html, body {
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
-::-webkit-scrollbar {
-  display: none;
-}
-
-* {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
+::-webkit-scrollbar { display: none; }
+* { -ms-overflow-style: none; scrollbar-width: none; }
 
 @layer base {
   body {
     @apply transition-colors duration-300;
-    overflow-x: hidden;
-    overflow-y: auto;
-    height: auto;
-    min-height: 100vh;
   }
 }
 
