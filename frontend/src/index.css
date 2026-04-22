@@ -6,14 +6,19 @@
   --accent: 79 70 229; /* indigo-600 defaults */
 }
 
-html {
-  scroll-behavior: smooth;
+/* ── Global scroll: let html/body be the one scroll context ── */
+html, body {
+  height: auto;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: scroll; /* native scroll, no lag */
+  scroll-behavior: auto; /* no smoothing — browser handles momentum natively */
 }
 
-::-webkit-scrollbar {
-  display: none;
-}
-
+/* Hide scrollbars everywhere, keep scrollability */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar { display: none; }
 * {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -22,10 +27,6 @@ html {
 @layer base {
   body {
     @apply transition-colors duration-300;
-    overflow-x: hidden;
-    overflow-y: auto;
-    height: auto;
-    min-height: 100vh;
   }
 }
 
@@ -67,13 +68,14 @@ html {
   --login-btn-text: #000000;
 }
 
+/* ── Page shell: no overflow, background colour only ── */
 .login-page {
   background-color: var(--login-bg);
   color: var(--login-text);
   transition: background-color 0.3s ease;
-  overflow-x: hidden;
+  min-height: 100vh;
+  position: relative;
 }
-
 
 /* Expanding Floating Glass Header */
 .floating-header {
@@ -91,12 +93,12 @@ html {
   border-radius: 24px;
   z-index: 1000;
   padding: 0 24px;
-  transition: all 0.3s ease;
+  transition: height 0.2s ease, background 0.2s ease;
   overflow: hidden;
 }
 
 .header-top {
-  height: 70px;
+  height: var(--header-h);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -114,20 +116,19 @@ html {
   pointer-events: all;
 }
 
-/* Responsive Frame Placement */
+/* ── Main container: static in page flow, scrolls with body ── */
 .main-frame {
   position: relative;
   width: 95%;
   max-width: 1600px;
-  margin: 120px auto 40px;
+  margin: calc(var(--header-h) + 40px) auto 40px;
   background: var(--login-glass-bg);
   backdrop-filter: blur(var(--blur));
   -webkit-backdrop-filter: blur(var(--blur));
   border: 1px solid var(--login-glass-border);
   border-radius: 40px;
   z-index: 20;
-  display: flex;
-  flex-direction: column;
+  /* NO overflow, NO fixed height — grows with content */
 }
 
 .media-card {
@@ -183,11 +184,11 @@ html {
   border-radius: 12px;
 }
 
-/* Animations - Simplified */
+/* Orbs – fixed so they never affect page scroll height */
 .orb {
-  position: absolute;
+  position: fixed;
   border-radius: 50%;
-  z-index: 10;
+  z-index: 0;
   pointer-events: none;
   opacity: 0.3;
 }
@@ -196,31 +197,11 @@ html {
 .orb-2 { width: 550px; height: 550px; background: radial-gradient(circle, #ec4899, #701a75); top: 40%; left: 80%; }
 .orb-3 { width: 300px; height: 300px; background: radial-gradient(circle, #06b6d4, #083344); top: 80%; left: -5%; }
 
-@keyframes roam1 {
-  0% { transform: translate3d(0, 0, 0) rotate(0deg); }
-  50% { transform: translate3d(60vw, 40vh, 0) rotate(180deg); }
-  100% { transform: translate3d(110vw, -10vh, 0) rotate(360deg); }
-}
-@keyframes roam2 {
-  0% { transform: translate3d(0, 0, 0) scale(1); }
-  50% { transform: translate3d(-90vw, -30vh, 0) scale(1.2); }
-  100% { transform: translate3d(-40vw, 50vh, 0) scale(1); }
-}
-@keyframes roam3 {
-  0% { transform: translate3d(0, 0, 0); }
-  100% { transform: translate3d(100vw, -100vh, 0); }
-}
-@keyframes roam4 {
-  0% { transform: translate3d(0, 0, 0) rotate(0deg); }
-  50% { transform: translate3d(-100vw, 100vh, 0) rotate(-180deg); }
-  100% { transform: translate3d(-20vw, 20vh, 0) rotate(-360deg); }
-}
-
 @media (max-width: 768px) {
   :root { --login-margin: 12px; }
   .header-top { height: 60px; }
   .floating-header { border-radius: 18px; padding: 0 16px; }
-  .main-frame { border-radius: 24px; }
-  .orb { opacity: 0.3; }
-  .orb-1, .orb-2, .orb-4 { width: 250px; height: 250px; }
+  .main-frame { border-radius: 24px; margin-top: calc(var(--header-h) + 24px); }
+  .orb { opacity: 0.2; }
+  .orb-1, .orb-2, .orb-3 { width: 250px; height: 250px; }
 }
