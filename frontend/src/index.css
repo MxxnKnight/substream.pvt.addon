@@ -75,35 +75,23 @@
   background-color: var(--login-bg);
   color: var(--login-text);
   transition: background-color 0.3s ease;
-  perspective: 1000px;
+  overflow-x: hidden;
 }
 
-.login-page::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: calc(var(--header-h) + var(--login-margin) + 20px);
-  background: linear-gradient(to bottom, var(--login-bg) 40%, transparent 100%);
-  z-index: 80;
-  pointer-events: none;
-}
 
 /* Expanding Floating Glass Header */
 .floating-header {
   position: fixed;
-  top: var(--login-margin);
-  left: var(--login-margin);
-  right: var(--login-margin);
+  top: 0;
+  left: 0;
+  right: 0;
   height: var(--header-h);
   background: var(--login-glass-bg);
-  backdrop-filter: blur(var(--blur));
-  -webkit-backdrop-filter: blur(var(--blur));
-  border: 1px solid var(--login-glass-border);
-  border-radius: 20px;
-  z-index: 100;
-  padding: 0 24px;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid var(--login-glass-border);
+  z-index: 1000;
+  padding: 0 5%;
   transition: height 0.2s ease, background 0.2s ease;
   overflow: hidden;
 }
@@ -130,18 +118,18 @@
 /* Responsive Frame Placement */
 .main-frame {
   position: relative;
-  margin-top: calc(var(--header-h) + (var(--login-margin) * 2));
-  margin-bottom: var(--login-margin);
-  margin-left: var(--login-margin);
-  margin-right: var(--login-margin);
+  width: 95%;
+  max-width: 1600px;
+  margin: 120px auto 40px;
   background: var(--login-glass-bg);
   backdrop-filter: blur(var(--blur));
   -webkit-backdrop-filter: blur(var(--blur));
   border: 1px solid var(--login-glass-border);
-  border-radius: 32px;
+  border-radius: 40px;
   z-index: 20;
   display: flex;
   flex-direction: column;
+  min-height: 80vh;
 }
 
 .media-card {
