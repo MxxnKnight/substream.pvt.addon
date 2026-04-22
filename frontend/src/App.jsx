@@ -866,8 +866,8 @@ export default function App() {
       
       {/* Main Content Area */}
       <main className="main-frame transition-theme">
-        <div className={`flex-1 flex flex-col min-w-0 bg-transparent relative`}>
-          <div className={`max-w-full mx-auto w-full flex flex-col flex-1 ${currentView === 'logs' ? 'p-0' : 'p-4 lg:p-10 pb-24 gap-6'}`}>
+        <div className={`flex flex-col min-w-0 bg-transparent relative w-full`}>
+          <div className={`max-w-full mx-auto w-full flex flex-col ${currentView === 'logs' ? 'p-0' : 'p-4 lg:p-10 pb-24 gap-6'}`}>
 
           {/* PAGE CONTENT BLOCKS */}
           {currentView === 'upload' ? (
@@ -1262,7 +1262,7 @@ export default function App() {
                               const isSeries = sub.type === 'series';
                               return (
                                  <div key={idx} className="media-card rounded-[3rem] p-8 flex flex-col gap-8 group">
-                                   <div className="flex gap-6 cursor-pointer" onClick={() => isSeries && setExpandedLibraryGroups(prev => ({...prev, [sub.groupKey]: !prev[sub.groupKey]}))}>
+                                   <div className="flex gap-6 cursor-pointer" onClick={() => setExpandedLibraryGroups(prev => ({...prev, [sub.groupKey]: !prev[sub.groupKey]}))}>
                                      <div className="shrink-0 relative">
                                        {first.poster_path ? (
                                          <img src={first.poster_path} className="w-28 h-40 object-cover rounded-[1.5rem] shadow-2xl" alt="" />
@@ -1299,21 +1299,19 @@ export default function App() {
                                        )}
                                        <p className="text-[10px] font-mono opacity-20 mt-2 uppercase tracking-[0.2em] font-bold">{sub.imdbId}</p>
                                        
-                                       <div className="mt-auto flex flex-wrap items-center gap-4">
+                                   <div className="mt-auto flex flex-wrap items-center gap-4">
                                          <span className="text-[9px] font-black uppercase px-3 py-1.5 rounded-xl bg-white/5 text-white/40 border border-white/5">
                                            {sub.files.length} ASSETS
                                          </span>
-                                         {isSeries && (
-                                           <div className={`transition-transform duration-300 ${expandedLibraryGroups[sub.groupKey] ? 'rotate-180' : ''}`}>
+                                         <div className={`transition-transform duration-300 ${expandedLibraryGroups[sub.groupKey] ? 'rotate-180' : ''}`}>
                                              <ChevronDown className="w-4 h-4 opacity-30" />
-                                           </div>
-                                         )}
+                                         </div>
                                        </div>
                                      </div>
                                    </div>
 
-                                   {/* File List - Always show for movies, toggle for series */}
-                                   {(!isSeries || expandedLibraryGroups[sub.groupKey]) && (
+                                   {/* File List - Toggled for all types */}
+                                   {expandedLibraryGroups[sub.groupKey] && (
                                      <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
                                        {sub?.files?.map((file, fIdx) => (
                                          <div key={fIdx} className="file-item p-4 flex justify-between items-center group/item transition-all hover:bg-white/5">
