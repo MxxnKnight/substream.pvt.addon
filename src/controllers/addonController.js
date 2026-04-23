@@ -102,7 +102,7 @@ const getSubtitles = async (req, res) => {
         const encodedUrl = Buffer.from(sub.file_path).toString('base64url');
         const protocol = req.headers['x-forwarded-proto'] || req.protocol;
         const host = req.get('host');
-        const proxyUrl = `${protocol}://${host}/subtitles/download/${encodedUrl}.srt`;
+        const proxyUrl = `${protocol}://${host}/subtitles/download/${encodedUrl}.vtt`;
 
         // Stremio requires: id (string), url (string), lang (ISO 639-2 string)
         return {

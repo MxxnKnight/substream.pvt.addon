@@ -23,7 +23,7 @@ router.get('/manifest.json', addonCors, (req, res) => {
 // Proxy route to serve the subtitle file directly to Stremio clients.
 // Bypasses Cloudflare block on unusual User-Agents (like Exoplayer) and ensures .srt extension
 
-router.get('/subtitles/download/:encodedUrl.srt', addonCors, async (req, res) => {
+router.get('/subtitles/download/:encodedUrl.vtt', addonCors, async (req, res) => {
   try {
     const fileUrl = Buffer.from(req.params.encodedUrl, 'base64url').toString('utf-8');
     const response = await fetch(fileUrl);
@@ -32,24 +32,29 @@ router.get('/subtitles/download/:encodedUrl.srt', addonCors, async (req, res) =>
       return res.status(response.status).send(`Failed to fetch subtitle from upstream: ${response.statusText}`);
     }
 
-    res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
-    res.setHeader('Content-Disposition', 'attachment; filename="subtitle.srt"');
+    res.setHeader('Content-Type', 'text/vtt; charset=UTF-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="subtitle.vtt"');
     
-    // We must download the entire file into a buffer first
-    // because streaming (piping) uses Transfer-Encoding: chunked.
-    // Stremio Desktop (VLC setup) strictly requires a Content-Length header to accept subtitles!
     const arrayBuffer = await response.arrayBuffer();
-    let buffer = Buffer.from(arrayBuffer);
+    let text = Buffer.from(arrayBuffer).toString('utf-8');
 
-    // Prepend UTF-8 BOM if not already present.
-    // VLC/Stremio fallback: even if Content-Type charset is ignored, the BOM
-    // forces correct UTF-8 detection for non-ASCII scripts like Malayalam.
-    const hasBOM = buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF;
-    if (!hasBOM) {
-      buffer = Buffer.concat([Buffer.from([0xEF, 0xBB, 0xBF]), buffer]);
+    // Convert SRT to WebVTT format
+    // WebVTT requires WEBVTT at the beginning
+    // WebVTT timestamps use a dot instead of a comma: 00:00:00.000 instead of 00:00:00,000
+    
+    // Remove BOM if present before manipulation
+    if (text.charCodeAt(0) === 0xFEFF) {
+      text = text.slice(1);
     }
     
-    // Express res.send() will automatically compute and set the Content-Length!
+    // Replace timestamp commas with dots
+    // SRT format: 00:00:10,056 --> 00:00:13,254
+    text = text.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
+
+    const vttContent = `WEBVTT\n\n${text}`;
+    
+    // Buffer the final output
+    const buffer = Buffer.from(vttContent, 'utf-8');
     res.send(buffer);
   } catch (error) {
     console.error('Subtitle proxy error:', error);
