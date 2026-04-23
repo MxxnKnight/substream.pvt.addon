@@ -1455,17 +1455,19 @@ export default function App() {
                     </div>
                 </div>
           ) : null}
-        {/* Toast Notification */}
-        {toast.show && (
-          <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[9999] animate-in slide-in-from-bottom duration-500">
-             <div className={`px-8 py-4 rounded-3xl backdrop-blur-3xl border shadow-2xl flex items-center gap-4 ${theme === 'dark' ? 'bg-indigo-500/20 border-indigo-500/30 text-indigo-100' : 'bg-indigo-600 border-indigo-400 text-white'}`}>
-                <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
-                <span className="text-xs font-black uppercase tracking-widest">{toast.message}</span>
-             </div>
+
+          {/* Toast Notification */}
+          {toast.show && (
+            <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[9999] animate-in slide-in-from-bottom duration-500">
+               <div className={`px-8 py-4 rounded-3xl backdrop-blur-3xl border shadow-2xl flex items-center gap-4 ${theme === 'dark' ? 'bg-indigo-500/20 border-indigo-500/30 text-indigo-100' : 'bg-indigo-600 border-indigo-400 text-white'}`}>
+                  <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+                  <span className="text-xs font-black uppercase tracking-widest">{toast.message}</span>
+               </div>
+            </div>
+          )}
           </div>
-        )}
-      </div>
-    </main>
-  </div>
-);
+        </div>
+      </main>
+    </div>
+  );
 }
