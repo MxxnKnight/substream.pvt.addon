@@ -46,6 +46,12 @@ export default function App() {
   const [libPage, setLibPage] = useState(1);
   const [libPagination, setLibPagination] = useState(null); // { total, totalPages, hasMore }
   const [isLibLoading, setIsLibLoading] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 4000);
+  };
 
   useEffect(() => {
     localStorage.setItem('theme', theme);
@@ -198,6 +204,13 @@ export default function App() {
     }
   }, []);
 
+  // --- Fetch Library on Tab or Filter Change ---
+  useEffect(() => {
+    if (user && currentView === 'list') {
+      fetchSubtitles(1, false);
+    }
+  }, [user, currentView, mediaFilter]);
+
   // --- Periodic Log Fetching ---
   useEffect(() => {
     let interval;
@@ -242,7 +255,7 @@ export default function App() {
     if (append) setIsRefreshing(true);
     else setIsLibLoading(true);
     try {
-      const res = await apiFetch(`/api/admin/subtitles?page=${page}&pageSize=24`);
+      const res = await apiFetch(`/api/admin/subtitles?page=${page}&pageSize=24&type=${mediaFilter}`);
       if (res.ok) {
         const json = await res.json();
         const data = json.data || [];
@@ -691,10 +704,9 @@ export default function App() {
     }
     setIsUploading(false);
     if (successCount > 0) {
-        setUploadSuccess(true);
+        showToast(`Successfully uploaded ${successCount} subtitle(s)!`);
         setStagedFiles([]);
-        setUploadForm(prev => ({ ...prev, imdbId: '' }));
-        fetchSubtitles();
+        fetchSubtitles(1, false);
     }
   };
 
@@ -812,7 +824,7 @@ export default function App() {
                       ].map(link => (
                         <button 
                           key={link.id}
-                          onClick={() => { setCurrentView(link.id); if(link.id === 'list') fetchSubtitles(); }}
+                          onClick={() => setCurrentView(link.id)}
                           className={`text-[10px] font-black uppercase tracking-widest transition-all ${currentView === link.id ? 'opacity-100' : 'opacity-40 hover:opacity-100'}`}
                         >
                           {link.label}
@@ -1376,26 +1388,37 @@ export default function App() {
                       </div>
                     )}
 
-                    {/* Load More */}
-                    {!isLibLoading && libPagination?.hasMore && (
-                      <div className="flex flex-col items-center gap-3 pt-4 pb-8">
-                        <p className="text-[10px] font-black uppercase tracking-widest opacity-30">
-                          Showing {subtitles.length} grouped clusters · Page {libPage} of {libPagination.totalPages} · {libPagination.total} raw records
+                    {/* Pagination */}
+                    {!isLibLoading && libPagination && libPagination.totalPages > 1 && (
+                      <div className="flex flex-col items-center gap-6 pt-10 pb-16">
+                        <div className="flex items-center gap-3">
+                          <button 
+                            onClick={() => fetchSubtitles(libPage - 1, false)}
+                            disabled={libPage === 1 || isRefreshing}
+                            className={`p-4 rounded-2xl border transition-all ${theme === 'dark' ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-black/5 border-black/10 hover:bg-black/10'} disabled:opacity-20`}
+                          >
+                            <ChevronDown className="w-5 h-5 rotate-90" />
+                          </button>
+
+                          <div className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white/5 border border-white/5">
+                             <span className="text-xs font-black uppercase tracking-widest opacity-40">Page</span>
+                             <span className="text-sm font-black">{libPage}</span>
+                             <span className="text-xs font-black uppercase tracking-widest opacity-20">of</span>
+                             <span className="text-sm font-black opacity-40">{libPagination.totalPages}</span>
+                          </div>
+
+                          <button 
+                            onClick={() => fetchSubtitles(libPage + 1, false)}
+                            disabled={!libPagination.hasMore || isRefreshing}
+                            className={`p-4 rounded-2xl border transition-all ${theme === 'dark' ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-black/5 border-black/10 hover:bg-black/10'} disabled:opacity-20`}
+                          >
+                            <ChevronDown className="w-5 h-5 -rotate-90" />
+                          </button>
+                        </div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-20">
+                          Total {libPagination.total} raw entries
                         </p>
-                        <button
-                          onClick={() => fetchSubtitles(libPage + 1, true)}
-                          disabled={isRefreshing}
-                          className={`px-10 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest border transition-all hover:scale-105 active:scale-95 flex items-center gap-3 ${theme === 'dark' ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-black/5 border-black/10 hover:bg-black/10'} disabled:opacity-50`}
-                        >
-                          {isRefreshing ? <RefreshCw className="w-4 h-4 animate-spin" /> : null}
-                          Load More
-                        </button>
                       </div>
-                    )}
-                    {!isLibLoading && libPagination && !libPagination.hasMore && subtitles.length > 0 && (
-                      <p className="text-center text-[10px] font-black uppercase tracking-widest opacity-20 py-6">
-                        All {libPagination.total} records loaded
-                      </p>
                     )}
                 </div>
           ) : currentView === 'logs' ? (
@@ -1432,7 +1455,15 @@ export default function App() {
                     </div>
                 </div>
           ) : null}
-        </div>
+        {/* Toast Notification */}
+        {toast.show && (
+          <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[9999] animate-in slide-in-from-bottom duration-500">
+             <div className={`px-8 py-4 rounded-3xl backdrop-blur-3xl border shadow-2xl flex items-center gap-4 ${theme === 'dark' ? 'bg-indigo-500/20 border-indigo-500/30 text-indigo-100' : 'bg-indigo-600 border-indigo-400 text-white'}`}>
+                <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+                <span className="text-xs font-black uppercase tracking-widest">{toast.message}</span>
+             </div>
+          </div>
+        )}
       </div>
     </main>
   </div>

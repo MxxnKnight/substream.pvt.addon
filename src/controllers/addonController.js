@@ -97,13 +97,19 @@ const getSubtitles = async (req, res) => {
         }
 
         const title = `${langName} - ${fileName}`;
+        
+        // Proxy URL to fix encoding (UTF-8 + BOM)
+        const encodedUrl = Buffer.from(sub.file_path).toString('base64url');
+        const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+        const host = req.get('host');
+        const proxyUrl = `${protocol}://${host}/subtitles/download/${encodedUrl}.srt`;
 
         // Stremio requires: id (string), url (string), lang (ISO 639-2 string)
         return {
-          id: String(sub.id),       // MUST be a string
-          url: sub.file_path,       // Direct Supabase URL for maximum performance and seeking (Range headers)
-          lang: langCode,           // MUST be ISO 639-2 (3-letter) code
-          title: title              // optional but helpful for UX
+          id: String(sub.id),
+          url: proxyUrl, 
+          lang: langCode,
+          title: title
         };
       });
 

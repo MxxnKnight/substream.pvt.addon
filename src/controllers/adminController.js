@@ -46,12 +46,19 @@ const listSubtitles = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const pageSize = parseInt(req.query.pageSize) || 24;
+    const type = req.query.type; // 'movie' or 'series'
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    const { data, error, count } = await supabase
+    let query = supabase
       .from('subtitles')
-      .select('*', { count: 'exact' })
+      .select('*', { count: 'exact' });
+    
+    if (type) {
+      query = query.eq('type', type);
+    }
+
+    const { data, error, count } = await query
       .order('created_at', { ascending: false })
       .range(from, to);
 
