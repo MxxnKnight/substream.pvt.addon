@@ -1243,10 +1243,10 @@ export default function App() {
                         </div>
                     </div>
 
-                    {subtitles.length === 0 ? (
-                      <div className="flex-1 flex flex-col items-center justify-center opacity-10 mt-20">
+                    {subtitles.filter(s => s?.type === mediaFilter).length === 0 ? (
+                      <div className="flex flex-col items-center justify-center opacity-10 mt-20 py-20">
                           <Archive className="w-32 h-32 mb-8" />
-                          <p className="text-2xl font-black uppercase tracking-[0.5em]">No Data Clusters</p>
+                          <p className="text-2xl font-black uppercase tracking-[0.5em]">No {mediaFilter} Clusters</p>
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-8">

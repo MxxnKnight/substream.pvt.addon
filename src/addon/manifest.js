@@ -3,7 +3,7 @@ const getManifest = () => ({
   version: "1.0.6",
   name: "SubStream Private",
   description: "Private subtitle addon for Movies and Series",
-  logo: "/logo.svg",
+  logo: "https://substream-pvt-addon-p9e5.onrender.com/logo.svg",
   resources: [
     {
       name: "subtitles",
