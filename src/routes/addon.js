@@ -32,14 +32,22 @@ router.get('/subtitles/download/:encodedUrl.srt', addonCors, async (req, res) =>
       return res.status(response.status).send(`Failed to fetch subtitle from upstream: ${response.statusText}`);
     }
 
-    res.setHeader('Content-Type', 'application/x-subrip');
+    res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
     res.setHeader('Content-Disposition', 'attachment; filename="subtitle.srt"');
     
     // We must download the entire file into a buffer first
     // because streaming (piping) uses Transfer-Encoding: chunked.
     // Stremio Desktop (VLC setup) strictly requires a Content-Length header to accept subtitles!
     const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    let buffer = Buffer.from(arrayBuffer);
+
+    // Prepend UTF-8 BOM if not already present.
+    // VLC/Stremio fallback: even if Content-Type charset is ignored, the BOM
+    // forces correct UTF-8 detection for non-ASCII scripts like Malayalam.
+    const hasBOM = buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF;
+    if (!hasBOM) {
+      buffer = Buffer.concat([Buffer.from([0xEF, 0xBB, 0xBF]), buffer]);
+    }
     
     // Express res.send() will automatically compute and set the Content-Length!
     res.send(buffer);
