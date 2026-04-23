@@ -44,11 +44,16 @@ const retrySupabase = async (fn, maxRetries = 3, delayMs = 600) => {
 
 const listSubtitles = async (req, res) => {
   try {
-    const { data, error } = await supabase
+    const page = parseInt(req.query.page) || 1;
+    const pageSize = parseInt(req.query.pageSize) || 24;
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const { data, error, count } = await supabase
       .from('subtitles')
-      .select('*')
+      .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
-      .limit(500);
+      .range(from, to);
 
     if (error) throw error;
 
@@ -65,7 +70,16 @@ const listSubtitles = async (req, res) => {
       };
     }));
 
-    res.json(enhancedData);
+    res.json({
+      data: enhancedData,
+      pagination: {
+        page,
+        pageSize,
+        total: count,
+        totalPages: Math.ceil(count / pageSize),
+        hasMore: to < count - 1
+      }
+    });
   } catch (err) {
     console.error('[List] Error:', err);
     res.status(500).json({ error: 'Failed to fetch subtitles' });

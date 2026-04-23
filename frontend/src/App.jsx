@@ -34,13 +34,18 @@ export default function App() {
   const [currentView, setCurrentView] = useState('upload');
   const [subtitles, setSubtitles] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isNavOpen, setIsNavOpen] = useState(false); // Mobile nav state
-  const [isNavExpanded, setIsNavExpanded] = useState(false); // For Nexus header expansion
+  const [isNavOpen, setIsNavOpen] = useState(false);
+  const [isNavExpanded, setIsNavExpanded] = useState(false);
 
   // Theme State
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
   const [accent, setAccent] = useState(localStorage.getItem('accent') || 'gold');
-  const [mediaFilter, setMediaFilter] = useState('movie'); // 'movie', 'series'
+  const [mediaFilter, setMediaFilter] = useState('movie');
+
+  // Library Pagination
+  const [libPage, setLibPage] = useState(1);
+  const [libPagination, setLibPagination] = useState(null); // { total, totalPages, hasMore }
+  const [isLibLoading, setIsLibLoading] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('theme', theme);
@@ -233,22 +238,24 @@ export default function App() {
   };
 
   
-  const fetchSubtitles = async () => {
-    setIsRefreshing(true);
+  const fetchSubtitles = async (page = 1, append = false) => {
+    if (append) setIsRefreshing(true);
+    else setIsLibLoading(true);
     try {
-      const res = await apiFetch('/api/admin/subtitles');
+      const res = await apiFetch(`/api/admin/subtitles?page=${page}&pageSize=24`);
       if (res.ok) {
-        const data = await res.json();
+        const json = await res.json();
+        const data = json.data || [];
+        const pagination = json.pagination || null;
+
         // Group by IMDb ID and Season
-        const groups = {};
-        data.forEach(sub => {
+        const groupRow = (sub, groups) => {
           const isSeries = sub.type === 'series';
           const groupKey = isSeries ? `${sub.imdb_id}-S${sub.season || 1}` : sub.imdb_id;
-          
           if (!groups[groupKey]) {
             groups[groupKey] = {
               imdbId: sub.imdb_id,
-              groupKey: groupKey,
+              groupKey,
               title: sub.metadata?.title || 'Unknown Title',
               type: sub.type,
               season: sub.season,
@@ -264,12 +271,29 @@ export default function App() {
             poster_path: sub.metadata?.poster_path,
             type: sub.type
           });
-        });
-        setSubtitles(Object.values(groups));
+        };
+
+        if (append) {
+          // Merge new records into existing groups
+          setSubtitles(prev => {
+            const groups = {};
+            prev.forEach(g => { groups[g.groupKey] = { ...g, files: [...g.files] }; });
+            data.forEach(sub => groupRow(sub, groups));
+            return Object.values(groups);
+          });
+        } else {
+          const groups = {};
+          data.forEach(sub => groupRow(sub, groups));
+          setSubtitles(Object.values(groups));
+        }
+
+        setLibPage(page);
+        setLibPagination(pagination);
       }
     } catch (err) {
-      console.error("Failed to fetch subtitles", err);
+      console.error('Failed to fetch subtitles', err);
     } finally {
+      setIsLibLoading(false);
       setIsRefreshing(false);
     }
   };
@@ -1243,7 +1267,23 @@ export default function App() {
                         </div>
                     </div>
 
-                    {subtitles.filter(s => s?.type === mediaFilter).length === 0 ? (
+                    {isLibLoading ? (
+                      /* Skeleton Cards */
+                      <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-8">
+                        {Array.from({ length: 6 }).map((_, i) => (
+                          <div key={i} className="media-card rounded-[3rem] p-8 flex gap-6">
+                            <div className="skeleton w-28 h-40 rounded-[1.5rem] shrink-0" />
+                            <div className="flex-1 flex flex-col gap-3 pt-2">
+                              <div className="skeleton h-4 w-1/3 rounded-lg" />
+                              <div className="skeleton h-7 w-3/4 rounded-lg" />
+                              <div className="skeleton h-3 w-1/2 rounded-lg" />
+                              <div className="skeleton h-3 w-1/4 rounded-lg mt-2" />
+                              <div className="skeleton h-8 w-28 rounded-xl mt-auto" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : subtitles.filter(s => s?.type === mediaFilter).length === 0 ? (
                       <div className="flex flex-col items-center justify-center opacity-10 mt-20 py-20">
                           <Archive className="w-32 h-32 mb-8" />
                           <p className="text-2xl font-black uppercase tracking-[0.5em]">No {mediaFilter} Clusters</p>
@@ -1334,6 +1374,28 @@ export default function App() {
                               );
                             })}
                       </div>
+                    )}
+
+                    {/* Load More */}
+                    {!isLibLoading && libPagination?.hasMore && (
+                      <div className="flex flex-col items-center gap-3 pt-4 pb-8">
+                        <p className="text-[10px] font-black uppercase tracking-widest opacity-30">
+                          Showing {subtitles.length} grouped clusters · Page {libPage} of {libPagination.totalPages} · {libPagination.total} raw records
+                        </p>
+                        <button
+                          onClick={() => fetchSubtitles(libPage + 1, true)}
+                          disabled={isRefreshing}
+                          className={`px-10 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest border transition-all hover:scale-105 active:scale-95 flex items-center gap-3 ${theme === 'dark' ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-black/5 border-black/10 hover:bg-black/10'} disabled:opacity-50`}
+                        >
+                          {isRefreshing ? <RefreshCw className="w-4 h-4 animate-spin" /> : null}
+                          Load More
+                        </button>
+                      </div>
+                    )}
+                    {!isLibLoading && libPagination && !libPagination.hasMore && subtitles.length > 0 && (
+                      <p className="text-center text-[10px] font-black uppercase tracking-widest opacity-20 py-6">
+                        All {libPagination.total} records loaded
+                      </p>
                     )}
                 </div>
           ) : currentView === 'logs' ? (
