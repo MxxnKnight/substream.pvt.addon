@@ -20,22 +20,27 @@ router.get('/manifest.json', addonCors, (req, res) => {
   res.json(getManifest());
 });
 
+const { getSubtitleById } = require('../services/db');
+
 // Proxy route to serve the subtitle file directly to Stremio clients.
-// We support both .srt and .vtt extensions but ALWAYS serve cleaned WebVTT content
-// because WebVTT is strict about UTF-8, which forces players (ExoPlayer/mpv) to render Malayalam correctly.
-router.get('/subtitles/download/:encodedUrl.:ext(srt|vtt)', addonCors, async (req, res) => {
+// We support both .srt and .vtt extensions but ALWAYS serve cleaned WebVTT content.
+// We now look up the file by ID for shorter, more reliable URLs.
+router.get('/subtitles/download/:id.:ext(srt|vtt)', addonCors, async (req, res) => {
   try {
-    const fileUrl = Buffer.from(req.params.encodedUrl, 'base64url').toString('utf-8');
-    const response = await fetch(fileUrl);
+    const sub = await getSubtitleById(req.params.id);
+    if (!sub) {
+      return res.status(404).send('Subtitle record not found');
+    }
+
+    const response = await fetch(sub.file_path);
     
     if (!response.ok) {
       return res.status(response.status).send(`Failed to fetch subtitle from upstream: ${response.statusText}`);
     }
 
-    // Force UTF-8 and VTT headers. Most modern players (Stremio Android/Desktop) 
-    // sniff the content (WEBVTT header) regardless of the extension in the URL.
+    // Force UTF-8 and VTT headers.
     res.setHeader('Content-Type', 'text/vtt; charset=UTF-8');
-    res.setHeader('Cache-Control', 'max-age=3600, public'); // Cache for 1 hour to prevent constant re-fetching
+    res.setHeader('Cache-Control', 'max-age=3600, public');
     
     const arrayBuffer = await response.arrayBuffer();
     let text = Buffer.from(arrayBuffer).toString('utf-8');

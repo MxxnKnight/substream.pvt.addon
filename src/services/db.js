@@ -44,8 +44,20 @@ const findSubtitles = async ({ imdb_id, season, episode, type }) => {
   return data;
 };
 
+const getSubtitleById = async (id) => {
+  const { data, error } = await supabase
+    .from('subtitles')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
 module.exports = {
   supabase,
   insertSubtitle,
-  findSubtitles
+  findSubtitles,
+  getSubtitleById
 };
