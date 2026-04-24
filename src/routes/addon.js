@@ -23,6 +23,13 @@ router.get('/manifest.json', addonCors, (req, res) => {
 // Proxy route to serve the subtitle file directly to Stremio clients.
 // Bypasses Cloudflare block on unusual User-Agents (like Exoplayer) and ensures .srt extension
 
+// Fallback for old .srt links cached by Stremio Mobile
+router.get('/subtitles/download/:encodedUrl.srt', addonCors, (req, res) => {
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+  const host = req.get('host');
+  res.redirect(302, `${protocol}://${host}/subtitles/download/${req.params.encodedUrl}.vtt`);
+});
+
 router.get('/subtitles/download/:encodedUrl.vtt', addonCors, async (req, res) => {
   try {
     const fileUrl = Buffer.from(req.params.encodedUrl, 'base64url').toString('utf-8');

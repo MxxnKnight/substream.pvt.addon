@@ -1458,10 +1458,10 @@ export default function App() {
 
           {/* Toast Notification */}
           {toast.show && (
-            <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[9999] animate-in slide-in-from-bottom duration-500">
-               <div className={`px-8 py-4 rounded-3xl backdrop-blur-3xl border shadow-2xl flex items-center gap-4 ${theme === 'dark' ? 'bg-indigo-500/20 border-indigo-500/30 text-indigo-100' : 'bg-indigo-600 border-indigo-400 text-white'}`}>
-                  <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
-                  <span className="text-xs font-black uppercase tracking-widest">{toast.message}</span>
+            <div className="fixed bottom-8 right-8 z-[9999] pointer-events-none animate-in fade-in slide-in-from-right-8 slide-in-from-bottom-4 duration-500 ease-out">
+               <div className={`px-6 py-4 rounded-2xl backdrop-blur-2xl border shadow-[0_20px_50px_rgba(0,0,0,0.3)] flex items-center gap-4 transition-all ${theme === 'dark' ? 'bg-[#1a1a1a]/80 border-white/10 text-white' : 'bg-white/80 border-black/10 text-black'}`}>
+                  <div className={`w-2 h-2 rounded-full animate-pulse ${toast.type === 'error' ? 'bg-red-500' : 'bg-emerald-500'}`} />
+                  <span className="text-[10px] font-black uppercase tracking-widest">{toast.message}</span>
                </div>
             </div>
           )}
