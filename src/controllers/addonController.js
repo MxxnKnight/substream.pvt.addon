@@ -112,7 +112,14 @@ const getSubtitles = async (req, res) => {
         };
       });
 
-    const response = { subtitles: mapped };
+    // Sort subtitles to prioritize Malayalam (mal) so Stremio auto-selects it
+    const sortedMapped = mapped.sort((a, b) => {
+      if (a.lang === 'mal' && b.lang !== 'mal') return -1;
+      if (a.lang !== 'mal' && b.lang === 'mal') return 1;
+      return 0;
+    });
+
+    const response = { subtitles: sortedMapped };
 
     // Update cache
     cache[cacheKey] = { timestamp: Date.now(), data: response };
