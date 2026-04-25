@@ -21,7 +21,7 @@ const LANG_MAP = {
 
 const LANG_NAMES = {
   'eng': 'English',
-  'mal': 'Malayalam',
+  'mal': 'മലയാളം',
 };
 
 

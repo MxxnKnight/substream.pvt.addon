@@ -26,24 +26,34 @@ const { getSubtitleById } = require('../services/db');
 // We support both .srt and .vtt extensions but ALWAYS serve cleaned WebVTT content.
 // We now look up the file by ID for shorter, more reliable URLs.
 router.get('/subtitles/download/:id.:ext(srt|vtt)', addonCors, async (req, res) => {
+  const { id, ext } = req.params;
+  console.log(`[Subtitle Proxy] Request received: id=${id}, ext=${ext}, UA=${req.headers['user-agent']}`);
+  
   try {
-    const sub = await getSubtitleById(req.params.id);
+    const sub = await getSubtitleById(id);
     if (!sub) {
+      console.error(`[Subtitle Proxy] Subtitle ID ${id} not found in DB`);
       return res.status(404).send('Subtitle record not found');
     }
 
-    const response = await fetch(sub.file_path);
+    console.log(`[Subtitle Proxy] Fetching from upstream: ${sub.file_path}`);
+    const upstreamResponse = await fetch(sub.file_path);
     
-    if (!response.ok) {
-      return res.status(response.status).send(`Failed to fetch subtitle from upstream: ${response.statusText}`);
+    if (!upstreamResponse.ok) {
+      console.error(`[Subtitle Proxy] Upstream fetch failed: ${upstreamResponse.status} ${upstreamResponse.statusText}`);
+      return res.status(upstreamResponse.status).send(`Failed to fetch subtitle from upstream: ${upstreamResponse.statusText}`);
     }
 
-    // Force UTF-8 and VTT headers.
+    // Android players are very sensitive to headers
     res.setHeader('Content-Type', 'text/vtt; charset=UTF-8');
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Cache-Control', 'max-age=3600, public');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
     
-    const arrayBuffer = await response.arrayBuffer();
+    const arrayBuffer = await upstreamResponse.arrayBuffer();
     let text = Buffer.from(arrayBuffer).toString('utf-8');
+
+    console.log(`[Subtitle Proxy] Processing content (length: ${text.length})...`);
 
     // Convert SRT to WebVTT format
     if (text.charCodeAt(0) === 0xFEFF) {
@@ -56,9 +66,10 @@ router.get('/subtitles/download/:id.:ext(srt|vtt)', addonCors, async (req, res) 
     const vttContent = `WEBVTT\n\n${text}`;
     const buffer = Buffer.from(vttContent, 'utf-8');
     
+    console.log(`[Subtitle Proxy] Sending ${buffer.length} bytes to Stremio`);
     res.send(buffer);
   } catch (error) {
-    console.error('Subtitle proxy error:', error);
+    console.error(`[Subtitle Proxy] Error processing ${id}:`, error);
     res.status(500).send('Internal server error during download proxy');
   }
 });
