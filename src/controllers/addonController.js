@@ -57,7 +57,7 @@ const getSubtitles = async (req, res) => {
   const cached = cache[cacheKey];
   if (cached && cached.timestamp > Date.now() - CACHE_DURATION) {
     console.log(`[Stremio Request] Serving from cache for ${cacheKey}`);
-    res.setHeader('Cache-Control', 'max-age=14400, public');
+    res.setHeader('Cache-Control', 'max-age=0, no-cache, no-store, must-revalidate');
     return res.json(cached.data);
   }
 
@@ -121,7 +121,8 @@ const getSubtitles = async (req, res) => {
     console.log(JSON.stringify(response, null, 2));
     
     // Stremio strictly recommends setting Cache-Control logic for subtitle responses
-    res.setHeader('Cache-Control', 'max-age=14400, public');
+    // During debugging, we set it to 0 to prevent Stremio from caching bad states.
+    res.setHeader('Cache-Control', 'max-age=0, no-cache, no-store, must-revalidate');
     res.json(response);
 
   } catch (err) {
