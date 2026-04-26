@@ -30,14 +30,25 @@ router.get('/subtitles/download/:id.:ext(srt|vtt)', addonCors, async (req, res) 
   console.log(`[Subtitle Proxy] Request received: id=${id}, ext=${ext}, UA=${req.headers['user-agent']}`);
   
   try {
-    const sub = await getSubtitleById(id);
-    if (!sub) {
-      console.error(`[Subtitle Proxy] Subtitle ID ${id} not found in DB`);
-      return res.status(404).send('Subtitle record not found');
+    let filePath = '';
+
+    // Backwards compatibility: If the ID is longer than a standard UUID (36 chars),
+    // it's likely an old base64-encoded URL from a cached Stremio session (resume state).
+    if (id.length > 40) {
+      console.log(`[Subtitle Proxy] Detected old base64 URL. Decoding...`);
+      filePath = Buffer.from(id, 'base64url').toString('utf-8');
+    } else {
+      // Standard flow: look up by UUID
+      const sub = await getSubtitleById(id);
+      if (!sub) {
+        console.error(`[Subtitle Proxy] Subtitle ID ${id} not found in DB`);
+        return res.status(404).send('Subtitle record not found');
+      }
+      filePath = sub.file_path;
     }
 
-    console.log(`[Subtitle Proxy] Fetching from upstream: ${sub.file_path}`);
-    const upstreamResponse = await fetch(sub.file_path);
+    console.log(`[Subtitle Proxy] Fetching from upstream: ${filePath}`);
+    const upstreamResponse = await fetch(filePath);
     
     if (!upstreamResponse.ok) {
       console.error(`[Subtitle Proxy] Upstream fetch failed: ${upstreamResponse.status} ${upstreamResponse.statusText}`);
