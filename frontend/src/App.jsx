@@ -136,7 +136,7 @@ export default function App() {
     type: 'movie',       // default: Movie
     season: '',
     episode: '',
-    language: 'mal'      // default: Malayalam
+    language: 'ml'      // default: Malayalam
   });
 
   // Staging state for files
@@ -933,7 +933,7 @@ export default function App() {
                     <div className="space-y-4">
                         <label className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-1">Subtitle</label>
                         <div className="toggle-group flex gap-4">
-                            {[ {code: 'mal', label: 'Malayalam'}, {code: 'eng', label: 'English'} ].map(l => (
+                             {[ {code: 'ml', label: 'Malayalam'}, {code: 'eng', label: 'English'} ].map(l => (
                               <button 
                                 key={l.code}
                                 type="button"

@@ -14,14 +14,14 @@ const LANG_MAP = {
   'eng': 'eng',
   'english': 'eng',
   // Malayalam variants
-  'ml': 'mal',
-  'mal': 'mal',
-  'malayalam': 'mal',
+  'ml': 'ml',
+  'mal': 'ml',
+  'malayalam': 'ml',
 };
 
 const LANG_NAMES = {
   'eng': 'English',
-  'mal': 'മലയാളം',
+  'ml': 'Malayalam',
 };
 
 
@@ -108,14 +108,15 @@ const getSubtitles = async (req, res) => {
           id: String(sub.id),
           url: proxyUrl, 
           lang: langCode,
-          title: title
+          title: title,
+          language: langName
         };
       });
 
-    // Sort subtitles to prioritize Malayalam (mal) so Stremio auto-selects it
+    // Sort subtitles to prioritize Malayalam (ml) so Stremio auto-selects it
     const sortedMapped = mapped.sort((a, b) => {
-      if (a.lang === 'mal' && b.lang !== 'mal') return -1;
-      if (a.lang !== 'mal' && b.lang === 'mal') return 1;
+      if (a.lang === 'ml' && b.lang !== 'ml') return -1;
+      if (a.lang !== 'ml' && b.lang === 'ml') return 1;
       return 0;
     });
 
