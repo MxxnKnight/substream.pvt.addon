@@ -66,16 +66,36 @@ router.get('/subtitles/download/:id.:ext(srt|vtt)', addonCors, async (req, res) 
 
     console.log(`[Subtitle Proxy] Processing content (length: ${text.length})...`);
 
-    // Convert SRT to WebVTT format
-    if (text.charCodeAt(0) === 0xFEFF) {
-      text = text.slice(1);
-    }
+    // Processing content (Cleaning formatting tags first)
+    const isVtt = ext === 'vtt';
     
-    // Replace timestamp commas with dots for WebVTT compliance
-    text = text.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
+    // 1. Remove BOM and normalize line endings
+    if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+    text = text.replace(/\r\n/g, '\n');
 
-    const vttContent = `WEBVTT\n\n${text}`;
-    const buffer = Buffer.from(vttContent, 'utf-8');
+    // 2. Formatting cleanup (Strip tags that override player settings)
+    text = text.replace(/<font[^>]*>/gi, '');
+    text = text.replace(/<\/font>/gi, '');
+    text = text.replace(/\{[^}]+\}/g, '');
+
+    let finalContent = '';
+
+    if (isVtt) {
+      console.log(`[Subtitle Proxy] Serving as WebVTT`);
+      // Convert to WebVTT
+      text = text.replace(/^(\d+)\n(\d{2}:\d{2}:\d{2})/gm, '$2'); // Remove indices
+      text = text.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2'); // Comma to Dot
+      finalContent = `WEBVTT\n\n${text.trim()}`;
+      res.setHeader('Content-Type', 'text/vtt; charset=UTF-8');
+    } else {
+      console.log(`[Subtitle Proxy] Serving as Cleaned SRT`);
+      // Serve as Cleaned SRT (Keep indices, ensure comma in timestamps)
+      text = text.replace(/(\d{2}:\d{2}:\d{2})\.(\d{3})/g, '$1,$2'); // Dot to Comma
+      finalContent = text.trim();
+      res.setHeader('Content-Type', 'application/x-subrip; charset=UTF-8');
+    }
+
+    const buffer = Buffer.from(finalContent, 'utf-8');
     
     console.log(`[Subtitle Proxy] Sending ${buffer.length} bytes to Stremio`);
     res.send(buffer);
